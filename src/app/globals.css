@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Vogun font-face — replace with actual files when available */
+/* For now we fall back to Playfair Display which has a similar editorial serif feel */
+
+@layer base {
+  body {
+    @apply font-sans text-beige antialiased;
+  }
+
+  /* All headings use the display serif (Vogun / Playfair Display) */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif text-aubergine;
+  }
+
+  h1 {
+    @apply text-5xl md:text-7xl font-normal tracking-tight leading-[1.05];
+  }
+
+  h2 {
+    @apply text-3xl md:text-5xl font-normal tracking-tight leading-[1.1];
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl font-normal;
+  }
+}
+
+@layer components {
+  /* Primary CTA: Violet pill with arrow circle */
+  .btn-primary {
+    @apply inline-flex items-center gap-3 bg-violet text-white font-sans font-semibold
+           text-sm px-7 py-3.5 rounded-pill
+           hover:bg-violet-dark transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-violet focus:ring-offset-2;
+  }
+
+  .btn-primary .btn-arrow {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full
+           bg-aubergine text-white text-lg -mr-2;
+  }
+
+  /* Secondary CTA: Ghost/outline pill with arrow circle */
+  .btn-secondary {
+    @apply inline-flex items-center gap-3 bg-transparent text-white font-sans font-semibold
+           text-sm px-7 py-3.5 rounded-pill border-[1.5px] border-white/50
+           hover:bg-white/10 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2;
+  }
+
+  .btn-secondary .btn-arrow {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full
+           border border-white/50 text-white text-lg -mr-2;
+  }
+
+  /* Secondary on light background */
+  .btn-secondary-light {
+    @apply inline-flex items-center gap-3 bg-transparent text-aubergine font-sans font-semibold
+           text-sm px-7 py-3.5 rounded-pill border-[1.5px] border-aubergine/50
+           hover:bg-aubergine/5 transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-aubergine/50 focus:ring-offset-2;
+  }
+
+  .btn-secondary-light .btn-arrow {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full
+           border border-aubergine/50 text-aubergine text-lg -mr-2;
+  }
+
+  /* Frosted glass nav bar */
+  .nav-glass {
+    @apply bg-aubergine/55 backdrop-blur-xl rounded-pill;
+  }
+
+  /* Section label with dots (e.g., "• Why Education Matters •") */
+  .section-label {
+    @apply text-violet font-sans font-semibold text-xs tracking-[0.2em] uppercase;
+  }
+
+  /* Hero gradient overlay (left-to-right dark) */
+  .hero-overlay {
+    background: linear-gradient(
+      to right,
+      rgba(26, 9, 48, 0.75) 0%,
+      rgba(26, 9, 48, 0.4) 45%,
+      rgba(26, 9, 48, 0.1) 70%,
+      transparent 100%
+    );
+  }
+
+  /* Below-fold cream section */
+  .section-cream {
+    @apply bg-cream;
+  }
+
+  /* Stat divider (vertical gold line between stats) */
+  .stat-divider {
+    @apply w-px h-24 bg-natural/50;
+  }
+
+  /* Glassmorphism card (for forms, panels) */
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-xl rounded-card border border-white/10;
+  }
+
+  /* Form inputs — underline style */
+  .input-underline {
+    @apply w-full bg-transparent border-b border-white/30 py-3 text-white
+           placeholder:text-white/50 font-sans text-sm
+           focus:outline-none focus:border-violet transition-colors;
+  }
+
+  .input-underline-dark {
+    @apply w-full bg-transparent border-b border-beige/30 py-3 text-beige
+           placeholder:text-beige/50 font-sans text-sm
+           focus:outline-none focus:border-violet transition-colors;
+  }
+}
