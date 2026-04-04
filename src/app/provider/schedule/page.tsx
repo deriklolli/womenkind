@@ -6,7 +6,7 @@ import ProviderNav from '@/components/provider/ProviderNav'
 import AppointmentTypesManager from '@/components/provider/AppointmentTypesManager'
 import AvailabilityEditor from '@/components/provider/AvailabilityEditor'
 import AppointmentsList from '@/components/provider/AppointmentsList'
-import { isGoogleCalendarConnected } from '@/lib/google-calendar'
+// Google Calendar connection status is fetched via API
 
 type ScheduleTab = 'appointments' | 'types' | 'availability'
 
@@ -17,7 +17,7 @@ export default function ProviderSchedulePage() {
   const [activeTab, setActiveTab] = useState<ScheduleTab>('appointments')
   const [providerId, setProviderId] = useState<string>(DEMO_PROVIDER_ID)
   const [loading, setLoading] = useState(true)
-  const gcalConnected = isGoogleCalendarConnected(providerId)
+  const [gcalConnected, setGcalConnected] = useState(false)
 
   useEffect(() => {
     // Check auth (demo mode or Supabase)
@@ -30,6 +30,15 @@ export default function ProviderSchedulePage() {
       setLoading(false)
     }
   }, [])
+
+  // Check Google Calendar connection status
+  useEffect(() => {
+    if (!providerId) return
+    fetch(`/api/auth/google/status?providerId=${providerId}`)
+      .then(res => res.json())
+      .then(data => setGcalConnected(data.connected === true))
+      .catch(() => setGcalConnected(false))
+  }, [providerId])
 
   if (loading) {
     return (
