@@ -63,6 +63,91 @@ const SEVERITY_COLORS: Record<string, string> = {
   severe: 'bg-red-50 text-red-600 border border-red-200',
 }
 
+function UpcomingAppointments({ patientId }: { patientId: string }) {
+  const router = useRouter()
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!patientId) { setLoading(false); return }
+    const fetchAppointments = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        const res = await fetch(`/api/scheduling/appointments?patientId=${patientId}&startDate=${today}`)
+        const data = await res.json()
+        setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+      } catch (err) {
+        console.error('Failed to fetch appointments:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAppointments()
+  }, [patientId])
+
+  return (
+    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 mt-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
+          Upcoming Appointments
+        </h3>
+        <button
+          onClick={() => router.push('/patient/schedule')}
+          className="text-xs font-sans font-medium text-violet hover:text-violet/80 transition-colors flex items-center gap-1"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Schedule New
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
+        </div>
+      ) : appointments.length === 0 ? (
+        <div className="text-center py-4">
+          <p className="text-sm font-sans text-aubergine/35 mb-3">No upcoming appointments</p>
+          <button
+            onClick={() => router.push('/patient/schedule')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-violet text-white text-sm font-sans font-medium rounded-xl hover:bg-violet/90 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Book an Appointment
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {appointments.map((apt: any) => (
+            <div key={apt.id} className="flex items-center gap-3 p-3 rounded-xl bg-human/50 border border-aubergine/5">
+              <div
+                className="w-1.5 h-10 rounded-full flex-shrink-0"
+                style={{ backgroundColor: apt.appointment_types?.color || '#944fed' }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-sans font-medium text-aubergine truncate">
+                  {apt.appointment_types?.name || 'Appointment'}
+                </p>
+                <p className="text-xs font-sans text-aubergine/45">
+                  {new Date(apt.starts_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {' at '}
+                  {new Date(apt.starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
+              </div>
+              <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill bg-emerald-50 border border-emerald-200 text-emerald-600">
+                Confirmed
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PatientDashboardPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -589,6 +674,14 @@ export default function PatientDashboardPage() {
                 </p>
               </div>
             )}
+
+            {/* Upcoming Appointments */}
+            <UpcomingAppointments patientId={
+              (() => {
+                const demo = typeof window !== 'undefined' ? localStorage.getItem('womenkind_demo_patient') : null
+                return demo ? 'c0000000-0000-0000-0000-000000000001' : ''
+              })()
+            } />
 
             {/* Care Presentation link */}
             {patient.presentationId && (

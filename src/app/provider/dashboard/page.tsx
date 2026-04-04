@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
+import { useChatContext } from '@/lib/chat-context'
 
-type DashboardTab = 'queue' | 'patients'
+type DashboardTab = 'queue' | 'patients' | 'schedule'
 
 interface Intake {
   id: string
@@ -62,6 +63,12 @@ export default function ProviderDashboard() {
   const [providerName, setProviderName] = useState('Dr. Sarah Chen')
   const [filter, setFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  const { setPageContext } = useChatContext()
+
+  useEffect(() => {
+    setPageContext({ page: 'dashboard' })
+  }, [])
 
   useEffect(() => {
     const demo = localStorage.getItem('womenkind_demo_provider')
@@ -415,16 +422,6 @@ export default function ProviderDashboard() {
                               <span>{visitCount} {visitCount === 1 ? 'visit' : 'visits'}</span>
                               {latestVisitDate && (
                                 <span>Last seen {formatShortDate(latestVisitDate)}</span>
-                              )}
-                              {burden && (
-                                <span className={
-                                  burden === 'severe' ? 'text-red-500' :
-                                  burden === 'high' ? 'text-orange-500' :
-                                  burden === 'moderate' ? 'text-amber-500' :
-                                  'text-green-500'
-                                }>
-                                  {burden.charAt(0).toUpperCase() + burden.slice(1)} symptom burden
-                                </span>
                               )}
                             </div>
                           </div>

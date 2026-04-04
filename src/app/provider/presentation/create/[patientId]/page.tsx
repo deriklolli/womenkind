@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
 import { PRESENTATION_COMPONENTS, type PresentationComponent } from '@/lib/presentation-components'
+import { useChatContext } from '@/lib/chat-context'
 
 interface PatientInfo {
   id: string
@@ -43,6 +44,8 @@ export default function CreatePresentationPage() {
     return ''
   }
 
+  const { setPageContext } = useChatContext()
+
   useEffect(() => {
     loadPatient()
   }, [patientId])
@@ -54,7 +57,15 @@ export default function CreatePresentationPage() {
         .select('id, profiles ( first_name, last_name )')
         .eq('id', patientId)
         .single()
-      setPatient(data as unknown as PatientInfo)
+      const patientData = data as unknown as PatientInfo
+      setPatient(patientData)
+
+      // Set chat context for AI assistant
+      setPageContext({
+        page: 'presentation-create',
+        patientId,
+        patientName: `${patientData.profiles?.first_name || ''} ${patientData.profiles?.last_name || ''}`.trim(),
+      })
     } catch (err) {
       console.error('Failed to load patient:', err)
     } finally {

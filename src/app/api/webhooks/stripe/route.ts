@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { createCalendarEvent } from '@/lib/google-calendar'
 import Stripe from 'stripe'
 
 /**
  * POST /api/webhooks/stripe
  *
  * Handles Stripe webhook events:
- * - checkout.session.completed → marks intake as paid, creates subscription record
+ * - checkout.session.completed → marks intake as paid, creates subscription record, or confirms appointment
  * - invoice.payment_succeeded → updates subscription status
  * - customer.subscription.deleted → marks membership canceled
  */
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
             stripeCustomerId: customerId,
             stripeSessionId: session.id,
             amountPaid: session.amount_total,
+          })
+        } else if (metadata.type === 'appointment') {
+          // Appointment payment completed
+          await handleAppointmentPayment(supabase, {
+            appointmentId: metadata.appointmentId,
+            patientId: metadata.patientId,
+            providerId: metadata.providerId,
+            stripeSessionId: session.id,
           })
         } else if (metadata.type === 'membership') {
           // Membership subscription started
@@ -162,6 +171,62 @@ async function handleIntakePayment(
       intake_id: data.intakeId,
       created_at: new Date().toISOString(),
     })
+  }
+}
+
+/**
+ * Handle appointment payment: confirm the appointment + create calendar event
+ */
+async function handleAppointmentPayment(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  data: {
+    appointmentId: string
+    patientId: string
+    providerId: string
+    stripeSessionId: string
+  }
+) {
+  // Get appointment details for calendar event
+  const { data: appointment } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      appointment_types(name, duration_minutes),
+      patients(id, profiles(first_name, last_name, email))
+    `)
+    .eq('id', data.appointmentId)
+    .single()
+
+  // Confirm the appointment
+  await supabase
+    .from('appointments')
+    .update({
+      status: 'confirmed',
+      is_paid: true,
+      stripe_session_id: data.stripeSessionId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', data.appointmentId)
+
+  // Create Google Calendar event
+  if (appointment) {
+    const profile = (appointment as any)?.patients?.profiles
+    const patientName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Patient'
+    const typeName = (appointment as any)?.appointment_types?.name || 'Appointment'
+
+    const calendarEventId = await createCalendarEvent({
+      providerId: data.providerId,
+      summary: `${typeName} — ${patientName}`,
+      description: appointment.patient_notes || `${typeName} with ${patientName}`,
+      startTime: appointment.starts_at,
+      endTime: appointment.ends_at,
+      patientEmail: profile?.email,
+    })
+
+    await supabase
+      .from('appointments')
+      .update({ google_calendar_event_id: calendarEventId })
+      .eq('id', data.appointmentId)
   }
 }
 

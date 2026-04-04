@@ -3,6 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
+import { ChatContextProvider, useChatContext } from '@/lib/chat-context'
+import ChatWidget from '@/components/provider/ChatWidget'
+
+function ChatWidgetWithContext() {
+  const { pageContext } = useChatContext()
+  return <ChatWidget context={pageContext} />
+}
 
 export default function ProviderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -60,5 +67,14 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
 
   if (!authorized && pathname !== '/provider/login') return null
 
-  return <>{children}</>
+  const isLoginPage = pathname === '/provider/login'
+
+  if (isLoginPage) return <>{children}</>
+
+  return (
+    <ChatContextProvider>
+      {children}
+      <ChatWidgetWithContext />
+    </ChatContextProvider>
+  )
 }

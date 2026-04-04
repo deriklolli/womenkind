@@ -9,6 +9,7 @@ import VisitTimeline from '@/components/provider/VisitTimeline'
 import PrescriptionsPanel from '@/components/provider/PrescriptionsPanel'
 import LabOrdersPanel from '@/components/provider/LabOrdersPanel'
 import NotesPanel from '@/components/provider/NotesPanel'
+import { useChatContext } from '@/lib/chat-context'
 
 interface PatientProfile {
   id: string
@@ -84,7 +85,7 @@ interface ProviderNote {
   updated_at: string
 }
 
-type ProfileTab = 'overview' | 'timeline' | 'prescriptions' | 'labs' | 'notes'
+type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes'
 
 const SYMPTOM_DOMAINS = [
   { key: 'vasomotor', label: 'Vasomotor (Hot Flashes)', color: '#d85623' },
@@ -118,6 +119,8 @@ export default function PatientProfilePage() {
     } catch {}
     return ''
   }
+
+  const { setPageContext } = useChatContext()
 
   useEffect(() => {
     loadPatientData()
@@ -164,13 +167,24 @@ export default function PatientProfilePage() {
       ])
 
       if (patientRes.error) throw patientRes.error
-      setPatient(patientRes.data as unknown as PatientProfile)
+      const patientData = patientRes.data as unknown as PatientProfile
+      setPatient(patientData)
       setIntakes(intakesRes.data || [])
       setVisits((visitsRes.data || []) as Visit[])
       setSubscriptions(subsRes.data || [])
       setPrescriptions((rxRes.data || []) as Prescription[])
       setLabOrders((labRes.data || []) as LabOrder[])
       setProviderNotes((notesRes.data || []) as ProviderNote[])
+
+      // Set chat context for AI assistant
+      const latestIntake = (intakesRes.data || [])[0]
+      setPageContext({
+        page: 'patient-profile',
+        patientId,
+        patientName: `${patientData.profiles?.first_name || ''} ${patientData.profiles?.last_name || ''}`.trim(),
+        intakeId: latestIntake?.id,
+        intakeStatus: latestIntake?.status,
+      })
     } catch (err) {
       console.error('Failed to load patient:', err)
     } finally {
@@ -264,6 +278,7 @@ export default function PatientProfilePage() {
 
   const TABS: { key: ProfileTab; label: string; count?: number }[] = [
     { key: 'overview', label: 'Overview & Trends' },
+    { key: 'intake', label: 'Intake Results', count: intakes.length },
     { key: 'timeline', label: 'Visit Timeline', count: visits.length },
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
@@ -450,6 +465,82 @@ export default function PatientProfilePage() {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'intake' && (
+          <div className="space-y-4">
+            {intakes.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-card shadow-sm">
+                <p className="text-lg font-serif text-aubergine/30">No intakes on file</p>
+                <p className="text-sm font-sans text-aubergine/20 mt-2">Intakes will appear here once submitted</p>
+              </div>
+            ) : (
+              intakes.map((intake) => {
+                const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+                  submitted: { label: 'New', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+                  reviewed: { label: 'Reviewed', color: 'text-violet', bg: 'bg-violet/5 border-violet/20' },
+                  care_plan_sent: { label: 'Care Plan Sent', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+                  draft: { label: 'In Progress', color: 'text-aubergine/40', bg: 'bg-gray-50 border-gray-200' },
+                }
+                const status = statusConfig[intake.status] || statusConfig.draft
+                const burden = intake.ai_brief?.metadata?.symptom_burden
+                const riskFlags = intake.ai_brief?.risk_flags
+                const urgentCount = riskFlags?.urgent?.length || 0
+                const contraCount = riskFlags?.contraindications?.length || 0
+                const considerCount = riskFlags?.considerations?.length || 0
+
+                return (
+                  <button
+                    key={intake.id}
+                    onClick={() => router.push(`/provider/brief/${intake.id}`)}
+                    className="w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md border border-transparent hover:border-violet/10 transition-all duration-200 text-left group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-serif text-lg text-aubergine group-hover:text-violet transition-colors">
+                            Intake
+                          </h3>
+                          <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill border ${status.color} ${status.bg}`}>
+                            {status.label}
+                          </span>
+                          {burden && (
+                            <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill ${
+                              burden === 'severe' ? 'text-red-600 bg-red-50 border border-red-200' :
+                              burden === 'high' ? 'text-orange-600 bg-orange-50 border border-orange-200' :
+                              burden === 'moderate' ? 'text-amber-600 bg-amber-50 border border-amber-200' :
+                              'text-emerald-600 bg-emerald-50 border border-emerald-200'
+                            }`}>
+                              {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-sans text-aubergine/40">
+                          <span>
+                            Submitted {intake.submitted_at
+                              ? new Date(intake.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : '—'}
+                          </span>
+                          {(urgentCount + contraCount + considerCount) > 0 && (
+                            <span className="flex items-center gap-2">
+                              {urgentCount > 0 && <span className="text-red-500">{urgentCount} urgent</span>}
+                              {contraCount > 0 && <span className="text-orange-500">{contraCount} contraindications</span>}
+                              {considerCount > 0 && <span className="text-amber-500">{considerCount} considerations</span>}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 ml-4">
+                        <svg className="w-5 h-5 text-aubergine/20 group-hover:text-violet transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })
+            )}
           </div>
         )}
 

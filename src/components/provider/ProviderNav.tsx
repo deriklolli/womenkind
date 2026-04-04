@@ -8,10 +8,11 @@ import { supabase } from '@/lib/supabase-browser'
 interface ProviderNavProps {
   providerName?: string
   /** Dashboard passes these to control tab state locally */
-  activeTab?: 'queue' | 'patients'
-  onTabChange?: (tab: 'queue' | 'patients') => void
+  activeTab?: 'queue' | 'patients' | 'schedule'
+  onTabChange?: (tab: 'queue' | 'patients' | 'schedule') => void
   newIntakeCount?: number
   patientCount?: number
+  appointmentCount?: number
 }
 
 export default function ProviderNav({
@@ -20,6 +21,7 @@ export default function ProviderNav({
   onTabChange,
   newIntakeCount,
   patientCount,
+  appointmentCount,
 }: ProviderNavProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -44,13 +46,20 @@ export default function ProviderNav({
 
   // Determine which tab is active
   const isDashboard = pathname === '/provider/dashboard'
-  const resolvedTab: 'queue' | 'patients' = controlledTab
+  const isSchedule = pathname === '/provider/schedule'
+  const resolvedTab: 'queue' | 'patients' | 'schedule' = controlledTab
     ? controlledTab
-    : pathname.startsWith('/provider/patient')
-      ? 'patients'
-      : 'queue'
+    : isSchedule
+      ? 'schedule'
+      : pathname.startsWith('/provider/patient')
+        ? 'patients'
+        : 'queue'
 
-  const handleTabClick = (tab: 'queue' | 'patients') => {
+  const handleTabClick = (tab: 'queue' | 'patients' | 'schedule') => {
+    if (tab === 'schedule') {
+      router.push('/provider/schedule')
+      return
+    }
     if (isDashboard && onTabChange) {
       onTabChange(tab)
     } else {
@@ -203,6 +212,26 @@ export default function ProviderNav({
                   My Patients
                   {(patientCount ?? 0) > 0 && (
                     <span className="text-xs text-aubergine/30">{patientCount}</span>
+                  )}
+                </span>
+              </button>
+              <button
+                onClick={() => handleTabClick('schedule')}
+                className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
+                  ${resolvedTab === 'schedule'
+                    ? 'border-violet text-violet'
+                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Schedule
+                  {(appointmentCount ?? 0) > 0 && (
+                    <span className="bg-violet/20 text-violet text-xs px-1.5 py-0.5 rounded-pill font-medium">
+                      {appointmentCount}
+                    </span>
                   )}
                 </span>
               </button>

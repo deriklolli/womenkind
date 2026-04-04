@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
+import { useChatContext } from '@/lib/chat-context'
 
 type Tab = 'symptoms' | 'risks' | 'treatment' | 'questions'
 
@@ -28,6 +29,7 @@ export default function BriefViewerPage() {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const { setPageContext } = useChatContext()
 
   useEffect(() => {
     loadIntake()
@@ -45,6 +47,15 @@ export default function BriefViewerPage() {
       if (error) throw error
       setIntake(data)
       setNotes(data.provider_notes || '')
+
+      // Set chat context for AI assistant
+      setPageContext({
+        page: 'brief',
+        patientId: data.patient_id,
+        patientName: data.answers?.full_name || 'Unknown Patient',
+        intakeId: data.id,
+        intakeStatus: data.status,
+      })
 
       // Mark as reviewed if currently submitted
       if (data.status === 'submitted') {
