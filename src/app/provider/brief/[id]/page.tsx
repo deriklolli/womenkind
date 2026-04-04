@@ -29,6 +29,7 @@ export default function BriefViewerPage() {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [isMember, setIsMember] = useState(false)
   const { setPageContext } = useChatContext()
 
   useEffect(() => {
@@ -56,6 +57,18 @@ export default function BriefViewerPage() {
         intakeId: data.id,
         intakeStatus: data.status,
       })
+
+      // Check membership status
+      if (data.patient_id) {
+        const { data: subs } = await supabase
+          .from('subscriptions')
+          .select('status, plan_type')
+          .eq('patient_id', data.patient_id)
+          .eq('plan_type', 'membership')
+          .eq('status', 'active')
+          .limit(1)
+        setIsMember((subs?.length || 0) > 0)
+      }
 
       // Mark as reviewed if currently submitted
       if (data.status === 'submitted') {
@@ -136,6 +149,11 @@ export default function BriefViewerPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="font-serif text-2xl text-aubergine">{answers.full_name || 'Unknown Patient'}</h1>
+                {isMember && (
+                  <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-pill border border-emerald-200">
+                    Member
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
                 {age && <span>{age} years old</span>}

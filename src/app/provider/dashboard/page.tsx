@@ -15,6 +15,12 @@ interface Intake {
   submitted_at: string | null
   reviewed_at: string | null
   ai_brief: any
+  patients: {
+    subscriptions: {
+      status: string
+      plan_type: string
+    }[]
+  } | null
 }
 
 interface DirectoryPatient {
@@ -85,12 +91,12 @@ export default function ProviderDashboard() {
     try {
       const { data, error } = await supabase
         .from('intakes')
-        .select('id, status, answers, submitted_at, reviewed_at, ai_brief')
+        .select('id, status, answers, submitted_at, reviewed_at, ai_brief, patients(subscriptions(status, plan_type))')
         .in('status', ['submitted', 'reviewed', 'care_plan_sent'])
         .order('submitted_at', { ascending: false })
 
       if (error) throw error
-      setIntakes(data || [])
+      setIntakes((data as unknown as Intake[]) || [])
     } catch (err) {
       console.error('Failed to load intakes:', err)
     } finally {
@@ -263,6 +269,9 @@ export default function ProviderDashboard() {
                   const age = getPatientAgeFromAnswers(intake.answers)
                   const concerns = getTopConcerns(intake.answers)
                   const burden = getSymptomBurden(intake.ai_brief)
+                  const isMember = intake.patients?.subscriptions?.some(
+                    (s) => s.plan_type === 'membership' && s.status === 'active'
+                  )
                   const status = STATUS_CONFIG[intake.status] || STATUS_CONFIG.draft
 
                   return (
@@ -295,6 +304,11 @@ export default function ProviderDashboard() {
                                   'text-emerald-600 bg-emerald-50 border border-emerald-200'}`}
                               >
                                 {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
+                              </span>
+                            )}
+                            {isMember && (
+                              <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-pill border border-emerald-200 flex-shrink-0">
+                                Member
                               </span>
                             )}
                           </div>

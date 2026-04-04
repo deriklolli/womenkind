@@ -25,6 +25,10 @@ interface Appointment {
       last_name: string | null
       email: string | null
     }
+    subscriptions?: {
+      status: string
+      plan_type: string
+    }[]
   }
 }
 
@@ -144,6 +148,9 @@ export default function AppointmentsList({ providerId }: Props) {
                   const patientName = apt.patients?.profiles
                     ? `${apt.patients.profiles.first_name || ''} ${apt.patients.profiles.last_name || ''}`.trim()
                     : 'Patient'
+                  const isMember = apt.patients?.subscriptions?.some(
+                    (s) => s.plan_type === 'membership' && s.status === 'active'
+                  )
 
                   return (
                     <div
@@ -176,6 +183,11 @@ export default function AppointmentsList({ providerId }: Props) {
                               <span className={`px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill border ${statusStyle.bg} ${statusStyle.color}`}>
                                 {statusStyle.label}
                               </span>
+                              {isMember && (
+                                <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill border text-emerald-600 bg-emerald-50 border-emerald-200">
+                                  Member
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs font-sans text-aubergine/50 mt-0.5">
                               {apt.appointment_types?.name} · {apt.appointment_types?.duration_minutes} min

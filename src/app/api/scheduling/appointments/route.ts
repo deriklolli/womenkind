@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
         appointment_types(name, duration_minutes, price_cents, color),
         patients(
           id,
-          profiles(first_name, last_name, email)
+          profiles(first_name, last_name, email),
+          subscriptions(status, plan_type)
         )
       `)
       .order('starts_at', { ascending: true })

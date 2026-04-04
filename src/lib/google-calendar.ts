@@ -36,9 +36,24 @@ interface TokenResponse {
 
 /** Build the Google OAuth consent URL for a provider to connect their calendar. */
 export function buildOAuthUrl(state: string): string {
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
+  if (!clientId) throw new Error('GOOGLE_OAUTH_CLIENT_ID is not set')
+  if (!appUrl) throw new Error('NEXT_PUBLIC_APP_URL is not set')
+
+  // Strip trailing slash to avoid double-slash in redirect URI
+  const baseUrl = appUrl.replace(/\/+$/, '')
+  const redirectUri = `${baseUrl}/api/auth/google/callback`
+
+  console.log('[OAuth] Building consent URL:', {
+    clientId: clientId.substring(0, 12) + '...',
+    redirectUri,
+  })
+
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`,
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: [
       'https://www.googleapis.com/auth/calendar',
@@ -53,6 +68,9 @@ export function buildOAuthUrl(state: string): string {
 
 /** Exchange an authorization code for tokens. */
 export async function exchangeCodeForTokens(code: string): Promise<TokenResponse> {
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
+  const redirectUri = `${baseUrl}/api/auth/google/callback`
+
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -60,7 +78,7 @@ export async function exchangeCodeForTokens(code: string): Promise<TokenResponse
       code,
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
       client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`,
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     }),
   })
