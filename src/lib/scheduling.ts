@@ -8,6 +8,25 @@
  * 4. Google Calendar busy times (Phase 2)
  */
 
+export const PROVIDER_TIMEZONE = 'America/Denver'
+
+/**
+ * Create a Date for a date + time in the provider's local timezone.
+ * Availability windows are stored as local times (e.g. 09:00 Mountain),
+ * so we need to convert them to proper UTC-based Date objects.
+ */
+function dateInProviderTz(dateStr: string, timeStr: string): Date {
+  // Treat the input as UTC first
+  const asUtc = new Date(`${dateStr}T${timeStr}Z`)
+  // Find what local time it would be in Denver at that UTC instant
+  const localStr = asUtc.toLocaleString('en-US', { timeZone: PROVIDER_TIMEZONE })
+  const localAsUtc = new Date(localStr)
+  // The difference is the timezone offset
+  const offsetMs = localAsUtc.getTime() - asUtc.getTime()
+  // Shift so the Denver local time matches our input
+  return new Date(asUtc.getTime() - offsetMs)
+}
+
 export interface TimeSlot {
   start: string // ISO timestamp
   end: string   // ISO timestamp
@@ -48,8 +67,8 @@ export function computeAvailableSlots({
   for (const window of availabilityWindows) {
     const startTime = window.start_time.length <= 5 ? `${window.start_time}:00` : window.start_time
     const endTime = window.end_time.length <= 5 ? `${window.end_time}:00` : window.end_time
-    const windowStart = new Date(`${date}T${startTime}`)
-    const windowEnd = new Date(`${date}T${endTime}`)
+    const windowStart = dateInProviderTz(date, startTime)
+    const windowEnd = dateInProviderTz(date, endTime)
 
     let slotStart = new Date(windowStart)
 
@@ -111,8 +130,8 @@ export function isSlotAvailable({
   const withinWindow = availabilityWindows.some(window => {
     const startTime = window.start_time.length <= 5 ? `${window.start_time}:00` : window.start_time
     const endTime = window.end_time.length <= 5 ? `${window.end_time}:00` : window.end_time
-    const windowStart = new Date(`${date}T${startTime}`)
-    const windowEnd = new Date(`${date}T${endTime}`)
+    const windowStart = dateInProviderTz(date, startTime)
+    const windowEnd = dateInProviderTz(date, endTime)
     return requestedStart >= windowStart && requestedEnd <= windowEnd
   })
 
