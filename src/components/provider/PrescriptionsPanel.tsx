@@ -121,7 +121,7 @@ export default function PrescriptionsPanel({
         {!showForm && (
           <button
             onClick={() => { resetForm(); setShowForm(true) }}
-            className="text-sm font-sans font-medium text-white bg-violet hover:bg-violet-dark px-4 py-2 rounded-brand shadow-sm transition-colors flex items-center gap-1.5"
+            className="text-sm font-sans font-medium text-violet bg-white border border-violet/30 hover:bg-violet/5 px-4 py-2 rounded-brand transition-colors flex items-center gap-1.5"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -234,7 +234,7 @@ export default function PrescriptionsPanel({
                 className={`px-5 py-2.5 rounded-brand text-sm font-sans font-semibold transition-all shadow-sm flex items-center gap-2 ${
                   sent
                     ? 'bg-emerald-500 text-white'
-                    : 'bg-violet text-white hover:bg-violet-dark disabled:opacity-50'
+                    : 'bg-white text-violet border border-violet/30 hover:bg-violet/5 disabled:opacity-50'
                 }`}
               >
                 {sent ? (

@@ -161,7 +161,7 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-violet text-white text-sm font-sans font-medium rounded-brand hover:bg-violet-dark transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-white text-violet border border-violet/30 text-sm font-sans font-medium rounded-brand hover:bg-violet/5 transition-colors"
         >
           {showForm ? (
             <>

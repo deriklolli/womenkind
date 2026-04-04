@@ -30,6 +30,7 @@ export default function CreatePresentationPage() {
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [closingMessage, setClosingMessage] = useState('')
   const [activeComponent, setActiveComponent] = useState<string | null>(null)
+  const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -173,21 +174,27 @@ export default function CreatePresentationPage() {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-12">
           <button
-            onClick={() => router.push(`/provider/patient/${patientId}`)}
-            className="text-sm font-sans text-violet hover:text-violet-dark transition-colors mb-4 flex items-center gap-1"
+            onClick={() => router.back()}
+            className="text-xs font-sans text-aubergine/40 hover:text-aubergine/60 transition-colors mb-4 flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            Back to {patientName}
+            Back to Patient Intake
           </button>
           <h1 className="font-serif text-2xl text-aubergine tracking-tight">
             Create Care Presentation
           </h1>
+          <p className="text-xs font-sans text-violet mt-[15px]">
+            Step {step} of 2 — {step === 1 ? 'Body Systems' : 'Message & Send'}
+          </p>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
-            Select the body systems relevant to {firstName}&apos;s care and add personalized notes for each.
+            {step === 1
+              ? `Select the body systems relevant to ${firstName}'s care and add personalized notes for each.`
+              : `Add a personal welcome and closing message for ${firstName}.`
+            }
           </p>
         </div>
 
@@ -208,152 +215,200 @@ export default function CreatePresentationPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-8">
-          {/* Left: Component selection */}
-          <div className="col-span-1 space-y-3">
-            <h3 className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">
-              Body Systems
-            </h3>
-            {PRESENTATION_COMPONENTS.map((comp) => (
-              <button
-                key={comp.key}
-                onClick={() => toggleComponent(comp.key)}
-                className={`w-full text-left p-3 rounded-card border transition-all ${
-                  selected.has(comp.key)
-                    ? activeComponent === comp.key
-                      ? 'bg-white border-violet/30 shadow-md ring-2 ring-violet/10'
-                      : 'bg-white border-violet/20 shadow-sm'
-                    : 'bg-white/50 border-aubergine/5 hover:border-aubergine/15 hover:bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+        {/* Step 1: Body Systems */}
+        {step === 1 && (
+          <>
+            <div className="grid grid-cols-3 gap-8">
+              {/* Left: Component selection */}
+              <div className="col-span-1 space-y-3">
+                <h3 className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">
+                  Body Systems
+                </h3>
+                {PRESENTATION_COMPONENTS.map((comp) => (
+                  <button
+                    key={comp.key}
+                    onClick={() => toggleComponent(comp.key)}
+                    className={`w-full text-left p-3 rounded-card border transition-all ${
                       selected.has(comp.key)
-                        ? 'bg-violet/10'
-                        : 'bg-aubergine/5'
+                        ? activeComponent === comp.key
+                          ? 'bg-white border-violet/30 shadow-md ring-2 ring-violet/10'
+                          : 'bg-white border-violet/20 shadow-sm'
+                        : 'bg-white/50 border-aubergine/5 hover:border-aubergine/15 hover:bg-white'
                     }`}
                   >
-                    <svg
-                      className={`w-4 h-4 transition-colors ${
-                        selected.has(comp.key) ? 'text-violet' : 'text-aubergine/30'
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d={comp.icon} />
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                          selected.has(comp.key)
+                            ? 'bg-violet/10'
+                            : 'bg-aubergine/5'
+                        }`}
+                      >
+                        <svg
+                          className={`w-4 h-4 transition-colors ${
+                            selected.has(comp.key) ? 'text-violet' : 'text-aubergine/30'
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d={comp.icon} />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-sans transition-colors ${
+                          selected.has(comp.key) ? 'text-aubergine' : 'text-aubergine/50'
+                        }`}>
+                          {comp.label}
+                        </p>
+                      </div>
+                      {selected.has(comp.key) && (
+                        <svg className="w-4 h-4 text-violet flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                ))}
+
+                <p className="text-xs font-sans text-aubergine/30 mt-4 px-1">
+                  {selected.size} of 10 systems selected
+                </p>
+              </div>
+
+              {/* Right: Notes editor */}
+              <div className="col-span-2">
+                {activeComponent ? (
+                  <ComponentEditor
+                    component={PRESENTATION_COMPONENTS.find((c) => c.key === activeComponent)!}
+                    note={notes[activeComponent]?.provider_note || ''}
+                    onNoteChange={(text) => updateNote(activeComponent, text)}
+                    onAIDraft={() => handleAIDraft(activeComponent)}
+                    isDrafting={draftingAI === activeComponent}
+                    firstName={firstName}
+                  />
+                ) : selected.size > 0 ? (
+                  <div className="bg-white rounded-card p-8 shadow-sm border border-aubergine/5 text-center">
+                    <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-sans transition-colors ${
-                      selected.has(comp.key) ? 'text-aubergine' : 'text-aubergine/50'
-                    }`}>
-                      {comp.label}
+                    <p className="text-sm font-sans text-aubergine/40">
+                      Click a selected body system to add personalized notes
                     </p>
                   </div>
-                  {selected.has(comp.key) && (
-                    <svg className="w-4 h-4 text-violet flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                ) : (
+                  <div className="bg-white rounded-card p-8 shadow-sm border border-aubergine/5 text-center">
+                    <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
-                  )}
-                </div>
-              </button>
-            ))}
+                    <p className="text-sm font-sans text-aubergine/40">
+                      Select body systems from the left to begin building {firstName}&apos;s presentation
+                    </p>
+                  </div>
+                )}
 
-            <p className="text-xs font-sans text-aubergine/30 mt-4 px-1">
-              {selected.size} of 10 systems selected
-            </p>
-          </div>
-
-          {/* Right: Notes editor */}
-          <div className="col-span-2">
-            {activeComponent ? (
-              <ComponentEditor
-                component={PRESENTATION_COMPONENTS.find((c) => c.key === activeComponent)!}
-                note={notes[activeComponent]?.provider_note || ''}
-                onNoteChange={(text) => updateNote(activeComponent, text)}
-                onAIDraft={() => handleAIDraft(activeComponent)}
-                isDrafting={draftingAI === activeComponent}
-                firstName={firstName}
-              />
-            ) : selected.size > 0 ? (
-              <div className="bg-white rounded-card p-8 shadow-sm border border-aubergine/5 text-center">
-                <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                <p className="text-sm font-sans text-aubergine/40">
-                  Click a selected body system to add personalized notes
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-card p-8 shadow-sm border border-aubergine/5 text-center">
-                <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <p className="text-sm font-sans text-aubergine/40">
-                  Select body systems from the left to begin building {firstName}&apos;s presentation
-                </p>
-              </div>
-            )}
-
-            {/* Welcome & Closing messages */}
-            {selected.size > 0 && (
-              <div className="mt-6 space-y-4">
-                <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                  <label className="text-xs font-sans text-aubergine/50 mb-2 block">
-                    Welcome message (optional — a default will be used)
-                  </label>
-                  <textarea
-                    value={welcomeMessage}
-                    onChange={(e) => setWelcomeMessage(e.target.value)}
-                    rows={2}
-                    placeholder={`${firstName}, I've put together a personalized summary of what's happening in your body and how we're going to address it together.`}
-                    className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y"
-                  />
-                </div>
-                <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                  <label className="text-xs font-sans text-aubergine/50 mb-2 block">
-                    Closing message (optional — a default will be used)
-                  </label>
-                  <textarea
-                    value={closingMessage}
-                    onChange={(e) => setClosingMessage(e.target.value)}
-                    rows={2}
-                    placeholder="Remember, this is a journey and you're not alone in it. I'm here to guide you every step of the way. — Dr. Urban"
-                    className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Send button */}
-            {selected.size > 0 && (
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={handleSend}
-                  disabled={sending || sent}
-                  className="flex items-center gap-2 px-6 py-3 bg-aubergine text-white text-sm font-sans font-medium rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sending ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
+                {/* Next step button */}
+                {selected.size > 0 && (
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      onClick={() => setStep(2)}
+                      className="flex items-center gap-2 px-6 py-3 bg-aubergine text-white text-sm font-sans font-medium rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm"
+                    >
+                      Continue to Messages
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
-                      Generate &amp; Send Presentation
-                    </>
-                  )}
-                </button>
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </>
+        )}
+
+        {/* Step 2: Messages & Send */}
+        {step === 2 && (
+          <div className="max-w-2xl">
+            {/* Selected systems summary */}
+            <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 mb-6">
+              <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">
+                Selected Body Systems
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {Array.from(selected).map((key) => {
+                  const comp = PRESENTATION_COMPONENTS.find((c) => c.key === key)
+                  if (!comp) return null
+                  return (
+                    <span key={key} className="text-xs font-sans text-violet bg-violet/5 px-3 py-1.5 rounded-pill border border-violet/15">
+                      {comp.label}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Welcome message */}
+            <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 mb-4">
+              <label className="text-xs font-sans text-aubergine/50 mb-2 block">
+                Welcome message (optional — a default will be used)
+              </label>
+              <textarea
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                rows={3}
+                placeholder={`${firstName}, I've put together a personalized summary of what's happening in your body and how we're going to address it together.`}
+                className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y"
+              />
+            </div>
+
+            {/* Closing message */}
+            <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 mb-6">
+              <label className="text-xs font-sans text-aubergine/50 mb-2 block">
+                Closing message (optional — a default will be used)
+              </label>
+              <textarea
+                value={closingMessage}
+                onChange={(e) => setClosingMessage(e.target.value)}
+                rows={3}
+                placeholder="Remember, this is a journey and you're not alone in it. I'm here to guide you every step of the way. — Dr. Urban"
+                className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y"
+              />
+            </div>
+
+            {/* Back and Send buttons */}
+            <div className="flex justify-between">
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-2 px-5 py-3 text-sm font-sans font-medium text-aubergine/60 bg-white border border-aubergine/15 rounded-brand hover:bg-aubergine/5 hover:text-aubergine transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Body Systems
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending || sent}
+                className="flex items-center gap-2 px-6 py-3 bg-aubergine text-white text-sm font-sans font-medium rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Generate &amp; Send Presentation
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
