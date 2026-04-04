@@ -11,9 +11,9 @@ import {
   type IntakeQuestion,
 } from '@/lib/intake-questions'
 import Image from 'next/image'
-import IntakeQuestionLight from '@/components/IntakeQuestionLight'
-import IntakeProgressLight from '@/components/IntakeProgressLight'
-import SectionIntroLight from '@/components/SectionIntroLight'
+import IntakeQuestionCard from '@/components/IntakeQuestion'
+import IntakeProgress from '@/components/IntakeProgress'
+import SectionIntro from '@/components/SectionIntro'
 
 type Screen =
   | { type: 'welcome' }
@@ -76,6 +76,7 @@ export default function IntakePage() {
     if (screen.type === 'question') {
       return Math.round(((screen.index + 1) / visibleQuestions.length) * 100)
     }
+    // section-intro: find the index of the first question in this section
     if (screen.type === 'section-intro') {
       const idx = visibleQuestions.findIndex((q) => q.sec === screen.section)
       return idx >= 0 ? Math.round((idx / visibleQuestions.length) * 100) : 0
@@ -110,6 +111,7 @@ export default function IntakePage() {
 
   const startIntake = useCallback(() => {
     setAnimDirection('forward')
+    // Show intro for first section
     const firstSection = visibleQuestions[0]?.sec
     if (firstSection && SEC_INTROS[firstSection]) {
       setSeenSections(new Set([firstSection]))
@@ -175,6 +177,7 @@ export default function IntakePage() {
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true)
     try {
+      // Final save before submitting
       await autoSave(answers)
 
       const res = await fetch('/api/intake/submit', {
@@ -186,10 +189,12 @@ export default function IntakePage() {
 
       if (!res.ok) throw new Error(data.error || 'Submission failed')
 
+      // Redirect to payment gate
       const id = intakeId || data.intakeId
       router.push(`/intake/payment?intake_id=${id}`)
     } catch (err) {
       console.error('Submit error:', err)
+      // Still redirect to payment for demo
       if (intakeId) {
         router.push(`/intake/payment?intake_id=${intakeId}`)
       } else {
@@ -201,12 +206,17 @@ export default function IntakePage() {
   }, [answers, intakeId, autoSave])
 
   return (
-    <div className="min-h-screen bg-[#f7f3ee] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#1A0E30] flex flex-col relative overflow-hidden">
+      {/* Ambient background effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-violet/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#FA6B05]/3 rounded-full blur-[100px]" />
+      </div>
 
       {/* Progress bar (visible during questions) */}
       {screen.type !== 'welcome' && screen.type !== 'complete' && (
-        <div className="sticky top-0 z-20">
-          <IntakeProgressLight currentSection={currentSection} progress={progress} />
+        <div className="sticky top-0 z-20 bg-[#1A0E30]/80 backdrop-blur-xl">
+          <IntakeProgress currentSection={currentSection} progress={progress} />
         </div>
       )}
 
@@ -221,31 +231,31 @@ export default function IntakePage() {
             {/* Logo */}
             <div className="mb-10">
               <Image
-                src="/womenkind-logo-dark.png"
+                src="/womenkind-logo.png"
                 alt="Womenkind"
                 width={500}
                 height={100}
-                className="h-24 md:h-[7.2rem] w-auto mx-auto"
+                className="h-10 md:h-11 w-auto mx-auto"
                 priority
               />
             </div>
 
-            <h2 className="font-serif text-2xl md:text-3xl text-aubergine mb-4 tracking-tight leading-snug">
+            <h2 className="font-serif text-2xl md:text-3xl text-white mb-4 tracking-tight leading-snug">
               Your intake starts here
             </h2>
-            <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-4">
+            <p className="text-base text-white/50 font-sans leading-relaxed max-w-md mx-auto mb-4">
               This questionnaire helps your clinician understand your symptoms,
               history, and goals before your first visit. It takes about 15{'\u2013'}20 minutes.
             </p>
-            <p className="text-sm text-beige/40 font-sans mb-10">
+            <p className="text-sm text-white/30 font-sans mb-10">
               Your answers are private and stored securely.
             </p>
 
             <button
               onClick={startIntake}
               className="inline-flex items-center gap-3 px-10 py-4 rounded-full font-sans text-base font-semibold
-                         bg-violet text-white hover:bg-violet-dark
-                         transition-all duration-300 hover:scale-[1.02]"
+                         bg-[#FA6B05] text-white hover:bg-[#FF8228] shadow-xl shadow-[#FA6B05]/25
+                         hover:shadow-[#FA6B05]/50 transition-all duration-300 hover:scale-[1.02]"
             >
               Begin Your Intake
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/20">
@@ -259,7 +269,7 @@ export default function IntakePage() {
 
         {/* Section intro */}
         {screen.type === 'section-intro' && (
-          <SectionIntroLight
+          <SectionIntro
             key={screen.section}
             section={screen.section}
             intro={SEC_INTROS[screen.section] || ''}
@@ -270,7 +280,7 @@ export default function IntakePage() {
 
         {/* Question */}
         {screen.type === 'question' && visibleQuestions[screen.index] && (
-          <IntakeQuestionLight
+          <IntakeQuestionCard
             key={visibleQuestions[screen.index].id}
             question={visibleQuestions[screen.index]}
             value={answers[visibleQuestions[screen.index].id]}
@@ -290,26 +300,26 @@ export default function IntakePage() {
               ${completeVisible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
           >
             {/* Success icon */}
-            <div className="mb-8 inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#4ECDC4]/10 border-2 border-[#4ECDC4]/25">
+            <div className="mb-8 inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#4ECDC4]/15 border-2 border-[#4ECDC4]/30">
               <svg className="w-10 h-10 text-[#4ECDC4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
-            <h2 className="font-serif text-3xl md:text-4xl text-aubergine mb-4 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl text-white mb-4 tracking-tight">
               Intake complete
             </h2>
-            <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-3">
+            <p className="text-base text-white/50 font-sans leading-relaxed max-w-md mx-auto mb-3">
               Thank you for sharing this information. Your clinician will review
               your responses and prepare a personalized clinical brief before your visit.
             </p>
-            <p className="text-sm text-beige/40 font-sans mb-10">
+            <p className="text-sm text-white/30 font-sans mb-10">
               You{'\u2019'}ll receive an email when your brief is ready.
             </p>
 
-            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-violet/10 border border-violet/20">
-              <span className="w-2 h-2 rounded-full bg-violet animate-pulse" />
-              <span className="text-sm font-sans text-violet">Processing your intake</span>
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#4ECDC4]/10 border border-[#4ECDC4]/20">
+              <span className="w-2 h-2 rounded-full bg-[#4ECDC4] animate-pulse" />
+              <span className="text-sm font-sans text-[#4ECDC4]">Processing your intake</span>
             </div>
           </div>
         )}
@@ -318,14 +328,14 @@ export default function IntakePage() {
       {/* Keyboard nav hint at bottom */}
       {screen.type === 'question' && (
         <div className="pb-6 text-center">
-          <div className="inline-flex items-center gap-4 text-beige/20 text-xs font-sans">
+          <div className="inline-flex items-center gap-4 text-white/15 text-xs font-sans">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-aubergine/5 rounded text-[10px]">{'\u2191'}</kbd>
-              <kbd className="px-1.5 py-0.5 bg-aubergine/5 rounded text-[10px]">{'\u2193'}</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">{'\u2191'}</kbd>
+              <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">{'\u2193'}</kbd>
               navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-2 py-0.5 bg-aubergine/5 rounded text-[10px]">Enter</kbd>
+              <kbd className="px-2 py-0.5 bg-white/5 rounded text-[10px]">Enter</kbd>
               continue
             </span>
           </div>
