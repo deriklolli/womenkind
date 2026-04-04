@@ -12,6 +12,7 @@ function IntakePaymentContent() {
   const [error, setError] = useState('')
   const [fadeIn, setFadeIn] = useState(false)
   const [addMembership, setAddMembership] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(false)
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -278,6 +279,23 @@ function IntakePaymentContent() {
                 <span className="text-xs font-sans text-beige/40">Powered by Stripe</span>
               </div>
             </div>
+
+            {/* Demo bypass */}
+            <button
+              onClick={async () => {
+                setDemoLoading(true)
+                try {
+                  // Skip Stripe — just redirect to success
+                  window.location.href = `/intake2/payment-success?session_id=demo&intake_id=${intakeId || ''}`
+                } catch {
+                  setDemoLoading(false)
+                }
+              }}
+              disabled={demoLoading}
+              className="mt-4 text-xs font-sans text-aubergine/25 hover:text-violet/60 transition-colors underline underline-offset-2"
+            >
+              {demoLoading ? 'Redirecting...' : 'Demo: Skip Payment'}
+            </button>
 
             {/* Cancellation note */}
             <p className="text-center text-xs text-beige/40 font-sans mt-4">

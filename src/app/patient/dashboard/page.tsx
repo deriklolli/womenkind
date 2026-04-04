@@ -379,6 +379,17 @@ export default function PatientDashboardPage() {
                 </div>
                 <div className="border-t border-aubergine/5 py-1">
                   <button
+                    onClick={() => { setMenuOpen(false); router.push('/provider/dashboard') }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-violet/70 hover:bg-violet/5 hover:text-violet transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-violet/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                    Switch to Provider View
+                  </button>
+                </div>
+                <div className="border-t border-aubergine/5 py-1">
+                  <button
                     onClick={() => { setMenuOpen(false); handleLogout() }}
                     className="w-full text-left px-4 py-2.5 text-sm font-sans text-red-500/70 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-3"
                   >
@@ -407,6 +418,29 @@ export default function PatientDashboardPage() {
             Here's the latest on your care journey.
           </p>
         </div>
+
+        {/* Scheduling banner — show when paid but no upcoming appointments */}
+        {patient.intakeStatus && patient.intakeStatus !== 'draft' && (
+          <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <h2 className="font-serif text-lg text-aubergine mb-1">
+                Begin your health journey
+              </h2>
+              <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
+                Your intake is complete. Schedule your initial consultation with your provider to review your results and start your personalized care plan.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/patient/schedule')}
+              className="shrink-0 flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Schedule Appointment
+            </button>
+          </div>
+        )}
 
         {/* Membership notification */}
         {membershipParam === 'active' && (
