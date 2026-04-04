@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getComponent } from '@/lib/presentation-components'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(req: Request) {
   try {
@@ -22,19 +24,19 @@ export async function POST(req: Request) {
 
     // Load patient data, latest intake, and visits for context
     const [patientRes, intakeRes, visitsRes] = await Promise.all([
-      supabaseAdmin
+      getSupabaseAdmin()
         .from('patients')
         .select('id, date_of_birth, state, profiles ( first_name, last_name )')
         .eq('id', patientId)
         .single(),
-      supabaseAdmin
+      getSupabaseAdmin()
         .from('intakes')
         .select('answers, ai_brief')
         .eq('patient_id', patientId)
         .order('submitted_at', { ascending: false })
         .limit(1)
         .single(),
-      supabaseAdmin
+      getSupabaseAdmin()
         .from('visits')
         .select('visit_type, visit_date, symptom_scores, provider_notes, treatment_updates')
         .eq('patient_id', patientId)

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 interface ChatContext {
   page: string
@@ -21,14 +23,14 @@ interface ChatMessage {
 
 async function getPatientContext(patientId: string) {
   // Fetch patient profile
-  const { data: patient } = await supabaseAdmin
+  const { data: patient } = await getSupabaseAdmin()
     .from('patients')
     .select('*, profiles ( first_name, last_name, email )')
     .eq('id', patientId)
     .single()
 
   // Fetch intake
-  const { data: intake } = await supabaseAdmin
+  const { data: intake } = await getSupabaseAdmin()
     .from('intakes')
     .select('*')
     .eq('patient_id', patientId)
@@ -37,7 +39,7 @@ async function getPatientContext(patientId: string) {
     .single()
 
   // Fetch visits
-  const { data: visits } = await supabaseAdmin
+  const { data: visits } = await getSupabaseAdmin()
     .from('visits')
     .select('*')
     .eq('patient_id', patientId)
@@ -45,21 +47,21 @@ async function getPatientContext(patientId: string) {
     .limit(5)
 
   // Fetch prescriptions
-  const { data: prescriptions } = await supabaseAdmin
+  const { data: prescriptions } = await getSupabaseAdmin()
     .from('prescriptions')
     .select('*')
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false })
 
   // Fetch lab orders
-  const { data: labOrders } = await supabaseAdmin
+  const { data: labOrders } = await getSupabaseAdmin()
     .from('lab_orders')
     .select('*')
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false })
 
   // Fetch provider notes
-  const { data: providerNotes } = await supabaseAdmin
+  const { data: providerNotes } = await getSupabaseAdmin()
     .from('provider_notes')
     .select('*')
     .eq('patient_id', patientId)
@@ -81,7 +83,7 @@ async function executeAction(action: string, params: Record<string, any>) {
       case 'add_risk_flag': {
         const { intakeId, flagType, flag } = params
         // flagType: 'urgent' | 'contraindications' | 'considerations'
-        const { data: intake } = await supabaseAdmin
+        const { data: intake } = await getSupabaseAdmin()
           .from('intakes')
           .select('ai_brief')
           .eq('id', intakeId)
@@ -94,7 +96,7 @@ async function executeAction(action: string, params: Record<string, any>) {
         if (!brief.risk_flags[flagType]) brief.risk_flags[flagType] = []
         brief.risk_flags[flagType].push(flag)
 
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
           .from('intakes')
           .update({ ai_brief: brief })
           .eq('id', intakeId)
@@ -104,7 +106,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'remove_risk_flag': {
         const { intakeId: iId, flagType: fType, flag: fText } = params
-        const { data: intakeData } = await supabaseAdmin
+        const { data: intakeData } = await getSupabaseAdmin()
           .from('intakes')
           .select('ai_brief')
           .eq('id', iId)
@@ -117,7 +119,7 @@ async function executeAction(action: string, params: Record<string, any>) {
           b.risk_flags[fType] = b.risk_flags[fType].filter((f: string) => !f.toLowerCase().includes(fText.toLowerCase()))
         }
 
-        const { error: err } = await supabaseAdmin
+        const { error: err } = await getSupabaseAdmin()
           .from('intakes')
           .update({ ai_brief: b })
           .eq('id', iId)
@@ -127,7 +129,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'add_provider_note': {
         const { patientId, providerId, noteType, title, content } = params
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
           .from('provider_notes')
           .insert({
             patient_id: patientId,
@@ -142,7 +144,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'update_symptom_severity': {
         const { intakeId: sIntakeId, domain, severity } = params
-        const { data: sIntake } = await supabaseAdmin
+        const { data: sIntake } = await getSupabaseAdmin()
           .from('intakes')
           .select('ai_brief')
           .eq('id', sIntakeId)
@@ -158,7 +160,7 @@ async function executeAction(action: string, params: Record<string, any>) {
           domainEntry.severity = severity
         }
 
-        const { error: sErr } = await supabaseAdmin
+        const { error: sErr } = await getSupabaseAdmin()
           .from('intakes')
           .update({ ai_brief: sb })
           .eq('id', sIntakeId)

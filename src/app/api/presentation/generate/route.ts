@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(req: Request) {
   try {
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Get the latest intake for this patient (optional link)
-    const { data: latestIntake } = await supabaseAdmin
+    const { data: latestIntake } = await getSupabaseAdmin()
       .from('intakes')
       .select('id')
       .eq('patient_id', patientId)
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
       .single()
 
     // Create the presentation record
-    const { data: presentation, error } = await supabaseAdmin
+    const { data: presentation, error } = await getSupabaseAdmin()
       .from('care_presentations')
       .insert({
         patient_id: patientId,
