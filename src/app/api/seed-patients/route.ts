@@ -509,11 +509,22 @@ export async function POST(req: Request) {
 
   for (const persona of PERSONAS) {
     try {
-      // 1. Create profile
+      // 1. Create auth user via Supabase Admin API (profiles.id FK → auth.users)
+      const uniqueEmail = `seed-${persona.first_name.toLowerCase()}.${persona.last_name.toLowerCase()}@womenkind-demo.com`
+      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        email: uniqueEmail,
+        password: 'womenkind-demo-2026',
+        email_confirm: true,
+      })
+
+      if (authErr) throw authErr
+      const userId = authData.user.id
+
+      // 2. Create profile linked to auth user
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .insert({
-          id: crypto.randomUUID(),
+          id: userId,
           first_name: persona.first_name,
           last_name: persona.last_name,
           email: persona.email,
@@ -524,7 +535,7 @@ export async function POST(req: Request) {
 
       if (profileErr) throw profileErr
 
-      // 2. Create patient
+      // 3. Create patient
       const { data: patient, error: patientErr } = await supabase
         .from('patients')
         .insert({
@@ -538,7 +549,7 @@ export async function POST(req: Request) {
 
       if (patientErr) throw patientErr
 
-      // 3. Create intake with full answers, mark as submitted
+      // 4. Create intake with full answers, mark as submitted
       const submittedAt = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
       const { data: intake, error: intakeErr } = await supabase
         .from('intakes')
@@ -554,7 +565,7 @@ export async function POST(req: Request) {
 
       if (intakeErr) throw intakeErr
 
-      // 4. Create a subscription marked as paid (skip Stripe)
+      // 5. Create a subscription marked as paid (skip Stripe)
       await supabase.from('subscriptions').insert({
         patient_id: patient.id,
         plan_type: 'intake',
@@ -562,7 +573,7 @@ export async function POST(req: Request) {
         current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       })
 
-      // 5. Generate AI brief via the same function used in submit
+      // 6. Generate AI brief via the same function used in submit
       let briefGenerated = false
       const anthropicKey = process.env.ANTHROPIC_API_KEY
       if (anthropicKey) {
