@@ -44,7 +44,7 @@ export default function PatientSchedulePage() {
   const [patientId, setPatientId] = useState(DEMO_PATIENT_ID)
   const [providerId] = useState(DEMO_PROVIDER_ID)
   const [patientName, setPatientName] = useState('Sarah Mitchell')
-  const [patientEmail, setPatientEmail] = useState('sarah@example.com')
+  const [patientEmail, setPatientEmail] = useState('dlolli@gmail.com')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -89,7 +89,7 @@ export default function PatientSchedulePage() {
       const demoData = JSON.parse(demo)
       setPatientId(demoData.patientId || DEMO_PATIENT_ID)
       setPatientName('Sarah Mitchell')
-      setPatientEmail('sarah@example.com')
+      setPatientEmail('dlolli@gmail.com')
       setIsMember(true) // Demo patient Sarah is a member
       setLoading(false)
       return
