@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 
-export default function IntakePaymentPage() {
+function IntakePaymentContent() {
   const searchParams = useSearchParams()
   const intakeId = searchParams.get('intake_id')
   const canceled = searchParams.get('canceled')
@@ -294,5 +294,13 @@ export default function IntakePaymentPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function IntakePaymentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1A0E30]" />}>
+      <IntakePaymentContent />
+    </Suspense>
   )
 }

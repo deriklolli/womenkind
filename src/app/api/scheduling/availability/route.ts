@@ -3,6 +3,8 @@ import { getServiceSupabase } from '@/lib/supabase-server'
 import { computeAvailableSlots, getDayOfWeek } from '@/lib/scheduling'
 import { getProviderBusyTimes } from '@/lib/google-calendar'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/scheduling/availability?providerId=xxx&date=YYYY-MM-DD&appointmentTypeId=xxx
  *
