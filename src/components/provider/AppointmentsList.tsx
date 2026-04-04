@@ -60,32 +60,15 @@ export default function AppointmentsList({ providerId }: Props) {
   const router = useRouter()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming')
 
   useEffect(() => {
     fetchAppointments()
-  }, [providerId, filter])
+  }, [providerId])
 
   const fetchAppointments = async () => {
     setLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
       const params = new URLSearchParams({ providerId })
-
-      if (filter === 'upcoming') {
-        params.set('startDate', today)
-      } else if (filter === 'past') {
-        // Get last 30 days
-        const past = new Date()
-        past.setDate(past.getDate() - 30)
-        params.set('startDate', past.toISOString().split('T')[0])
-        params.set('endDate', today)
-      }
-
-      if (filter !== 'all') {
-        // Don't filter by status for 'all'
-      }
-
       const res = await fetch(`/api/scheduling/appointments?${params}`)
       const data = await res.json()
       setAppointments(data.appointments || [])
@@ -132,33 +115,12 @@ export default function AppointmentsList({ providerId }: Props) {
 
   return (
     <div>
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-5">
-        {([
-          { key: 'upcoming', label: 'Upcoming' },
-          { key: 'past', label: 'Past 30 Days' },
-          { key: 'all', label: 'All' },
-        ] as { key: typeof filter; label: string }[]).map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 text-xs font-sans font-medium rounded-pill transition-all ${
-              filter === f.key
-                ? 'bg-violet text-white'
-                : 'bg-white text-aubergine/50 border border-aubergine/15 hover:border-violet/30'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
       {loading ? (
         <div className="flex items-center justify-center h-40">
           <div className="w-6 h-6 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />
         </div>
       ) : appointments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-aubergine/10 p-12 text-center">
+        <div className="bg-white rounded-card border border-aubergine/10 p-12 text-center shadow-sm">
           <svg className="w-12 h-12 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -186,7 +148,7 @@ export default function AppointmentsList({ providerId }: Props) {
                   return (
                     <div
                       key={apt.id}
-                      className="bg-white rounded-xl border border-aubergine/10 p-4 hover:shadow-md transition-shadow"
+                      className="bg-white rounded-card border border-transparent hover:border-violet/10 p-4 shadow-sm hover:shadow-md transition-all duration-200"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">

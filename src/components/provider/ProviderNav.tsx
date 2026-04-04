@@ -94,13 +94,10 @@ export default function ProviderNav({
                 alt="Womenkind"
                 width={160}
                 height={36}
-                className="h-7 w-auto"
+                className="h-[25px] w-auto"
                 priority
               />
             </button>
-            <span className="text-xs font-sans text-white/40 border-l border-white/10 pl-6">
-              Provider Portal
-            </span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -210,9 +207,6 @@ export default function ProviderNav({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   My Patients
-                  {(patientCount ?? 0) > 0 && (
-                    <span className="text-xs text-aubergine/30">{patientCount}</span>
-                  )}
                 </span>
               </button>
               <button

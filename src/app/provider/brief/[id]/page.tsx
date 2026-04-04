@@ -136,16 +136,23 @@ export default function BriefViewerPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="font-serif text-2xl text-aubergine">{answers.full_name || 'Unknown Patient'}</h1>
-                {age && <span className="text-sm font-sans text-aubergine/40">{age} years old</span>}
               </div>
               <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
-                {answers.email && <span>{answers.email}</span>}
-                {answers.phone && <span>{answers.phone}</span>}
+                {age && <span>{age} years old</span>}
+                {answers.height && <span>{answers.height}</span>}
+                {answers.weight && <span>{answers.weight}</span>}
+                {answers.height && answers.weight && (() => {
+                  const hMatch = String(answers.height).match(/(\d+)'(\d+)/)
+                  if (!hMatch) return null
+                  const inches = parseInt(hMatch[1]) * 12 + parseInt(hMatch[2])
+                  const lbs = parseFloat(String(answers.weight).replace(/[^\d.]/g, ''))
+                  if (!inches || !lbs) return null
+                  const bmi = ((lbs / (inches * inches)) * 703).toFixed(1)
+                  return <span>BMI {bmi}</span>
+                })()}
               </div>
-            </div>
-            <div className="text-right">
               {brief.metadata && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-3">
                   <span className={`text-xs font-sans px-2.5 py-1 rounded-pill border
                     ${brief.metadata.symptom_burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
                       brief.metadata.symptom_burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
@@ -161,9 +168,17 @@ export default function BriefViewerPage() {
                   </span>
                 </div>
               )}
-              <p className="text-xs font-sans text-aubergine/30 mt-2">
-                Submitted {new Date(intake.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </p>
+            </div>
+            <div className="flex flex-col items-end flex-shrink-0">
+              <button
+                onClick={() => router.push(`/provider/presentation/create/${(intake as any).patient_id}`)}
+                className="text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Care Presentation
+              </button>
             </div>
           </div>
 
@@ -239,8 +254,6 @@ export default function BriefViewerPage() {
                   Quick Reference
                 </h4>
                 <div className="space-y-2 text-xs font-sans text-aubergine/60">
-                  {answers.height && <p><span className="text-aubergine/30">Height:</span> {answers.height}</p>}
-                  {answers.weight && <p><span className="text-aubergine/30">Weight:</span> {answers.weight}</p>}
                   {answers.height && answers.weight && (() => {
                     const hMatch = String(answers.height).match(/(\d+)'(\d+)/)
                     if (!hMatch) return null

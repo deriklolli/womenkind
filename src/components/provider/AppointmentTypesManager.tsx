@@ -91,7 +91,7 @@ export default function AppointmentTypesManager({ providerId }: Props) {
         {types.map(type => (
           <div
             key={type.id}
-            className="bg-white rounded-2xl border border-aubergine/10 p-5 hover:shadow-md transition-shadow"
+            className="bg-white rounded-card border border-transparent hover:border-violet/10 p-5 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2.5">
@@ -131,7 +131,7 @@ export default function AppointmentTypesManager({ providerId }: Props) {
         {/* Add new card */}
         <button
           onClick={() => setEditing({ name: '', duration_minutes: 30, price_cents: 0, color: '#944fed', description: '' })}
-          className="bg-white/50 border-2 border-dashed border-aubergine/15 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 hover:border-violet/40 hover:bg-violet/5 transition-all min-h-[140px]"
+          className="bg-white/50 border-2 border-dashed border-aubergine/15 rounded-card p-5 flex flex-col items-center justify-center gap-2 hover:border-violet/40 hover:bg-violet/5 transition-all min-h-[140px]"
         >
           <svg className="w-8 h-8 text-aubergine/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -143,7 +143,7 @@ export default function AppointmentTypesManager({ providerId }: Props) {
       {/* Edit modal */}
       {editing && (
         <div className="fixed inset-0 bg-aubergine/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <div className="bg-white rounded-card shadow-2xl w-full max-w-lg p-6">
             <h2 className="text-lg font-sans font-bold text-aubergine mb-5">
               {editing.id ? 'Edit' : 'New'} Appointment Type
             </h2>

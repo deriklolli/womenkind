@@ -125,7 +125,7 @@ export default function AvailabilityEditor({ providerId }: Props) {
 
   return (
     <div>
-      <div className="bg-white rounded-2xl border border-aubergine/10 overflow-hidden">
+      <div className="bg-white rounded-card border border-aubergine/10 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-aubergine/5">
           <h3 className="text-sm font-sans font-semibold text-aubergine">Weekly Hours</h3>
           <p className="text-xs font-sans text-aubergine/40 mt-0.5">
@@ -197,7 +197,7 @@ export default function AvailabilityEditor({ providerId }: Props) {
       </div>
 
       {/* Info note */}
-      <div className="mt-4 bg-violet/5 border border-violet/15 rounded-xl px-4 py-3 flex items-start gap-3">
+      <div className="mt-4 bg-violet/5 border border-violet/15 rounded-card px-4 py-3 flex items-start gap-3">
         <svg className="w-4 h-4 text-violet/60 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>

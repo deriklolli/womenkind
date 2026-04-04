@@ -278,8 +278,7 @@ export default function PatientProfilePage() {
 
   const TABS: { key: ProfileTab; label: string; count?: number }[] = [
     { key: 'overview', label: 'Overview & Trends' },
-    { key: 'intake', label: 'Intake Results', count: intakes.length },
-    { key: 'timeline', label: 'Visit Timeline', count: visits.length },
+{ key: 'timeline', label: 'Visit Timeline', count: visits.length },
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
     { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length },
@@ -310,6 +309,19 @@ export default function PatientProfilePage() {
                     <span className="text-sm font-sans text-aubergine/40">{patient.profiles.email}</span>
                   )}
                 </div>
+                {latestIntake && (
+                  <div className="flex items-center gap-2.5 mt-3">
+                    <button
+                      onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
+                      className="text-xs font-sans text-violet hover:text-violet-dark transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      View Clinical Brief
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -366,29 +378,6 @@ export default function PatientProfilePage() {
         {/* Tab content */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                <p className="text-xs font-sans text-aubergine/40 mb-1">Total Visits</p>
-                <p className="text-2xl font-sans font-semibold text-aubergine">{visits.length}</p>
-              </div>
-              <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                <p className="text-xs font-sans text-aubergine/40 mb-1">Last Visit</p>
-                <p className="text-lg font-sans font-semibold text-aubergine">
-                  {visits[0]
-                    ? new Date(visits[0].visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : '—'}
-                </p>
-              </div>
-              <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                <p className="text-xs font-sans text-aubergine/40 mb-1">Prescriptions</p>
-                <p className="text-2xl font-sans font-semibold text-aubergine">{prescriptions.length}</p>
-              </div>
-              <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-                <p className="text-xs font-sans text-aubergine/40 mb-1">Lab Orders</p>
-                <p className="text-2xl font-sans font-semibold text-aubergine">{labOrders.length}</p>
-              </div>
-            </div>
-
             {treatment && (
               <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5">
                 <h3 className="text-sm font-sans font-medium text-aubergine mb-3 flex items-center gap-2">
@@ -400,51 +389,6 @@ export default function PatientProfilePage() {
                 <p className="text-sm font-sans text-aubergine/70 whitespace-pre-wrap">{treatment}</p>
               </div>
             )}
-
-            {latestIntake && (
-              <div className="bg-gradient-to-r from-violet/5 to-aubergine/5 rounded-card p-5 border border-violet/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-sans font-medium text-aubergine">AI Clinical Brief</h3>
-                    <p className="text-xs font-sans text-aubergine/40 mt-0.5">
-                      Generated from intake on {latestIntake.submitted_at
-                        ? new Date(latestIntake.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
-                    className="text-sm font-sans font-medium text-violet hover:text-violet-dark transition-colors flex items-center gap-1.5 bg-white px-4 py-2 rounded-brand shadow-sm border border-violet/15 hover:border-violet/30"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    View Brief
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Care Presentation */}
-            <div className="bg-gradient-to-r from-terracota/5 to-violet/5 rounded-card p-5 border border-terracota/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-sans font-medium text-aubergine">Care Presentation</h3>
-                  <p className="text-xs font-sans text-aubergine/40 mt-0.5">
-                    Build a personalized, animated care summary for {name.split(' ')[0] || 'the patient'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
-                  className="text-sm font-sans font-medium text-terracota hover:text-terracota/80 transition-colors flex items-center gap-1.5 bg-white px-4 py-2 rounded-brand shadow-sm border border-terracota/15 hover:border-terracota/30"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Create Presentation
-                </button>
-              </div>
-            </div>
 
             <div>
               <h3 className="text-sm font-sans font-medium text-aubergine mb-4 flex items-center gap-2">

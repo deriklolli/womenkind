@@ -33,24 +33,24 @@ export default function ProviderSchedulePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-human">
+      <div className="min-h-screen bg-cream">
         <ProviderNav activeTab="schedule" />
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-human">
+    <div className="min-h-screen bg-cream">
       <ProviderNav activeTab="schedule" />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-sans font-bold text-aubergine">Schedule</h1>
+            <h1 className="font-serif text-2xl text-aubergine tracking-tight">Schedule</h1>
             <p className="text-sm font-sans text-aubergine/50 mt-1">
               Manage appointments, availability, and appointment types
             </p>
@@ -75,7 +75,7 @@ export default function ProviderSchedulePage() {
         </div>
 
         {/* Sub-tabs */}
-        <div className="flex gap-1 mb-6 bg-aubergine/5 rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-white rounded-brand p-1 w-fit shadow-sm">
           {([
             { key: 'appointments', label: 'Appointments' },
             { key: 'types', label: 'Appointment Types' },
@@ -84,10 +84,10 @@ export default function ProviderSchedulePage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-sans font-medium rounded-lg transition-all ${
+              className={`px-4 py-2 rounded-brand text-sm font-sans font-medium transition-all ${
                 activeTab === tab.key
-                  ? 'bg-white text-aubergine shadow-sm'
-                  : 'text-aubergine/50 hover:text-aubergine/70'
+                  ? 'bg-aubergine text-white shadow-sm'
+                  : 'text-aubergine/50 hover:text-aubergine hover:bg-aubergine/5'
               }`}
             >
               {tab.label}
