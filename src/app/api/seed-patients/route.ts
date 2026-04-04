@@ -509,52 +509,87 @@ export async function POST(req: Request) {
 
   for (const persona of PERSONAS) {
     try {
-      // 1. Create auth user via Supabase Admin API (profiles.id FK → auth.users)
+      // 1. Find or create auth user
       const uniqueEmail = `seed-${persona.first_name.toLowerCase()}.${persona.last_name.toLowerCase()}@womenkind-demo.com`
-      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-        email: uniqueEmail,
-        password: 'womenkind-demo-2026',
-        email_confirm: true,
-      })
+      let userId: string
 
-      if (authErr) throw authErr
-      const userId = authData.user.id
+      // Try to find existing auth user first
+      const { data: existingUsers } = await supabase.auth.admin.listUsers()
+      const existingUser = existingUsers?.users?.find((u: any) => u.email === uniqueEmail)
 
-      // 2. Create profile linked to auth user
-      const { data: profile, error: profileErr } = await supabase
+      if (existingUser) {
+        userId = existingUser.id
+      } else {
+        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+          email: uniqueEmail,
+          password: 'womenkind-demo-2026',
+          email_confirm: true,
+        })
+        if (authErr) throw authErr
+        userId = authData.user.id
+      }
+
+      // 2. Upsert profile
+      const { error: profileErr } = await supabase
         .from('profiles')
-        .insert({
+        .upsert({
           id: userId,
           first_name: persona.first_name,
           last_name: persona.last_name,
           email: persona.email,
           role: 'patient',
         })
-        .select('id')
-        .single()
 
       if (profileErr) throw profileErr
 
-      // 3. Create patient
-      const { data: patient, error: patientErr } = await supabase
+      // 3. Find or create patient
+      let patientId: string
+      const { data: existingPatient } = await supabase
         .from('patients')
-        .insert({
-          profile_id: profile.id,
-          date_of_birth: persona.dob,
-          phone: persona.phone,
-          state: persona.state,
-        })
         .select('id')
+        .eq('profile_id', userId)
         .single()
 
-      if (patientErr) throw patientErr
+      if (existingPatient) {
+        patientId = existingPatient.id
+      } else {
+        const { data: patient, error: patientErr } = await supabase
+          .from('patients')
+          .insert({
+            profile_id: userId,
+            date_of_birth: persona.dob,
+            phone: persona.phone,
+            state: persona.state,
+          })
+          .select('id')
+          .single()
+        if (patientErr) throw patientErr
+        patientId = patient.id
+      }
 
-      // 4. Create intake with full answers, mark as submitted
+      // 4. Check if intake already exists, skip if so
+      const { data: existingIntake } = await supabase
+        .from('intakes')
+        .select('id')
+        .eq('patient_id', patientId)
+        .single()
+
+      if (existingIntake) {
+        results.push({
+          name: `${persona.first_name} ${persona.last_name}`,
+          patientId,
+          intakeId: existingIntake.id,
+          skipped: true,
+        })
+        continue
+      }
+
+      // 5. Create intake with full answers, mark as submitted
       const submittedAt = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
       const { data: intake, error: intakeErr } = await supabase
         .from('intakes')
         .insert({
-          patient_id: patient.id,
+          patient_id: patientId,
           status: 'submitted',
           answers: persona.answers,
           started_at: new Date(new Date(submittedAt).getTime() - 30 * 60 * 1000).toISOString(),
@@ -567,7 +602,7 @@ export async function POST(req: Request) {
 
       // 5. Create a subscription marked as paid (skip Stripe)
       await supabase.from('subscriptions').insert({
-        patient_id: patient.id,
+        patient_id: patientId,
         plan_type: 'intake',
         status: 'active',
         current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
@@ -592,8 +627,8 @@ export async function POST(req: Request) {
 
       results.push({
         name: `${persona.first_name} ${persona.last_name}`,
-        profileId: profile.id,
-        patientId: patient.id,
+        profileId: userId,
+        patientId,
         intakeId: intake.id,
         briefGenerated,
       })
