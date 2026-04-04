@@ -32,6 +32,7 @@ interface BookedAppointment {
   starts_at: string
   ends_at: string
   status: string
+  video_room_url?: string | null
   appointment_types: { name: string; duration_minutes: number }
 }
 
@@ -185,6 +186,7 @@ export default function PatientSchedulePage() {
           starts_at: data.appointment.starts_at,
           ends_at: data.appointment.ends_at,
           status: 'confirmed',
+          video_room_url: data.appointment.video_room_url,
           appointment_types: {
             name: selectedType.name,
             duration_minutes: selectedType.duration_minutes,
@@ -459,7 +461,7 @@ export default function PatientSchedulePage() {
                     Apple / Outlook
                   </a>
                   <a
-                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((bookedAppointment.appointment_types?.name || 'Appointment') + ' — Womenkind')}&dates=${new Date(bookedAppointment.starts_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${new Date(bookedAppointment.ends_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}&details=${encodeURIComponent('Appointment with Dr. Joseph Urban Jr.')}&location=${encodeURIComponent('Virtual (video call)')}`}
+                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((bookedAppointment.appointment_types?.name || 'Appointment') + ' — Womenkind')}&dates=${new Date(bookedAppointment.starts_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${new Date(bookedAppointment.ends_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}&details=${encodeURIComponent('Appointment with Dr. Joseph Urban Jr.' + (bookedAppointment.video_room_url ? '\n\nJoin video call: ' + bookedAppointment.video_room_url : ''))}&location=${encodeURIComponent('Virtual (video call)')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium text-aubergine/60 bg-human/80 border border-aubergine/10 rounded-pill hover:border-violet/30 hover:text-violet transition-colors"

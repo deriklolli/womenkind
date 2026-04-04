@@ -337,7 +337,12 @@ export async function POST(req: NextRequest) {
       })
 
       return NextResponse.json({
-        appointment,
+        appointment: {
+          ...appointment,
+          video_room_url: videoRoom?.url || null,
+          video_room_name: videoRoom?.roomName || null,
+          google_calendar_event_id: calendarEventId || null,
+        },
         status: 'confirmed',
         message: 'Appointment booked successfully',
       })
