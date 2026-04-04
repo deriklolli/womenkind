@@ -3,6 +3,193 @@ import { getServiceSupabase } from '@/lib/supabase-server'
 import { getStripe } from '@/lib/stripe'
 import { isSlotAvailable, getDayOfWeek } from '@/lib/scheduling'
 import { createCalendarEvent } from '@/lib/google-calendar'
+import { createVideoRoom } from '@/lib/daily-video'
+import { Resend } from 'resend'
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY!)
+}
+
+async function sendBookingConfirmationEmail({
+  appointmentId,
+  patientEmail,
+  patientName,
+  appointmentName,
+  durationMinutes,
+  startsAt,
+  endsAt,
+  videoRoomUrl,
+}: {
+  appointmentId: string
+  patientEmail: string
+  patientName: string
+  appointmentName: string
+  durationMinutes: number
+  startsAt: string
+  endsAt: string
+  videoRoomUrl?: string | null
+}) {
+  if (!process.env.RESEND_API_KEY || !patientEmail) return
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  const firstName = patientName.split(' ')[0] || 'there'
+  const start = new Date(startsAt)
+  const end = new Date(endsAt)
+
+  const dateStr = start.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'America/Denver',
+  })
+  const startTime = start.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Denver',
+  })
+  const endTime = end.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Denver',
+  })
+
+  try {
+    const resend = getResend()
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>',
+      to: patientEmail,
+      subject: `Your ${appointmentName} is Confirmed`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7f3ee;">
+    <tr>
+      <td align="center" style="padding: 48px 24px 40px 24px;">
+        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width: 560px; width: 100%; background-color: #ffffff; border-radius: 20px; overflow: hidden;">
+          <tr>
+            <td style="padding: 40px 36px 32px 36px;">
+              <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #280f49;">
+                You're all set, ${firstName}!
+              </h1>
+              <p style="margin: 0 0 28px 0; font-size: 14px; color: #422a1f; opacity: 0.6; line-height: 1.5;">
+                Your appointment has been confirmed. We look forward to seeing you.
+              </p>
+
+              <!-- Appointment card -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7f3ee; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">
+                      ${appointmentName}
+                    </p>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
+                      ${durationMinutes} minutes with Dr. Joseph Urban Jr.
+                    </p>
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-right: 10px; vertical-align: top;">
+                          <span style="font-size: 16px; color: #944fed;">&#128197;</span>
+                        </td>
+                        <td style="padding-bottom: 8px;">
+                          <p style="margin: 0; font-size: 14px; color: #280f49;">${dateStr}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-right: 10px; vertical-align: top;">
+                          <span style="font-size: 16px; color: #944fed;">&#128336;</span>
+                        </td>
+                        <td>
+                          <p style="margin: 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
+                        </td>
+                      </tr>
+                      ${videoRoomUrl ? `<tr>
+                        <td style="padding-right: 10px; vertical-align: top;">
+                          <span style="font-size: 16px; color: #944fed;">&#128249;</span>
+                        </td>
+                        <td style="padding-top: 8px;">
+                          <p style="margin: 0; font-size: 14px; color: #280f49;">Virtual visit via video call</p>
+                        </td>
+                      </tr>` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              ${videoRoomUrl ? `
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${videoRoomUrl}" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
+                      Join Video Call
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 12px;">
+                    <a href="${appUrl}/patient/dashboard" style="font-size: 13px; color: #944fed; text-decoration: none;">
+                      or view your dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              ` : `
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/patient/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
+                      View Your Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              `}
+
+              <!-- Add to Calendar -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; border-top: 1px solid rgba(40,15,73,0.06); padding-top: 20px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #422a1f; opacity: 0.4;">Add to your calendar</p>
+                    <a href="${appUrl}/api/scheduling/calendar-export?appointmentId=${appointmentId}" style="font-size: 13px; color: #944fed; text-decoration: none; margin-right: 16px;">Apple / Outlook</a>
+                    <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointmentName + ' — Womenkind')}&dates=${new Date(startsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}/${new Date(endsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}&details=${encodeURIComponent('Appointment with Dr. Joseph Urban Jr.')}&location=${encodeURIComponent('Virtual (video call)')}" target="_blank" style="font-size: 13px; color: #944fed; text-decoration: none;">Google Calendar</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 32px 24px 48px 24px;">
+        <p style="margin: 0; font-size: 12px; color: #422a1f; opacity: 0.35;">
+          Womenkind &mdash; Personalized menopause &amp; midlife care
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
+    })
+    console.log(`[RESEND] Booking confirmation email sent to ${patientEmail}`)
+  } catch (emailErr) {
+    console.error('[RESEND] Failed to send booking confirmation:', emailErr)
+  }
+}
 
 /**
  * POST /api/scheduling/book
@@ -110,21 +297,44 @@ export async function POST(req: NextRequest) {
 
       if (insertError) throw insertError
 
-      // Create Google Calendar event
+      // Create video room for the appointment
+      const videoRoom = await createVideoRoom({
+        appointmentId: appointment.id,
+        appointmentName: appointmentType.name,
+        startsAt,
+        endsAt,
+      })
+
+      // Create Google Calendar event (include video link if available)
       const calendarEventId = await createCalendarEvent({
         providerId,
         summary: `${appointmentType.name} — ${patientName}`,
-        description: patientNotes || `${appointmentType.name} with ${patientName}`,
+        description: `${patientNotes || `${appointmentType.name} with ${patientName}`}${videoRoom ? `\n\nJoin video call: ${videoRoom.url}` : ''}`,
         startTime: startsAt,
         endTime: endsAt,
         patientEmail,
       })
 
-      // Update appointment with calendar event ID
+      // Update appointment with calendar event ID and video room
       await supabase
         .from('appointments')
-        .update({ google_calendar_event_id: calendarEventId })
+        .update({
+          google_calendar_event_id: calendarEventId,
+          ...(videoRoom ? { video_room_url: videoRoom.url, video_room_name: videoRoom.roomName } : {}),
+        })
         .eq('id', appointment.id)
+
+      // Send confirmation email
+      await sendBookingConfirmationEmail({
+        appointmentId: appointment.id,
+        patientEmail,
+        patientName,
+        appointmentName: appointmentType.name,
+        durationMinutes: appointmentType.duration_minutes,
+        startsAt,
+        endsAt,
+        videoRoomUrl: videoRoom?.url,
+      })
 
       return NextResponse.json({
         appointment,

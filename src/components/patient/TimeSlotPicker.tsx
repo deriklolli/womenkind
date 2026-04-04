@@ -14,19 +14,24 @@ interface Props {
   onSelect: (slot: TimeSlot) => void
 }
 
-function getDaysFromToday(count: number): { date: string; label: string; dayName: string; isToday: boolean }[] {
+function getWeekdaysFromToday(count: number): { date: string; label: string; dayName: string; isToday: boolean }[] {
   const days = []
   const today = new Date()
+  let i = 0
 
-  for (let i = 0; i < count; i++) {
+  while (days.length < count) {
     const d = new Date(today)
     d.setDate(d.getDate() + i)
-    days.push({
-      date: d.toISOString().split('T')[0],
-      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      isToday: i === 0,
-    })
+    const dow = d.getDay()
+    if (dow >= 1 && dow <= 5) {
+      days.push({
+        date: d.toISOString().split('T')[0],
+        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        isToday: i === 0,
+      })
+    }
+    i++
   }
   return days
 }
@@ -40,13 +45,13 @@ function formatSlotTime(isoStr: string): string {
 }
 
 export default function TimeSlotPicker({ providerId, appointmentTypeId, durationMinutes, onSelect }: Props) {
-  const [days] = useState(() => getDaysFromToday(21))
-  const [selectedDate, setSelectedDate] = useState(days[0]?.date || '')
+  const [days] = useState(() => getWeekdaysFromToday(15))
+  const [selectedDate, setSelectedDate] = useState(() => getWeekdaysFromToday(15)[0]?.date || '')
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
   const [weekOffset, setWeekOffset] = useState(0)
 
-  const visibleDays = days.slice(weekOffset * 7, weekOffset * 7 + 7)
+  const visibleDays = days.slice(weekOffset * 5, weekOffset * 5 + 5)
 
   useEffect(() => {
     if (!selectedDate) return
@@ -79,7 +84,7 @@ export default function TimeSlotPicker({ providerId, appointmentTypeId, duration
   return (
     <div>
       {/* Date selector */}
-      <div className="bg-white rounded-2xl border border-aubergine/10 p-4 mb-4">
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => setWeekOffset(Math.max(0, weekOffset - 1))}
@@ -104,7 +109,7 @@ export default function TimeSlotPicker({ providerId, appointmentTypeId, duration
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-5 gap-1.5">
           {visibleDays.map(day => (
             <button
               key={day.date}
@@ -136,7 +141,7 @@ export default function TimeSlotPicker({ providerId, appointmentTypeId, duration
       </div>
 
       {/* Time slots */}
-      <div className="bg-white rounded-2xl border border-aubergine/10 p-5">
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-5">
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <div className="w-6 h-6 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />

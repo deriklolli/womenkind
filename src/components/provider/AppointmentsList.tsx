@@ -12,6 +12,7 @@ interface Appointment {
   amount_cents: number
   patient_notes: string | null
   provider_notes: string | null
+  video_room_url: string | null
   appointment_types: {
     name: string
     duration_minutes: number
@@ -203,6 +204,19 @@ export default function AppointmentsList({ providerId }: Props) {
                         {/* Actions */}
                         {apt.status === 'confirmed' && (
                           <div className="flex items-center gap-1">
+                            {apt.video_room_url && (
+                              <a
+                                href={apt.video_room_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors mr-1"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                                Join Call
+                              </a>
+                            )}
                             <button
                               onClick={() => handleMarkComplete(apt.id)}
                               className="p-1.5 text-emerald-500/60 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"

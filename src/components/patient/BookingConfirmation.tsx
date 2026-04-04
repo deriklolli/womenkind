@@ -38,26 +38,20 @@ export default function BookingConfirmation({
 
   return (
     <div>
-      <h1 className="text-2xl font-sans font-bold text-aubergine mb-2">Confirm Your Appointment</h1>
-      <p className="text-sm font-sans text-aubergine/50 mb-6">
+      <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2 text-center">Confirm Your Appointment</h1>
+      <p className="text-sm font-sans text-aubergine/40 mb-6 text-center">
         Review the details below and confirm your booking.
       </p>
 
-      <div className="bg-white rounded-2xl border border-aubergine/10 p-6 max-w-lg">
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 max-w-lg mx-auto">
         {/* Appointment details */}
-        <div className="flex items-start gap-4 mb-5 pb-5 border-b border-aubergine/5">
-          <div
-            className="w-2 h-12 rounded-full flex-shrink-0 mt-0.5"
-            style={{ backgroundColor: appointmentType.color }}
-          />
-          <div className="flex-1">
-            <h3 className="text-base font-sans font-semibold text-aubergine">
-              {appointmentType.name}
-            </h3>
-            <p className="text-sm font-sans text-aubergine/50 mt-0.5">
-              with Dr. Joseph Urban Jr.
-            </p>
-          </div>
+        <div className="mb-5 pb-5 border-b border-aubergine/5">
+          <h3 className="text-base font-sans font-semibold text-aubergine">
+            {appointmentType.name}
+          </h3>
+          <p className="text-sm font-sans text-aubergine/50 mt-0.5">
+            with Dr. Joseph Urban Jr.
+          </p>
         </div>
 
         {/* Date & time */}
@@ -128,7 +122,7 @@ export default function BookingConfirmation({
         <button
           onClick={onBook}
           disabled={booking}
-          className="w-full py-3 text-sm font-sans font-semibold text-white bg-violet rounded-xl hover:bg-violet/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+          className="w-full py-3 text-sm font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {booking ? (
             <>

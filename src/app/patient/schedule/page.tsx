@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase-browser'
@@ -43,6 +43,10 @@ export default function PatientSchedulePage() {
   const [isMember, setIsMember] = useState(false)
   const [patientId, setPatientId] = useState(DEMO_PATIENT_ID)
   const [providerId] = useState(DEMO_PROVIDER_ID)
+  const [patientName, setPatientName] = useState('Sarah Mitchell')
+  const [patientEmail, setPatientEmail] = useState('sarah@example.com')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   // Booking state
   const [selectedType, setSelectedType] = useState<AppointmentType | null>(null)
@@ -59,6 +63,17 @@ export default function PatientSchedulePage() {
     checkAuth()
   }, [])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
+
   useEffect(() => {
     if (bookedId) {
       setStep('success')
@@ -73,6 +88,8 @@ export default function PatientSchedulePage() {
     if (demo) {
       const demoData = JSON.parse(demo)
       setPatientId(demoData.patientId || DEMO_PATIENT_ID)
+      setPatientName('Sarah Mitchell')
+      setPatientEmail('sarah@example.com')
       setIsMember(true) // Demo patient Sarah is a member
       setLoading(false)
       return
@@ -83,6 +100,18 @@ export default function PatientSchedulePage() {
     if (!session) {
       router.push('/patient/login')
       return
+    }
+
+    // Get profile for name/email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profile) {
+      setPatientName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Patient')
+      setPatientEmail(profile.email || session.user.email || '')
     }
 
     // Get patient ID and membership status
@@ -175,6 +204,12 @@ export default function PatientSchedulePage() {
     }
   }
 
+  const handleLogout = async () => {
+    localStorage.removeItem('womenkind_demo_patient')
+    await supabase.auth.signOut()
+    router.push('/patient/login')
+  }
+
   const handleBack = () => {
     if (step === 'pick-time') {
       setStep('select-type')
@@ -187,81 +222,163 @@ export default function PatientSchedulePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-human flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-human">
+    <div className="min-h-screen bg-cream">
       {/* Header */}
-      <nav className="bg-aubergine text-white">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
+      <nav className="bg-white border-b border-aubergine/5">
+        <div className="max-w-5xl mx-auto px-6 py-[3px] flex items-center justify-between">
           <button onClick={() => router.push('/patient/dashboard')} className="flex items-center">
             <Image
-              src="/womenkind-logo.png"
+              src="/womenkind-logo-dark.png"
               alt="Womenkind"
-              width={140}
-              height={32}
-              className="h-6 w-auto"
+              width={400}
+              height={90}
+              className="h-16 w-auto -ml-2"
               priority
             />
           </button>
-          <button
-            onClick={() => router.push('/patient/dashboard')}
-            className="text-xs font-sans text-white/50 hover:text-white transition-colors"
-          >
-            Back to Dashboard
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex items-center gap-2 text-sm font-sans text-aubergine/60 hover:text-aubergine transition-colors rounded-pill px-3 py-1.5 hover:bg-aubergine/5"
+            >
+              <div className="w-7 h-7 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-semibold text-violet">
+                  {patientName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              {patientName}
+              <svg
+                className={`w-3.5 h-3.5 text-aubergine/30 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-card shadow-xl shadow-aubergine/10 border border-aubergine/10 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-aubergine/5">
+                  <p className="text-sm font-sans font-medium text-aubergine">{patientName}</p>
+                  <p className="text-xs font-sans text-aubergine/40 mt-0.5">{patientEmail}</p>
+                </div>
+                <div className="py-1">
+                  <button
+                    onClick={() => { setMenuOpen(false); router.push('/patient/dashboard') }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                    </svg>
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false) }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false) }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Settings
+                  </button>
+                </div>
+                <div className="border-t border-aubergine/5 py-1">
+                  <button
+                    onClick={() => { setMenuOpen(false); router.push('/provider/dashboard') }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-violet/70 hover:bg-violet/5 hover:text-violet transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-violet/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                    Switch to Provider View
+                  </button>
+                </div>
+                <div className="border-t border-aubergine/5 py-1">
+                  <button
+                    onClick={() => { setMenuOpen(false); handleLogout() }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-sans text-red-500/70 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-3"
+                  >
+                    <svg className="w-4 h-4 text-red-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                    </svg>
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Progress bar */}
         {step !== 'success' && (
-          <div className="flex items-center gap-2 mb-8">
-            {['select-type', 'pick-time', 'confirm'].map((s, i) => (
-              <div key={s} className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-sans font-bold transition-all ${
-                  step === s
-                    ? 'bg-violet text-white'
-                    : ['select-type', 'pick-time', 'confirm'].indexOf(step) > i
-                      ? 'bg-violet/20 text-violet'
-                      : 'bg-aubergine/10 text-aubergine/30'
-                }`}>
-                  {['select-type', 'pick-time', 'confirm'].indexOf(step) > i ? (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : i + 1}
-                </div>
-                {i < 2 && <div className={`w-16 h-0.5 rounded-full ${
-                  ['select-type', 'pick-time', 'confirm'].indexOf(step) > i ? 'bg-violet/30' : 'bg-aubergine/10'
-                }`} />}
-              </div>
-            ))}
-          </div>
-        )}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {(['select-type', 'pick-time', 'confirm'] as const).map((s, i) => {
+              const steps: BookingStep[] = ['select-type', 'pick-time', 'confirm']
+              const currentIdx = steps.indexOf(step)
+              const isCompleted = currentIdx > i
+              const isCurrent = step === s
+              const canClick = isCompleted
 
-        {/* Back button */}
-        {(step === 'pick-time' || step === 'confirm') && (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1.5 text-sm font-sans text-aubergine/50 hover:text-aubergine mb-4 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back
-          </button>
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (!canClick) return
+                      if (s === 'select-type') {
+                        setSelectedType(null)
+                        setSelectedSlot(null)
+                      } else if (s === 'pick-time') {
+                        setSelectedSlot(null)
+                      }
+                      setStep(s)
+                    }}
+                    disabled={!canClick}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-sans font-bold transition-all ${
+                      isCurrent
+                        ? 'bg-violet text-white'
+                        : isCompleted
+                          ? 'bg-violet/20 text-violet hover:bg-violet/30 cursor-pointer'
+                          : 'bg-aubergine/10 text-aubergine/30'
+                    } ${canClick ? '' : 'cursor-default'}`}
+                  >
+                    {isCompleted ? (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : i + 1}
+                  </button>
+                  {i < 2 && <div className={`w-16 h-0.5 rounded-full ${
+                    currentIdx > i ? 'bg-violet/30' : 'bg-aubergine/10'
+                  }`} />}
+                </div>
+              )
+            })}
+          </div>
         )}
 
         {/* Step content */}
         {step === 'select-type' && (
           <div>
-            <h1 className="text-2xl font-sans font-bold text-aubergine mb-2">Book an Appointment</h1>
-            <p className="text-sm font-sans text-aubergine/50 mb-6">Select the type of appointment you&apos;d like to schedule with Dr. Urban.</p>
+            <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2 text-center">Book an Appointment</h1>
+            <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">Select the type of appointment you&apos;d like to schedule with Dr. Urban.</p>
             <AppointmentTypeSelector
               providerId={providerId}
               isMember={isMember}
@@ -272,8 +389,8 @@ export default function PatientSchedulePage() {
 
         {step === 'pick-time' && selectedType && (
           <div>
-            <h1 className="text-2xl font-sans font-bold text-aubergine mb-2">Choose a Time</h1>
-            <p className="text-sm font-sans text-aubergine/50 mb-6">
+            <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2 text-center">Choose a Time</h1>
+            <p className="text-sm font-sans text-aubergine/40 mb-6 text-center">
               Select a date and time for your {selectedType.name.toLowerCase()} ({selectedType.duration_minutes} min).
             </p>
             <TimeSlotPicker
@@ -304,13 +421,13 @@ export default function PatientSchedulePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-sans font-bold text-aubergine mb-2">Appointment Confirmed</h1>
-            <p className="text-sm font-sans text-aubergine/50 mb-6">
+            <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2">Appointment Confirmed</h1>
+            <p className="text-sm font-sans text-aubergine/40 mb-6">
               You&apos;re all set! We&apos;ll send you a reminder before your appointment.
             </p>
 
             {bookedAppointment && (
-              <div className="bg-white rounded-2xl border border-aubergine/10 p-6 max-w-sm mx-auto mb-6">
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 max-w-sm mx-auto mb-6">
                 <p className="text-sm font-sans font-semibold text-aubergine mb-1">
                   {bookedAppointment.appointment_types?.name || 'Appointment'}
                 </p>
@@ -329,12 +446,36 @@ export default function PatientSchedulePage() {
                   })}
                 </p>
                 <p className="text-xs font-sans text-aubergine/40 mt-2">with Dr. Joseph Urban Jr.</p>
+
+                {/* Add to Calendar */}
+                <div className="flex items-center justify-center gap-3 mt-5 pt-4 border-t border-aubergine/5">
+                  <a
+                    href={`/api/scheduling/calendar-export?appointmentId=${bookedAppointment.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium text-aubergine/60 bg-human/80 border border-aubergine/10 rounded-pill hover:border-violet/30 hover:text-violet transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Apple / Outlook
+                  </a>
+                  <a
+                    href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent((bookedAppointment.appointment_types?.name || 'Appointment') + ' — Womenkind')}&dates=${new Date(bookedAppointment.starts_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${new Date(bookedAppointment.ends_at).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}&details=${encodeURIComponent('Appointment with Dr. Joseph Urban Jr.')}&location=${encodeURIComponent('Virtual (video call)')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium text-aubergine/60 bg-human/80 border border-aubergine/10 rounded-pill hover:border-violet/30 hover:text-violet transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Google Calendar
+                  </a>
+                </div>
               </div>
             )}
 
             <button
               onClick={() => router.push('/patient/dashboard')}
-              className="px-6 py-2.5 text-sm font-sans font-medium text-white bg-violet rounded-xl hover:bg-violet/90 transition-colors"
+              className="px-6 py-2.5 text-sm font-sans font-medium text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
             >
               Return to Dashboard
             </button>

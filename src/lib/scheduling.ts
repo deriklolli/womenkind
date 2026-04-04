@@ -46,8 +46,10 @@ export function computeAvailableSlots({
   const slots: TimeSlot[] = []
 
   for (const window of availabilityWindows) {
-    const windowStart = new Date(`${date}T${window.start_time}:00`)
-    const windowEnd = new Date(`${date}T${window.end_time}:00`)
+    const startTime = window.start_time.length <= 5 ? `${window.start_time}:00` : window.start_time
+    const endTime = window.end_time.length <= 5 ? `${window.end_time}:00` : window.end_time
+    const windowStart = new Date(`${date}T${startTime}`)
+    const windowEnd = new Date(`${date}T${endTime}`)
 
     let slotStart = new Date(windowStart)
 
@@ -107,8 +109,10 @@ export function isSlotAvailable({
 
   // Check the slot falls within an availability window
   const withinWindow = availabilityWindows.some(window => {
-    const windowStart = new Date(`${date}T${window.start_time}:00`)
-    const windowEnd = new Date(`${date}T${window.end_time}:00`)
+    const startTime = window.start_time.length <= 5 ? `${window.start_time}:00` : window.start_time
+    const endTime = window.end_time.length <= 5 ? `${window.end_time}:00` : window.end_time
+    const windowStart = new Date(`${date}T${startTime}`)
+    const windowEnd = new Date(`${date}T${endTime}`)
     return requestedStart >= windowStart && requestedEnd <= windowEnd
   })
 
