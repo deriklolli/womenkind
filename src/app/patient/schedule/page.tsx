@@ -83,21 +83,21 @@ export default function PatientSchedulePage() {
   }, [bookedId])
 
   const checkAuth = async () => {
-    // Demo mode check
-    const demo = localStorage.getItem('womenkind_demo_patient')
-    if (demo) {
-      const demoData = JSON.parse(demo)
-      setPatientId(demoData.patientId || DEMO_PATIENT_ID)
-      setPatientName('Sarah Mitchell')
-      setPatientEmail('dlolli@gmail.com')
-      setIsMember(true) // Demo patient Sarah is a member
-      setLoading(false)
-      return
-    }
-
-    // Real auth
+    // Check real auth first (takes priority over demo mode)
     const { data: { session } } = await supabase.auth.getSession()
+
     if (!session) {
+      // Fall back to demo mode if no real session
+      const demo = localStorage.getItem('womenkind_demo_patient')
+      if (demo) {
+        const demoData = JSON.parse(demo)
+        setPatientId(demoData.patientId || DEMO_PATIENT_ID)
+        setPatientName('Sarah Mitchell')
+        setPatientEmail('dlolli@gmail.com')
+        setIsMember(true) // Demo patient Sarah is a member
+        setLoading(false)
+        return
+      }
       router.push('/patient/login')
       return
     }

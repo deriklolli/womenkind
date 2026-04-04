@@ -207,20 +207,20 @@ export default function PatientDashboardPage() {
   }, [menuOpen])
 
   const loadPatientData = async () => {
-    // Check for demo mode
-    const demo = localStorage.getItem('womenkind_demo_patient')
-    if (demo) {
-      setPatient(DEMO_PATIENT)
-      setLoading(false)
-      return
-    }
-
-    // Load from Supabase
+    // Check real auth first (takes priority over demo mode)
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession()
+
       if (!session) {
+        // Fall back to demo mode if no real session
+        const demo = localStorage.getItem('womenkind_demo_patient')
+        if (demo) {
+          setPatient(DEMO_PATIENT)
+          setLoading(false)
+          return
+        }
         router.replace('/patient/login')
         return
       }
