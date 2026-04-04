@@ -241,7 +241,7 @@ export default function PatientDashboardPage() {
         .from('patients')
         .select('id')
         .eq('profile_id', userId)
-        .single()
+        .maybeSingle()
 
       // Get latest intake
       let intakeData = null
@@ -252,7 +252,7 @@ export default function PatientDashboardPage() {
           .eq('patient_id', patientRecord.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
         intakeData = intake
       }
 
@@ -267,7 +267,7 @@ export default function PatientDashboardPage() {
           .eq('plan_type', 'membership')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
 
         if (sub) {
           membershipStatus = sub.status as MembershipStatus
@@ -304,7 +304,7 @@ export default function PatientDashboardPage() {
           .in('status', ['sent', 'viewed'])
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
         presentationId = presData?.id || null
       }
 
