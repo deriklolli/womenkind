@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
       ends_at: a.ends_at,
     })) || []
 
-    // 6. Get Google Calendar busy times
-    const busyTimes = await getProviderBusyTimes(providerId, dayStart, dayEnd)
+    // 6. Get Google Calendar busy times (pass YYYY-MM-DD format)
+    const busyTimes = await getProviderBusyTimes(providerId, date, date)
 
     // 7. Compute available slots
     const slots = computeAvailableSlots({

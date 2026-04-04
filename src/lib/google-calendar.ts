@@ -1,49 +1,256 @@
-/**
- * Google Calendar Integration Layer
- *
- * Currently mocked for demo. Provides the real interface that will
- * be swapped for actual Google Calendar API + OAuth in Phase 2.
- *
- * Phase 2 TODO:
- * - Add Google OAuth credentials to .env.local
- * - Implement real getProviderBusyTimes using Google Calendar API freebusy query
- * - Implement real createCalendarEvent / cancelCalendarEvent
- * - Store provider's Google Calendar ID in providers table
- */
+import { createClient } from '@supabase/supabase-js'
+import { encrypt, decrypt } from './encryption'
+
+// ── Supabase (service role) ──────────────────────────────────────────
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+// ── Types ────────────────────────────────────────────────────────────
+export interface BusyTime {
+  starts_at: string // ISO datetime  (matches scheduling.ts interface)
+  ends_at: string   // ISO datetime
+}
 
 export interface CalendarEvent {
-  id: string
+  id?: string
   summary: string
   description?: string
-  startTime: string // ISO
-  endTime: string   // ISO
+  startTime: string // ISO datetime
+  endTime: string   // ISO datetime
   attendees?: string[]
+  timeZone?: string
 }
 
-export interface BusyTime {
-  starts_at: string
-  ends_at: string
+interface TokenResponse {
+  access_token: string
+  expires_in: number
+  refresh_token?: string
+  token_type: string
 }
 
-/**
- * Get busy times from the provider's Google Calendar.
- * Phase 2: Replace with real Google Calendar API freebusy query.
- */
+// ── OAuth Helpers ────────────────────────────────────────────────────
+
+/** Build the Google OAuth consent URL for a provider to connect their calendar. */
+export function buildOAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`,
+    response_type: 'code',
+    scope: [
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ].join(' '),
+    state,
+    access_type: 'offline',
+    prompt: 'consent',
+  })
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+}
+
+/** Exchange an authorization code for tokens. */
+export async function exchangeCodeForTokens(code: string): Promise<TokenResponse> {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`,
+      grant_type: 'authorization_code',
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Token exchange failed: ${res.status} — ${text}`)
+  }
+  return res.json()
+}
+
+/** Refresh an expired access token. */
+async function refreshAccessToken(refreshTokenEncrypted: string): Promise<TokenResponse> {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      refresh_token: decrypt(refreshTokenEncrypted),
+      grant_type: 'refresh_token',
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Token refresh failed: ${res.status} — ${text}`)
+  }
+  return res.json()
+}
+
+/** Get a valid access token for a provider, auto-refreshing if expired. */
+export async function getValidAccessToken(providerId: string): Promise<string> {
+  const supabase = getSupabase()
+
+  const { data: conn, error } = await supabase
+    .from('provider_calendar_connections')
+    .select('*')
+    .eq('provider_id', providerId)
+    .eq('is_active', true)
+    .single()
+
+  if (error || !conn) throw new Error('No active calendar connection for this provider')
+
+  // If token is still valid (with 5-minute buffer), return it
+  if (new Date(conn.token_expires_at) > new Date(Date.now() + 5 * 60 * 1000)) {
+    return decrypt(conn.access_token_encrypted)
+  }
+
+  // Refresh the token
+  const tokens = await refreshAccessToken(conn.refresh_token_encrypted)
+
+  // Update stored tokens
+  await supabase
+    .from('provider_calendar_connections')
+    .update({
+      access_token_encrypted: encrypt(tokens.access_token),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', conn.id)
+
+  return tokens.access_token
+}
+
+/** Get the Google email from a token. */
+export async function getGoogleEmail(accessToken: string): Promise<string> {
+  const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) throw new Error('Failed to get Google user info')
+  const data = await res.json()
+  return data.email
+}
+
+// ── Calendar API ─────────────────────────────────────────────────────
+
+/** Save a new calendar connection for a provider. */
+export async function saveCalendarConnection(
+  providerId: string,
+  tokens: TokenResponse,
+  googleEmail: string,
+  timezone: string = 'America/Denver'
+) {
+  const supabase = getSupabase()
+
+  const { error } = await supabase
+    .from('provider_calendar_connections')
+    .upsert({
+      provider_id: providerId,
+      google_email: googleEmail,
+      google_calendar_id: 'primary',
+      access_token_encrypted: encrypt(tokens.access_token),
+      refresh_token_encrypted: encrypt(tokens.refresh_token!),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      timezone,
+      is_active: true,
+      synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'provider_id' })
+
+  if (error) throw error
+}
+
+/** Check if Google Calendar is connected for a provider. */
+export async function isGoogleCalendarConnected(providerId: string): Promise<boolean> {
+  const supabase = getSupabase()
+  const { data } = await supabase
+    .from('provider_calendar_connections')
+    .select('id')
+    .eq('provider_id', providerId)
+    .eq('is_active', true)
+    .maybeSingle()
+  return !!data
+}
+
+/** Get connection info (non-sensitive) for display. */
+export async function getCalendarConnectionInfo(providerId: string) {
+  const supabase = getSupabase()
+  const { data } = await supabase
+    .from('provider_calendar_connections')
+    .select('google_email, timezone, synced_at, is_active, created_at')
+    .eq('provider_id', providerId)
+    .eq('is_active', true)
+    .maybeSingle()
+  return data
+}
+
+/** Fetch busy times from a provider's Google Calendar. */
 export async function getProviderBusyTimes(
-  _providerId: string,
-  _startDate: string,
-  _endDate: string
+  providerId: string,
+  startDate: string, // YYYY-MM-DD
+  endDate: string,   // YYYY-MM-DD
+  timezone: string = 'America/Denver'
 ): Promise<BusyTime[]> {
-  // Mock: return a few realistic busy blocks for demo
-  // In production, this queries Google Calendar API:
-  // calendar.freebusy.query({ timeMin, timeMax, items: [{ id: calendarId }] })
-  return []
+  let accessToken: string
+  try {
+    accessToken = await getValidAccessToken(providerId)
+  } catch {
+    return [] // No calendar connected — graceful degradation
+  }
+
+  const supabase = getSupabase()
+  const { data: conn } = await supabase
+    .from('provider_calendar_connections')
+    .select('google_calendar_id')
+    .eq('provider_id', providerId)
+    .eq('is_active', true)
+    .single()
+
+  const calendarId = conn?.google_calendar_id || 'primary'
+
+  const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      timeMin: `${startDate}T00:00:00`,
+      timeMax: `${endDate}T23:59:59`,
+      timeZone: timezone,
+      items: [{ id: calendarId }],
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.error('Google Calendar freeBusy error:', text)
+    await supabase.from('calendar_event_logs').insert({
+      provider_id: providerId,
+      action: 'sync_error',
+      error_message: `freeBusy failed: ${res.status} — ${text}`,
+    })
+    return []
+  }
+
+  const data = await res.json()
+  const busySlots = data.calendars?.[calendarId]?.busy || []
+
+  await supabase
+    .from('provider_calendar_connections')
+    .update({ synced_at: new Date().toISOString() })
+    .eq('provider_id', providerId)
+
+  return busySlots.map((slot: { start: string; end: string }) => ({
+    starts_at: slot.start,
+    ends_at: slot.end,
+  }))
 }
 
-/**
- * Create a Google Calendar event when an appointment is booked.
- * Phase 2: Replace with real Google Calendar API event creation.
- */
+/** Create an event on a provider's Google Calendar. Returns the Google event ID. */
 export async function createCalendarEvent(event: {
   providerId: string
   summary: string
@@ -52,33 +259,137 @@ export async function createCalendarEvent(event: {
   endTime: string
   patientEmail?: string
 }): Promise<string> {
-  // Mock: generate a fake event ID and log
-  const eventId = `gcal_evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-  console.log(`[Google Calendar Mock] Event created:`, {
-    id: eventId,
+  const supabase = getSupabase()
+
+  let accessToken: string
+  try {
+    accessToken = await getValidAccessToken(event.providerId)
+  } catch {
+    // No calendar connected — return a local-only ID
+    console.warn('No Google Calendar connected, skipping event creation')
+    return `local_${Date.now()}`
+  }
+
+  const { data: conn } = await supabase
+    .from('provider_calendar_connections')
+    .select('google_calendar_id, timezone')
+    .eq('provider_id', event.providerId)
+    .eq('is_active', true)
+    .single()
+
+  const calendarId = conn?.google_calendar_id || 'primary'
+  const tz = conn?.timezone || 'America/Denver'
+
+  const googleEvent = {
     summary: event.summary,
-    start: event.startTime,
-    end: event.endTime,
+    description: event.description || '',
+    start: { dateTime: event.startTime, timeZone: tz },
+    end: { dateTime: event.endTime, timeZone: tz },
+    attendees: event.patientEmail ? [{ email: event.patientEmail }] : [],
+    reminders: { useDefault: true },
+  }
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(googleEvent),
+    }
+  )
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.error('Google Calendar create event error:', text)
+    await supabase.from('calendar_event_logs').insert({
+      provider_id: event.providerId,
+      action: 'sync_error',
+      error_message: `create failed: ${res.status} — ${text}`,
+    })
+    return `local_${Date.now()}`
+  }
+
+  const created = await res.json()
+
+  await supabase.from('calendar_event_logs').insert({
+    provider_id: event.providerId,
+    google_event_id: created.id,
+    action: 'created',
   })
-  return eventId
+
+  return created.id
 }
 
-/**
- * Cancel/delete a Google Calendar event.
- * Phase 2: Replace with real Google Calendar API event deletion.
- */
+/** Cancel/delete a Google Calendar event. */
 export async function cancelCalendarEvent(
-  _providerId: string,
-  eventId: string
+  providerId: string,
+  googleEventId: string
 ): Promise<void> {
-  console.log(`[Google Calendar Mock] Event canceled: ${eventId}`)
+  if (googleEventId.startsWith('local_')) return // Not a real Google event
+
+  const supabase = getSupabase()
+
+  let accessToken: string
+  try {
+    accessToken = await getValidAccessToken(providerId)
+  } catch {
+    return // Can't cancel if no connection
+  }
+
+  const { data: conn } = await supabase
+    .from('provider_calendar_connections')
+    .select('google_calendar_id')
+    .eq('provider_id', providerId)
+    .eq('is_active', true)
+    .single()
+
+  const calendarId = conn?.google_calendar_id || 'primary'
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleEventId)}?sendUpdates=all`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  )
+
+  if (res.ok || res.status === 410) {
+    await supabase.from('calendar_event_logs').insert({
+      provider_id: providerId,
+      google_event_id: googleEventId,
+      action: 'deleted',
+    })
+  } else {
+    const text = await res.text()
+    console.error('Google Calendar delete error:', text)
+    await supabase.from('calendar_event_logs').insert({
+      provider_id: providerId,
+      google_event_id: googleEventId,
+      action: 'sync_error',
+      error_message: `delete failed: ${res.status} — ${text}`,
+    })
+  }
 }
 
-/**
- * Check if Google Calendar is connected for a provider.
- * Phase 2: Check for valid OAuth tokens.
- */
-export function isGoogleCalendarConnected(_providerId: string): boolean {
-  // Mock: always return true for demo
-  return true
+/** Disconnect a provider's Google Calendar. */
+export async function disconnectCalendar(providerId: string): Promise<void> {
+  const supabase = getSupabase()
+
+  try {
+    const accessToken = await getValidAccessToken(providerId)
+    await fetch(`https://oauth2.googleapis.com/revoke?token=${accessToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+  } catch {
+    // Token may already be invalid — fine
+  }
+
+  await supabase
+    .from('provider_calendar_connections')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('provider_id', providerId)
 }

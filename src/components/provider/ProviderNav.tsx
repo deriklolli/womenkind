@@ -140,7 +140,7 @@ export default function ProviderNav({
                         Profile
                       </button>
                       <button
-                        onClick={() => { setMenuOpen(false) }}
+                        onClick={() => { setMenuOpen(false); router.push('/provider/settings') }}
                         className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
                       >
                         <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
