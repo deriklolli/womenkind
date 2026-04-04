@@ -9,6 +9,7 @@ type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
 
 interface PatientData {
+  patientId: string
   name: string
   email: string
   intakeStatus: IntakeStatus | null
@@ -27,6 +28,7 @@ interface PatientData {
 
 // Demo data for investor demo
 const DEMO_PATIENT: PatientData = {
+  patientId: 'c0000000-0000-0000-0000-000000000001',
   name: 'Sarah Mitchell',
   email: 'sarah@example.com',
   intakeStatus: 'reviewed',
@@ -307,6 +309,7 @@ export default function PatientDashboardPage() {
       }
 
       setPatient({
+        patientId: patientRecord?.id || '',
         name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Patient',
         email: profile?.email || session.user.email || '',
         intakeStatus: intakeData?.status || null,
@@ -735,12 +738,7 @@ export default function PatientDashboardPage() {
             )}
 
             {/* Upcoming Appointments */}
-            <UpcomingAppointments patientId={
-              (() => {
-                const demo = typeof window !== 'undefined' ? localStorage.getItem('womenkind_demo_patient') : null
-                return demo ? 'c0000000-0000-0000-0000-000000000001' : ''
-              })()
-            } />
+            <UpcomingAppointments patientId={patient.patientId} />
 
             {/* Care Presentation link */}
             {patient.presentationId && (
