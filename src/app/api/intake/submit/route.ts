@@ -16,15 +16,16 @@ function getSupabase() {
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabase()
-    const { intakeId, answers } = await req.json()
+    const { intakeId, patientId, answers } = await req.json()
 
-    // 1. Update intake status to submitted
+    // 1. Update intake status to submitted (and link to patient if provided)
     const { error: updateError } = await supabase
       .from('intakes')
       .update({
         status: 'submitted',
         answers,
         submitted_at: new Date().toISOString(),
+        ...(patientId ? { patient_id: patientId } : {}),
       })
       .eq('id', intakeId)
 

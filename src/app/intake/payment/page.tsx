@@ -286,7 +286,7 @@ function IntakePaymentContent() {
                 setDemoLoading(true)
                 try {
                   // Skip Stripe — just redirect to success
-                  window.location.href = `/intake2/payment-success?session_id=demo&intake_id=${intakeId || ''}`
+                  window.location.href = `/intake/payment-success?session_id=demo&intake_id=${intakeId || ''}`
                 } catch {
                   setDemoLoading(false)
                 }

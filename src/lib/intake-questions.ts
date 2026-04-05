@@ -17,9 +17,9 @@ export interface IntakeQuestion {
 
 export const QUESTIONS: IntakeQuestion[] = [
   // ── About you ──
-  { id: 'full_name', sec: 'About you', type: 'text', label: 'What is your full legal name?', ph: 'First and last name', req: true },
+  { id: 'full_name', sec: 'About you', type: 'text', label: 'What is your full legal name?', ph: 'First and last name', req: true, showIf: (a) => !a._authenticated },
   { id: 'dob', sec: 'About you', type: 'date', label: 'Date of birth', req: true },
-  { id: 'email', sec: 'About you', type: 'text', label: 'Email address', ph: 'you@example.com', req: true },
+  { id: 'email', sec: 'About you', type: 'text', label: 'Email address', ph: 'you@example.com', req: true, showIf: (a) => !a._authenticated },
   { id: 'phone', sec: 'About you', type: 'text', label: 'Phone number', ph: '(555) 555-5555', req: true },
   { id: 'height', sec: 'About you', type: 'text', label: 'Height', ph: "e.g. 5'6\"", req: true },
   { id: 'weight', sec: 'About you', type: 'text', label: 'Current weight', ph: 'e.g. 150 lb', req: true },

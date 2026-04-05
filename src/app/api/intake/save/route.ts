@@ -16,7 +16,7 @@ function getSupabase() {
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabase()
-    const { intakeId, answers, currentSection } = await req.json()
+    const { intakeId, patientId, answers, currentSection } = await req.json()
 
     if (!intakeId) {
       // Create a new intake record (draft)
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
           status: 'draft',
           answers,
           started_at: new Date().toISOString(),
+          ...(patientId ? { patient_id: patientId } : {}),
         })
         .select('id')
         .single()

@@ -14,6 +14,7 @@ import Image from 'next/image'
 import IntakeQuestionLight from '@/components/IntakeQuestionLight'
 import IntakeProgressLight from '@/components/IntakeProgressLight'
 import SectionIntroLight from '@/components/SectionIntroLight'
+import { supabase } from '@/lib/supabase-browser'
 
 type Screen =
   | { type: 'welcome' }
@@ -31,18 +32,77 @@ export default function IntakePage() {
   const [welcomeVisible, setWelcomeVisible] = useState(false)
   const [completeVisible, setCompleteVisible] = useState(false)
   const [intakeId, setIntakeId] = useState<string | null>(null)
+  const [patientId, setPatientId] = useState<string | null>(null)
+  const [userFirstName, setUserFirstName] = useState<string | null>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Check for authenticated user and resume existing draft
+  useEffect(() => {
+    const checkAuthAndResume = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) return
+
+        const meta = session.user.user_metadata
+        const firstName = (meta?.first_name || '').split(' ')[0]
+        const fullName = `${firstName} ${meta?.last_name || ''}`.trim()
+        const email = session.user.email || ''
+
+        if (firstName) setUserFirstName(firstName)
+
+        // Pre-populate known fields and mark as authenticated
+        const prePopulated: Record<string, any> = { _authenticated: true }
+        if (fullName) prePopulated.full_name = fullName
+        if (email) prePopulated.email = email
+
+        // Check for patient record
+        const { data: patientRecord } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('profile_id', session.user.id)
+          .maybeSingle()
+
+        if (patientRecord) {
+          setPatientId(patientRecord.id)
+
+          // Check for existing draft intake to resume
+          const { data: existingIntake } = await supabase
+            .from('intakes')
+            .select('id, answers')
+            .eq('patient_id', patientRecord.id)
+            .eq('status', 'draft')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (existingIntake) {
+            setIntakeId(existingIntake.id)
+            setAnswers({ ...prePopulated, ...(existingIntake.answers || {}) })
+            return
+          }
+        }
+
+        setAnswers((prev) => ({ ...prePopulated, ...prev }))
+      } catch (err) {
+        console.error('Auth check error:', err)
+      }
+    }
+    checkAuthAndResume()
+  }, [])
 
   // Auto-save answers to Supabase (debounced)
   const autoSave = useCallback(
     async (currentAnswers: Record<string, any>) => {
       try {
+        // Strip internal flags before saving
+        const { _authenticated, ...savableAnswers } = currentAnswers
         const res = await fetch('/api/intake/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             intakeId,
-            answers: currentAnswers,
+            patientId,
+            answers: savableAnswers,
           }),
         })
         const data = await res.json()
@@ -53,7 +113,7 @@ export default function IntakePage() {
         console.error('Auto-save failed:', err)
       }
     },
-    [intakeId]
+    [intakeId, patientId]
   )
 
   // Debounced save on answer change
@@ -177,10 +237,11 @@ export default function IntakePage() {
     try {
       await autoSave(answers)
 
+      const { _authenticated, ...submitAnswers } = answers
       const res = await fetch('/api/intake/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intakeId, answers }),
+        body: JSON.stringify({ intakeId, patientId, answers: submitAnswers }),
       })
       const data = await res.json()
 
@@ -231,14 +292,12 @@ export default function IntakePage() {
             </div>
 
             <h2 className="font-serif text-2xl md:text-3xl text-aubergine mb-4 tracking-tight leading-snug">
-              Your intake starts here
+              {userFirstName ? `Welcome ${userFirstName}, your` : 'Your'} intake starts here
             </h2>
-            <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-4">
+            <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-10">
               This questionnaire helps your clinician understand your symptoms,
               history, and goals before your first visit. It takes about 15{'\u2013'}20 minutes.
-            </p>
-            <p className="text-sm text-beige/40 font-sans mb-10">
-              Your answers are private and stored securely.
+              If you need to step away, your progress is saved automatically and you can pick up right where you left off.
             </p>
 
             <button

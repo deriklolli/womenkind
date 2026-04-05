@@ -24,6 +24,7 @@ interface PatientData {
     symptomBurden: string
   } | null
   presentationId: string | null
+  intakeId: string | null
 }
 
 // Demo data for investor demo
@@ -49,6 +50,7 @@ const DEMO_PATIENT: PatientData = {
     symptomBurden: 'high',
   },
   presentationId: 'e3303689-bda9-4044-b695-37d8c075f2bb',
+  intakeId: 'demo-intake-id',
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -182,8 +184,27 @@ export default function PatientDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [fadeIn, setFadeIn] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [membershipLoading, setMembershipLoading] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const membershipParam = searchParams.get('membership')
+
+  const handleMembershipEnroll = async () => {
+    if (!patient) return
+    setMembershipLoading(true)
+    try {
+      const res = await fetch('/api/stripe/membership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intakeId: patient.intakeId }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch {
+      setMembershipLoading(false)
+    }
+  }
 
   useEffect(() => {
     loadPatientData()
@@ -243,17 +264,47 @@ export default function PatientDashboardPage() {
         .eq('profile_id', userId)
         .maybeSingle()
 
-      // Get latest intake
+      // Get latest intake (by patient_id, or fallback to email match in answers)
       let intakeData = null
       if (patientRecord) {
         const { data: intake } = await supabase
           .from('intakes')
-          .select('status, submitted_at, reviewed_at, ai_brief, answers')
+          .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
           .eq('patient_id', patientRecord.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
         intakeData = intake
+      }
+
+      // Fallback: find intake by email if not linked by patient_id
+      if (!intakeData && profile?.email) {
+        const { data: intakeByEmail } = await supabase
+          .from('intakes')
+          .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
+          .neq('status', 'draft')
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        if (intakeByEmail) {
+          intakeData = intakeByEmail.find(
+            (i: any) => i.answers?.email?.toLowerCase() === profile.email.toLowerCase()
+          ) || null
+
+          // Link the intake to the patient record if found
+          if (intakeData && patientRecord) {
+            await supabase
+              .from('intakes')
+              .update({ patient_id: patientRecord.id })
+              .eq('id', intakeData.id)
+          }
+        }
+      }
+
+      // Gate: if user has a patient record but no submitted intake, redirect to intake
+      if (patientRecord && (!intakeData || intakeData.status === 'draft')) {
+        router.replace('/intake')
+        return
       }
 
       // Get membership
@@ -319,6 +370,7 @@ export default function PatientDashboardPage() {
         membershipRenewal,
         intakeSummary,
         presentationId,
+        intakeId: intakeData?.id || null,
       })
     } catch (err) {
       console.error('Error loading patient data:', err)
@@ -638,12 +690,21 @@ export default function PatientDashboardPage() {
                 </div>
               ) : (
                 <>
-                  <p className="text-sm font-sans text-aubergine/40 mb-3">
-                    No active membership.
+                  <p className="text-sm font-sans text-aubergine/60 mb-2">
+                    Continue with membership
                   </p>
-                  <p className="text-xs font-sans text-aubergine/25 mb-4">
-                    Ongoing care is $200/month — includes follow-up visits, prescriptions, and progress tracking.
+                  <p className="text-xs font-sans text-aubergine/35 mb-4 leading-relaxed">
+                    Get ongoing care for $200/month — follow-up visits, progress tracking, prescription management, and personalized care presentations.
                   </p>
+                  <button
+                    onClick={handleMembershipEnroll}
+                    disabled={membershipLoading}
+                    className="w-full py-2.5 rounded-full font-sans text-sm font-semibold
+                               bg-violet text-white hover:bg-violet/90
+                               disabled:opacity-50 transition-all duration-300"
+                  >
+                    {membershipLoading ? 'Loading...' : 'Enroll — $200/month'}
+                  </button>
                 </>
               )}
             </div>
