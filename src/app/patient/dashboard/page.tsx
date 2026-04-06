@@ -12,7 +12,6 @@ import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
 import BookingConfirmation from '@/components/patient/BookingConfirmation'
 import PatientMessages from '@/components/patient/PatientMessages'
 import WearableTrends from '@/components/patient/WearableTrends'
-import PatientSettings from '@/components/patient/PatientSettings'
 import PatientLabResults from '@/components/patient/PatientLabResults'
 import HealthBlueprintList from '@/components/patient/HealthBlueprintList'
 import NotificationBell from '@/components/patient/NotificationBell'
@@ -560,7 +559,7 @@ export default function PatientDashboardPage() {
                     Profile
                   </button>
                   <button
-                    onClick={() => { setMenuOpen(false); setActiveView('settings') }}
+                    onClick={() => { setMenuOpen(false); router.push('/patient/settings') }}
                     className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
                   >
                     <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1157,18 +1156,7 @@ export default function PatientDashboardPage() {
 
             {/* Wearables / Health Trends view */}
             {activeView === 'wearables' && dashboardPhase === 'care_plan_viewed' && (
-              <WearableTrends patientId={patient.patientId} onGoToSettings={() => setActiveView('settings')} />
-            )}
-
-            {/* Settings view */}
-            {activeView === 'settings' && dashboardPhase === 'care_plan_viewed' && (
-              <PatientSettings
-                patientId={patient.patientId}
-                membershipStatus={patient.membershipStatus}
-                membershipRenewal={patient.membershipRenewal}
-                onEnrollMembership={handleMembershipEnroll}
-                membershipLoading={membershipLoading}
-              />
+              <WearableTrends patientId={patient.patientId} onGoToSettings={() => router.push('/patient/settings')} />
             )}
 
             {/* Health Blueprint view */}

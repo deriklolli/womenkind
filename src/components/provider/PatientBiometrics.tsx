@@ -169,8 +169,8 @@ function ProviderMetricChart({
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id={`prov-gradient-${config.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={config.color} stopOpacity={0.15} />
-                <stop offset="95%" stopColor={config.color} stopOpacity={0} />
+                <stop offset="0%" stopColor={config.color} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={config.color} stopOpacity={0.03} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#280f4910" vertical={false} />
@@ -205,6 +205,8 @@ function ProviderMetricChart({
               stroke={config.color}
               strokeWidth={2.5}
               fill={`url(#prov-gradient-${config.key})`}
+              fillOpacity={1}
+              baseValue={config.key === 'temperature_deviation' ? 0 : undefined}
               dot={{ r: 3, fill: config.color, stroke: '#fff', strokeWidth: 2 }}
               activeDot={{ r: 5, fill: config.color, stroke: '#fff', strokeWidth: 2 }}
             />

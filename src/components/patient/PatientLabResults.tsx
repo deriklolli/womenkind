@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase-browser'
+import LabResultsVisual from './LabResultsVisual'
 
 interface LabResultItem {
   testCode: string
@@ -32,12 +33,6 @@ const LAB_PARTNERS: Record<string, string> = {
   labcorp: 'Labcorp',
 }
 
-const FLAG_STYLES: Record<string, { text: string; bg: string; label: string }> = {
-  normal: { text: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Normal' },
-  high: { text: 'text-orange-600', bg: 'bg-orange-50', label: 'High' },
-  low: { text: 'text-amber-600', bg: 'bg-amber-50', label: 'Low' },
-  critical: { text: 'text-red-600', bg: 'bg-red-50', label: 'Critical' },
-}
 
 const STATUS_LABELS: Record<string, { label: string; style: string }> = {
   sent: { label: 'Ordered', style: 'text-violet bg-violet/5 border-violet/15' },
@@ -130,13 +125,6 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {order.tests.map((t) => (
-                          <span key={t.code} className="text-xs font-sans text-aubergine/40 bg-aubergine/[0.04] px-2 py-0.5 rounded-pill">
-                            {t.name}
-                          </span>
-                        ))}
-                      </div>
                       {orderedDate && (
                         <p className="text-xs font-sans text-aubergine/30">Ordered {orderedDate}</p>
                       )}
@@ -153,68 +141,10 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
                 {isExpanded && (
                   <div className="px-5 pb-5 md:px-6 md:pb-6 pt-0">
                     <div className="pt-2">
-                      {/* Results table */}
-                      <div className="space-y-0">
-                        {/* Header row */}
-                        <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2.5 rounded-lg bg-aubergine/[0.04]">
-                          <span className="col-span-4 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider">Test</span>
-                          <span className="col-span-2 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Result</span>
-                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Reference Range</span>
-                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Status</span>
-                        </div>
-
-                        {results.map((r, i) => {
-                          const flag = r.flag || 'normal'
-                          const style = FLAG_STYLES[flag] || FLAG_STYLES.normal
-
-                          return (
-                            <div
-                              key={i}
-                              className={`grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-3 px-3 py-3 border-b border-aubergine/5 last:border-0 ${
-                                flag !== 'normal' ? 'bg-orange-50/30 rounded-lg' : ''
-                              }`}
-                            >
-                              {/* Test name */}
-                              <div className="col-span-4">
-                                <span className="text-xs font-sans font-medium text-aubergine/50 md:hidden">Test: </span>
-                                <span className="text-sm font-sans text-aubergine">{r.testName}</span>
-                                <span className="text-xs font-sans text-aubergine/30 ml-1.5">({r.testCode})</span>
-                              </div>
-
-                              {/* Value */}
-                              <div className="col-span-2 md:text-right">
-                                <span className="text-xs font-sans font-medium text-aubergine/50 md:hidden">Result: </span>
-                                <span className={`text-sm font-sans font-semibold ${flag !== 'normal' ? style.text : 'text-aubergine'}`}>
-                                  {r.value}
-                                </span>
-                                <span className="text-xs font-sans text-aubergine/30 ml-1">{r.unit}</span>
-                              </div>
-
-                              {/* Reference range */}
-                              <div className="col-span-3 md:text-right">
-                                <span className="text-xs font-sans font-medium text-aubergine/50 md:hidden">Range: </span>
-                                <span className="text-xs font-sans text-aubergine/40">{r.referenceRange}</span>
-                              </div>
-
-                              {/* Flag */}
-                              <div className="col-span-3 md:text-right">
-                                <span className={`inline-block text-xs font-sans font-medium px-2 py-0.5 rounded-pill ${style.text} ${style.bg}`}>
-                                  {style.label}
-                                </span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-
-                      {/* Footer note */}
-                      <div className="mt-5 p-4 rounded-brand bg-violet/5 border border-violet/10">
-                        <p className="text-xs font-sans text-violet/70 leading-relaxed">
-                          These results have been reviewed by Dr. Urban. Flagged values are highlighted
-                          for your awareness — they don&apos;t necessarily indicate a problem. Your provider
-                          will discuss any findings during your next visit.
-                        </p>
-                      </div>
+                      {/* Visual results — range bars + summary ring */}
+                      {results.length > 0 && (
+                        <LabResultsVisual results={results} />
+                      )}
                     </div>
                   </div>
                 )}
@@ -246,13 +176,6 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
                       <span className={`text-xs font-sans px-2 py-0.5 rounded-pill border ${st.style}`}>
                         {st.label}
                       </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {order.tests.map((t) => (
-                        <span key={t.code} className="text-xs font-sans text-aubergine/40 bg-aubergine/[0.04] px-2 py-0.5 rounded-pill">
-                          {t.name}
-                        </span>
-                      ))}
                     </div>
                     {orderedDate && (
                       <p className="text-xs font-sans text-aubergine/30">Ordered {orderedDate}</p>
