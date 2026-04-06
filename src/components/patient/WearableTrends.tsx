@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   AreaChart,
   Area,
@@ -254,10 +254,42 @@ export default function WearableTrends({ patientId, dateRange = 30 }: WearableTr
   const [metrics, setMetrics] = useState<MetricRow[]>([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState(dateRange)
+  const autoSyncTriggered = useRef(false)
+
+  useEffect(() => {
+    // Auto-sync on mount if last sync was more than 6 hours ago
+    if (!autoSyncTriggered.current) {
+      autoSyncTriggered.current = true
+      autoSync()
+    }
+  }, [patientId])
 
   useEffect(() => {
     fetchMetrics()
   }, [patientId, range])
+
+  async function autoSync() {
+    try {
+      const statusRes = await fetch(`/api/wearables/status?patientId=${patientId}`)
+      const status = await statusRes.json()
+      if (!status.connected) return
+
+      const lastSynced = status.lastSyncedAt ? new Date(status.lastSyncedAt).getTime() : 0
+      const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000
+
+      if (lastSynced < sixHoursAgo) {
+        // Sync last 7 days in background, then refresh charts
+        await fetch('/api/wearables/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patientId, days: 7 }),
+        })
+        fetchMetrics()
+      }
+    } catch (err) {
+      console.error('Auto-sync failed:', err)
+    }
+  }
 
   async function fetchMetrics() {
     setLoading(true)
