@@ -230,20 +230,20 @@ export default function PatientDashboardPage() {
   }, [menuOpen])
 
   const loadPatientData = async () => {
-    // Check real auth first (takes priority over demo mode)
+    // Check demo mode first (explicit user choice takes priority)
+    const demo = localStorage.getItem('womenkind_demo_patient')
+    if (demo) {
+      setPatient(DEMO_PATIENT)
+      setLoading(false)
+      return
+    }
+
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
       if (!session) {
-        // Fall back to demo mode if no real session
-        const demo = localStorage.getItem('womenkind_demo_patient')
-        if (demo) {
-          setPatient(DEMO_PATIENT)
-          setLoading(false)
-          return
-        }
         router.replace('/patient/login')
         return
       }
@@ -271,7 +271,7 @@ export default function PatientDashboardPage() {
           .from('intakes')
           .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
           .eq('patient_id', patientRecord.id)
-          .order('created_at', { ascending: false })
+          .order('started_at', { ascending: false })
           .limit(1)
           .maybeSingle()
         intakeData = intake
@@ -283,7 +283,7 @@ export default function PatientDashboardPage() {
           .from('intakes')
           .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
           .neq('status', 'draft')
-          .order('created_at', { ascending: false })
+          .order('started_at', { ascending: false })
           .limit(10)
 
         if (intakeByEmail) {

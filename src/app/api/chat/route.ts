@@ -34,7 +34,7 @@ async function getPatientContext(patientId: string) {
     .from('intakes')
     .select('*')
     .eq('patient_id', patientId)
-    .order('created_at', { ascending: false })
+    .order('started_at', { ascending: false })
     .limit(1)
     .single()
 
