@@ -1,6 +1,6 @@
 'use client'
 
-export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables' | 'settings'
+export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables' | 'settings' | 'lab-results'
 
 interface QuickActionsProps {
   presentationId?: string | null
@@ -63,15 +63,23 @@ const secondaryActions: ActionItem[] = [
   },
   {
     key: 'blueprint',
-    label: 'View Health Blueprint',
+    label: 'Your Health Blueprint',
     subtitle: 'Prepared by Dr. Urban',
     icon: 'blueprint',
     color: '#4ECDC4',
     bg: 'rgba(78, 205, 196, 0.08)',
   },
   {
+    key: 'lab-results',
+    label: 'Your Lab Results',
+    subtitle: 'Blood work & diagnostics',
+    icon: 'lab',
+    color: '#4ECDC4',
+    bg: 'rgba(78, 205, 196, 0.08)',
+  },
+  {
     key: 'intake-summary',
-    label: 'View Intake Summary',
+    label: 'Your Intake Summary',
     subtitle: 'Your responses & results',
     icon: 'clipboard',
     color: '#4ECDC4',
@@ -140,6 +148,14 @@ function ActionIcon({ type, color }: { type: string; color: string }) {
         <svg {...props}>
           <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
           <line x1="1" y1="10" x2="23" y2="10" />
+        </svg>
+      )
+    case 'lab':
+      return (
+        <svg {...props}>
+          <path d="M9 3h6v5.586a1 1 0 00.293.707l3.414 3.414a3 3 0 01.879 2.121V17a4 4 0 01-4 4H8.414a4 4 0 01-4-4v-2.172a3 3 0 01.879-2.121l3.414-3.414A1 1 0 009 8.586V3z" />
+          <line x1="9" y1="3" x2="15" y2="3" />
+          <line x1="10" y1="12" x2="14" y2="12" />
         </svg>
       )
     case 'wearable':

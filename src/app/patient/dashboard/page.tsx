@@ -13,6 +13,7 @@ import BookingConfirmation from '@/components/patient/BookingConfirmation'
 import PatientMessages from '@/components/patient/PatientMessages'
 import WearableTrends from '@/components/patient/WearableTrends'
 import PatientSettings from '@/components/patient/PatientSettings'
+import PatientLabResults from '@/components/patient/PatientLabResults'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -1171,7 +1172,11 @@ export default function PatientDashboardPage() {
               />
             )}
 
-            {/* Billing view */}
+            {/* Lab Results view */}
+            {activeView === 'lab-results' && dashboardPhase === 'care_plan_viewed' && (
+              <PatientLabResults patientId={patient.patientId} />
+            )}
+
             {/* Intake Summary view */}
             {activeView === 'intake-summary' && dashboardPhase === 'care_plan_viewed' && (
               patient.intakeSummary ? (

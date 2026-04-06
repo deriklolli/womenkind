@@ -222,6 +222,19 @@ async function fetchOuraSleep(accessToken: string, startDate: string, endDate: s
   return res.json()
 }
 
+/** Fetch sleep periods from Oura API (includes HRV and heart rate per-period). */
+async function fetchOuraSleepPeriods(accessToken: string, startDate: string, endDate: string) {
+  const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
+  const res = await fetch(`https://api.ouraring.com/v2/usercollection/sleep?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Oura sleep periods fetch failed: ${res.status} — ${text}`)
+  }
+  return res.json()
+}
+
 /** Fetch daily readiness data from Oura API (includes temperature). */
 async function fetchOuraReadiness(accessToken: string, startDate: string, endDate: string) {
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate })
@@ -238,11 +251,12 @@ async function fetchOuraReadiness(accessToken: string, startDate: string, endDat
 /** Normalize Oura API responses into flat metric rows. */
 export function normalizeOuraData(
   sleepData: { data: any[] },
-  readinessData: { data: any[] }
+  readinessData: { data: any[] },
+  sleepPeriods?: { data: any[] }
 ): NormalizedMetric[] {
   const metrics: NormalizedMetric[] = []
 
-  // Process sleep data
+  // Process daily sleep summary (scores + durations)
   for (const day of sleepData.data || []) {
     const date = day.day
     if (!date) continue
@@ -250,26 +264,55 @@ export function normalizeOuraData(
     if (day.score != null) {
       metrics.push({ metric_type: 'sleep_score', metric_date: date, value: day.score })
     }
-    if (day.deep_sleep_duration != null) {
-      metrics.push({ metric_type: 'sleep_deep_minutes', metric_date: date, value: Math.round(day.deep_sleep_duration / 60) })
+    if (day.contributors?.deep_sleep != null) {
+      metrics.push({ metric_type: 'sleep_deep_minutes', metric_date: date, value: day.contributors.deep_sleep })
     }
-    if (day.rem_sleep_duration != null) {
-      metrics.push({ metric_type: 'sleep_rem_minutes', metric_date: date, value: Math.round(day.rem_sleep_duration / 60) })
-    }
-    if (day.light_sleep_duration != null) {
-      metrics.push({ metric_type: 'sleep_light_minutes', metric_date: date, value: Math.round(day.light_sleep_duration / 60) })
-    }
-    if (day.total_sleep_duration != null) {
-      metrics.push({ metric_type: 'sleep_total_minutes', metric_date: date, value: Math.round(day.total_sleep_duration / 60) })
+    if (day.contributors?.rem_sleep != null) {
+      metrics.push({ metric_type: 'sleep_rem_minutes', metric_date: date, value: day.contributors.rem_sleep })
     }
     if (day.contributors?.efficiency != null) {
       metrics.push({ metric_type: 'sleep_efficiency', metric_date: date, value: day.contributors.efficiency })
     }
-    if (day.average_hrv != null) {
-      metrics.push({ metric_type: 'hrv_average', metric_date: date, value: day.average_hrv })
+  }
+
+  // Process sleep periods for HRV, heart rate, and actual durations
+  // Use the longest sleep period per day (type === 'long_sleep') for the nightly values
+  const periodsByDay = new Map<string, any>()
+  for (const period of sleepPeriods?.data || []) {
+    const date = period.day
+    if (!date) continue
+    // Prefer long_sleep type; fall back to whatever we have
+    const existing = periodsByDay.get(date)
+    if (!existing || period.type === 'long_sleep') {
+      periodsByDay.set(date, period)
     }
-    if (day.lowest_heart_rate != null) {
-      metrics.push({ metric_type: 'resting_heart_rate', metric_date: date, value: day.lowest_heart_rate })
+  }
+
+  for (const [date, period] of Array.from(periodsByDay.entries())) {
+    if (period.average_hrv != null) {
+      metrics.push({ metric_type: 'hrv_average', metric_date: date, value: Math.round(period.average_hrv) })
+    }
+    if (period.lowest_heart_rate != null) {
+      metrics.push({ metric_type: 'resting_heart_rate', metric_date: date, value: period.lowest_heart_rate })
+    }
+    if (period.deep_sleep_duration != null) {
+      // Only add duration metrics from periods if we didn't get them from daily_sleep
+      const hasDeep = metrics.some((m) => m.metric_type === 'sleep_deep_minutes' && m.metric_date === date)
+      if (!hasDeep) {
+        metrics.push({ metric_type: 'sleep_deep_minutes', metric_date: date, value: Math.round(period.deep_sleep_duration / 60) })
+      }
+    }
+    if (period.rem_sleep_duration != null) {
+      const hasRem = metrics.some((m) => m.metric_type === 'sleep_rem_minutes' && m.metric_date === date)
+      if (!hasRem) {
+        metrics.push({ metric_type: 'sleep_rem_minutes', metric_date: date, value: Math.round(period.rem_sleep_duration / 60) })
+      }
+    }
+    if (period.light_sleep_duration != null) {
+      metrics.push({ metric_type: 'sleep_light_minutes', metric_date: date, value: Math.round(period.light_sleep_duration / 60) })
+    }
+    if (period.total_sleep_duration != null) {
+      metrics.push({ metric_type: 'sleep_total_minutes', metric_date: date, value: Math.round(period.total_sleep_duration / 60) })
     }
   }
 
@@ -303,14 +346,15 @@ export async function syncOuraData(
   try {
     const accessToken = await getValidOuraToken(connectionId)
 
-    // Fetch from both endpoints
-    const [sleepData, readinessData] = await Promise.all([
+    // Fetch from all three endpoints
+    const [sleepData, readinessData, sleepPeriodData] = await Promise.all([
       fetchOuraSleep(accessToken, startDate, endDate),
       fetchOuraReadiness(accessToken, startDate, endDate),
+      fetchOuraSleepPeriods(accessToken, startDate, endDate),
     ])
 
     // Normalize into flat metrics
-    const metrics = normalizeOuraData(sleepData, readinessData)
+    const metrics = normalizeOuraData(sleepData, readinessData, sleepPeriodData)
 
     if (metrics.length > 0) {
       // Upsert all metrics (on conflict: patient_id + metric_date + metric_type)
