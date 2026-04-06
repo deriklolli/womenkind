@@ -710,8 +710,34 @@ export default function PatientDashboardPage() {
             </div>
           </div>
 
-          {/* Right column: intake summary */}
-          <div className="md:col-span-2">
+          {/* Right column: care presentation + intake summary */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Care Presentation — top of right column when available */}
+            {patient.presentationId && (
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-1">
+                      Care Presentation
+                    </h3>
+                    <p className="text-sm font-sans text-aubergine/50">
+                      Your personalized care summary from Dr. Urban is ready
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/presentation/${patient.presentationId}`)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-aubergine text-white text-sm font-sans rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    View Presentation
+                  </button>
+                </div>
+              </div>
+            )}
+
             {patient.intakeSummary ? (
               <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                 <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
@@ -801,31 +827,6 @@ export default function PatientDashboardPage() {
             {/* Upcoming Appointments */}
             <UpcomingAppointments patientId={patient.patientId} />
 
-            {/* Care Presentation link */}
-            {patient.presentationId && (
-              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 mt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-1">
-                      Care Presentation
-                    </h3>
-                    <p className="text-sm font-sans text-aubergine/50">
-                      Your personalized care summary from Dr. Urban is ready
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/presentation/${patient.presentationId}`)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-aubergine text-white text-sm font-sans rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    View Presentation
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
