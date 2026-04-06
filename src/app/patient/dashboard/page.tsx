@@ -11,6 +11,8 @@ import PrescriptionList from '@/components/patient/PrescriptionList'
 import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
 import BookingConfirmation from '@/components/patient/BookingConfirmation'
 import PatientMessages from '@/components/patient/PatientMessages'
+import WearableConnect from '@/components/patient/WearableConnect'
+import WearableTrends from '@/components/patient/WearableTrends'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -1150,6 +1152,14 @@ export default function PatientDashboardPage() {
                   Send a secure message to Dr. Urban&apos;s care team. You&apos;ll receive a response within 1-2 business days.
                 </p>
                 <PatientMessages patientId={patient.patientId} />
+              </div>
+            )}
+
+            {/* Wearables / Health Trends view */}
+            {activeView === 'wearables' && dashboardPhase === 'care_plan_viewed' && (
+              <div className="space-y-4">
+                <WearableConnect patientId={patient.patientId} />
+                <WearableTrends patientId={patient.patientId} />
               </div>
             )}
 

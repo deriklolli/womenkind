@@ -1,6 +1,6 @@
 'use client'
 
-export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary'
+export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables'
 
 interface QuickActionsProps {
   presentationId?: string | null
@@ -53,6 +53,14 @@ const primaryActions: ActionItem[] = [
 ]
 
 const secondaryActions: ActionItem[] = [
+  {
+    key: 'wearables',
+    label: 'Health Trends',
+    subtitle: 'Oura Ring biometrics',
+    icon: 'wearable',
+    color: '#4ECDC4',
+    bg: 'rgba(78, 205, 196, 0.08)',
+  },
   {
     key: 'blueprint',
     label: 'View Health Blueprint',
@@ -140,6 +148,12 @@ function ActionIcon({ type, color }: { type: string; color: string }) {
         <svg {...props}>
           <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
           <line x1="1" y1="10" x2="23" y2="10" />
+        </svg>
+      )
+    case 'wearable':
+      return (
+        <svg {...props}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
         </svg>
       )
     default:

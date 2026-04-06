@@ -10,6 +10,7 @@ import PrescriptionsPanel from '@/components/provider/PrescriptionsPanel'
 import LabOrdersPanel from '@/components/provider/LabOrdersPanel'
 import NotesPanel from '@/components/provider/NotesPanel'
 import PatientMessagesPanel from '@/components/provider/PatientMessagesPanel'
+import PatientBiometrics from '@/components/provider/PatientBiometrics'
 import { useChatContext } from '@/lib/chat-context'
 
 interface PatientProfile {
@@ -86,7 +87,7 @@ interface ProviderNote {
   updated_at: string
 }
 
-type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes' | 'messages'
+type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes' | 'messages' | 'biometrics'
 
 const SYMPTOM_DOMAINS = [
   { key: 'vasomotor', label: 'Vasomotor (Hot Flashes)', color: '#d85623' },
@@ -292,6 +293,7 @@ export default function PatientProfilePage() {
     { key: 'labs', label: 'Labs', count: labOrders.length },
     { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length },
     { key: 'messages', label: 'Messages', count: messageThreadCount },
+    { key: 'biometrics', label: 'Biometrics' },
   ]
 
   return (
@@ -538,6 +540,14 @@ export default function PatientProfilePage() {
             patientId={patientId}
             providerId={getProviderId()}
             patientName={name || 'Patient'}
+          />
+        )}
+
+        {activeTab === 'biometrics' && (
+          <PatientBiometrics
+            patientId={patientId}
+            visits={visits}
+            prescriptions={prescriptions}
           />
         )}
       </div>
