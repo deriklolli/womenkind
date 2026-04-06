@@ -242,21 +242,39 @@ export default function PatientMessages({ patientId }: Props) {
             <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
             {threadMessages.map((msg) => {
               const isMe = msg.sender_type === 'patient'
               return (
-                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                <div key={msg.id} className={`flex items-end gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Avatar */}
+                  {isMe ? (
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-violet/15 flex items-center justify-center">
+                      <span className="text-[11px] font-sans font-semibold text-violet">DL</span>
+                    </div>
+                  ) : (
+                    <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden bg-aubergine/10">
+                      <img
+                        src="/dr-urban.jpg"
+                        alt="Dr. Urban"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          target.style.display = 'none'
+                          target.parentElement!.innerHTML = '<span class="text-[11px] font-sans font-semibold text-aubergine/60 flex items-center justify-center w-full h-full">JU</span>'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Message bubble */}
+                  <div className={`max-w-[75%] px-4 py-3 ${
                     isMe
-                      ? 'bg-violet/10 text-aubergine'
-                      : 'bg-cream border border-aubergine/5 text-aubergine'
+                      ? 'bg-violet/10 text-aubergine rounded-2xl rounded-br-md'
+                      : 'bg-cream border border-aubergine/5 text-aubergine rounded-2xl rounded-bl-md'
                   }`}>
-                    <p className="text-[11px] font-sans font-medium mb-1 opacity-50">
-                      {isMe ? 'You' : 'Dr. Urban'}
-                    </p>
                     <p className="text-sm font-sans leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-                    <p className="text-[10px] font-sans opacity-30 mt-1.5 text-right">
+                    <p className={`text-[10px] font-sans opacity-30 mt-1.5 ${isMe ? 'text-right' : 'text-left'}`}>
                       {formatTime(msg.created_at)}
                     </p>
                   </div>
