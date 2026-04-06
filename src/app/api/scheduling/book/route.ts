@@ -274,52 +274,54 @@ export async function POST(req: NextRequest) {
 
       if (insertError) throw insertError
 
-      // Create video room for the appointment
-      const videoRoom = await createVideoRoom({
-        appointmentId: appointment.id,
-        appointmentName: appointmentType.name,
-        startsAt,
-        endsAt,
-      })
+      // Fire-and-forget: video room, calendar, email run in the background
+      // so the response returns immediately to the patient
+      const backgroundTasks = async () => {
+        try {
+          const videoRoom = await createVideoRoom({
+            appointmentId: appointment.id,
+            appointmentName: appointmentType.name,
+            startsAt,
+            endsAt,
+          })
 
-      // Create Google Calendar event (include video link if available)
-      const calendarEventId = await createCalendarEvent({
-        providerId,
-        summary: `${appointmentType.name} — ${patientName}`,
-        description: `${patientNotes || `${appointmentType.name} with ${patientName}`}${videoRoom ? `\n\nJoin video call: ${videoRoom.url}` : ''}`,
-        startTime: startsAt,
-        endTime: endsAt,
-        patientEmail,
-      })
+          const calendarEventId = await createCalendarEvent({
+            providerId,
+            summary: `${appointmentType.name} — ${patientName}`,
+            description: `${patientNotes || `${appointmentType.name} with ${patientName}`}${videoRoom ? `\n\nJoin video call: ${videoRoom.url}` : ''}`,
+            startTime: startsAt,
+            endTime: endsAt,
+            patientEmail,
+          })
 
-      // Update appointment with calendar event ID and video room
-      await supabase
-        .from('appointments')
-        .update({
-          google_calendar_event_id: calendarEventId,
-          ...(videoRoom ? { video_room_url: videoRoom.url, video_room_name: videoRoom.roomName } : {}),
-        })
-        .eq('id', appointment.id)
+          await supabase
+            .from('appointments')
+            .update({
+              google_calendar_event_id: calendarEventId,
+              ...(videoRoom ? { video_room_url: videoRoom.url, video_room_name: videoRoom.roomName } : {}),
+            })
+            .eq('id', appointment.id)
 
-      // Send confirmation email
-      await sendBookingConfirmationEmail({
-        appointmentId: appointment.id,
-        patientEmail,
-        patientName,
-        appointmentName: appointmentType.name,
-        durationMinutes: appointmentType.duration_minutes,
-        startsAt,
-        endsAt,
-        videoRoomUrl: videoRoom?.url,
-      })
+          await sendBookingConfirmationEmail({
+            appointmentId: appointment.id,
+            patientEmail,
+            patientName,
+            appointmentName: appointmentType.name,
+            durationMinutes: appointmentType.duration_minutes,
+            startsAt,
+            endsAt,
+            videoRoomUrl: videoRoom?.url,
+          })
+        } catch (bgErr) {
+          console.error('Background booking tasks failed:', bgErr)
+        }
+      }
+
+      // Don't await — let it run in the background
+      backgroundTasks()
 
       return NextResponse.json({
-        appointment: {
-          ...appointment,
-          video_room_url: videoRoom?.url || null,
-          video_room_name: videoRoom?.roomName || null,
-          google_calendar_event_id: calendarEventId || null,
-        },
+        appointment,
         status: 'confirmed',
         message: 'Appointment booked successfully',
       })

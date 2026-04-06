@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import ProviderNav from '@/components/provider/ProviderNav'
+import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav'
+import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
+import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import { useChatContext } from '@/lib/chat-context'
 
-type DashboardTab = 'queue' | 'patients' | 'schedule'
+type DashboardTab = ProviderTab
 
 interface Intake {
   id: string
@@ -61,7 +63,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 export default function ProviderDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const initialTab = (searchParams.get('tab') === 'patients' ? 'patients' : 'queue') as DashboardTab
+  const tabParam = searchParams.get('tab')
+  const validTabs: DashboardTab[] = ['queue', 'patients', 'schedule', 'messages', 'refills']
+  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'queue') as DashboardTab
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
@@ -69,6 +73,10 @@ export default function ProviderDashboard() {
   const [providerName, setProviderName] = useState('Dr. Sarah Chen')
   const [filter, setFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [pendingRefillCount, setPendingRefillCount] = useState(0)
+
+  const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 
   const { setPageContext } = useChatContext()
 
@@ -84,7 +92,25 @@ export default function ProviderDashboard() {
     }
     loadIntakes()
     loadPatients()
+    loadCounts()
   }, [])
+
+  const loadCounts = async () => {
+    try {
+      // Fetch pending refill count
+      const refillRes = await fetch(`/api/refill-requests?providerId=${PROVIDER_ID}&status=pending`)
+      const refillData = await refillRes.json()
+      setPendingRefillCount((refillData.refillRequests || []).length)
+
+      // Fetch unread message count
+      const msgRes = await fetch(`/api/messages?providerId=${PROVIDER_ID}`)
+      const msgData = await msgRes.json()
+      const unread = (msgData.threads || []).reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
+      setUnreadMessageCount(unread)
+    } catch (err) {
+      console.error('Failed to load counts:', err)
+    }
+  }
 
   const loadIntakes = async () => {
     setLoading(true)
@@ -208,11 +234,13 @@ export default function ProviderDashboard() {
         onTabChange={setActiveTab}
         newIntakeCount={counts.submitted}
         patientCount={patients.length}
+        unreadMessageCount={unreadMessageCount}
+        pendingRefillCount={pendingRefillCount}
       />
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'queue' ? (
+        {activeTab === 'queue' && (
           /* ====== INTAKE QUEUE TAB ====== */
           <>
             <div className="flex items-end justify-between mb-8">
@@ -340,7 +368,9 @@ export default function ProviderDashboard() {
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {activeTab === 'patients' && (
           /* ====== PATIENTS DIRECTORY TAB ====== */
           <>
             <div className="flex items-end justify-between mb-8">
@@ -454,6 +484,16 @@ export default function ProviderDashboard() {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'messages' && (
+          /* ====== MESSAGES TAB ====== */
+          <ProviderMessagesInbox providerId={PROVIDER_ID} onCountChange={setUnreadMessageCount} />
+        )}
+
+        {activeTab === 'refills' && (
+          /* ====== REFILL REQUESTS TAB ====== */
+          <ProviderRefillQueue providerId={PROVIDER_ID} onCountChange={setPendingRefillCount} />
         )}
       </div>
     </div>

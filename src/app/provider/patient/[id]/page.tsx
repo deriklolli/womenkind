@@ -9,6 +9,7 @@ import VisitTimeline from '@/components/provider/VisitTimeline'
 import PrescriptionsPanel from '@/components/provider/PrescriptionsPanel'
 import LabOrdersPanel from '@/components/provider/LabOrdersPanel'
 import NotesPanel from '@/components/provider/NotesPanel'
+import PatientMessagesPanel from '@/components/provider/PatientMessagesPanel'
 import { useChatContext } from '@/lib/chat-context'
 
 interface PatientProfile {
@@ -85,7 +86,7 @@ interface ProviderNote {
   updated_at: string
 }
 
-type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes'
+type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes' | 'messages'
 
 const SYMPTOM_DOMAINS = [
   { key: 'vasomotor', label: 'Vasomotor (Hot Flashes)', color: '#d85623' },
@@ -107,6 +108,7 @@ export default function PatientProfilePage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [labOrders, setLabOrders] = useState<LabOrder[]>([])
   const [providerNotes, setProviderNotes] = useState<ProviderNote[]>([])
+  const [messageThreadCount, setMessageThreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
 
@@ -175,6 +177,13 @@ export default function PatientProfilePage() {
       setPrescriptions((rxRes.data || []) as Prescription[])
       setLabOrders((labRes.data || []) as LabOrder[])
       setProviderNotes((notesRes.data || []) as ProviderNote[])
+
+      // Fetch message thread count
+      try {
+        const msgRes = await fetch(`/api/messages?patientId=${patientId}`)
+        const msgData = await msgRes.json()
+        setMessageThreadCount((msgData.threads || []).length)
+      } catch {}
 
       // Set chat context for AI assistant
       const latestIntake = (intakesRes.data || [])[0]
@@ -282,6 +291,7 @@ export default function PatientProfilePage() {
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
     { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length },
+    { key: 'messages', label: 'Messages', count: messageThreadCount },
   ]
 
   return (
@@ -520,6 +530,14 @@ export default function PatientProfilePage() {
             visits={visits}
             providerNotes={providerNotes}
             onNoteAdded={reloadProviderNotes}
+          />
+        )}
+
+        {activeTab === 'messages' && (
+          <PatientMessagesPanel
+            patientId={patientId}
+            providerId={getProviderId()}
+            patientName={name || 'Patient'}
           />
         )}
       </div>

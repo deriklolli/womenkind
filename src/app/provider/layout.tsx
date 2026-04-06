@@ -29,6 +29,11 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
       // Check demo session first
       const demo = localStorage.getItem('womenkind_demo_provider')
       if (demo) {
+        // Clear any patient auth session so RLS uses anon role (sees all intakes)
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          await supabase.auth.signOut()
+        }
         setAuthorized(true)
         setChecking(false)
         return

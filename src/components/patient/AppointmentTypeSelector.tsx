@@ -15,9 +15,10 @@ interface Props {
   providerId: string
   isMember: boolean
   onSelect: (type: AppointmentType) => void
+  excludeNames?: string[]
 }
 
-export default function AppointmentTypeSelector({ providerId, isMember, onSelect }: Props) {
+export default function AppointmentTypeSelector({ providerId, isMember, onSelect, excludeNames }: Props) {
   const [types, setTypes] = useState<AppointmentType[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -26,7 +27,11 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
       try {
         const res = await fetch(`/api/scheduling/appointment-types?providerId=${providerId}`)
         const data = await res.json()
-        setTypes(data.appointmentTypes || [])
+        const all = data.appointmentTypes || []
+        setTypes(excludeNames?.length
+          ? all.filter((t: AppointmentType) => !excludeNames.some(name => t.name.toLowerCase().includes(name.toLowerCase())))
+          : all
+        )
       } catch (err) {
         console.error('Failed to fetch types:', err)
       } finally {
@@ -37,9 +42,10 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
   }, [providerId])
 
   if (loading) {
+    const skeletonCount = excludeNames?.length ? 2 : 3
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map(i => (
+      <div className={`grid grid-cols-1 gap-4 ${skeletonCount >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {Array.from({ length: skeletonCount }, (_, i) => (
           <div key={i} className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 animate-pulse h-44" />
         ))}
       </div>
@@ -47,12 +53,12 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 gap-4 ${types.length >= 3 ? 'md:grid-cols-3' : types.length === 2 ? 'md:grid-cols-2' : ''}`}>
       {types.map(type => (
         <button
           key={type.id}
           onClick={() => onSelect(type)}
-          className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all group border border-transparent"
+          className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all group border border-aubergine/15"
         >
           {/* Duration */}
           <div className="flex items-center justify-end mb-3">

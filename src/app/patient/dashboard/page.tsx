@@ -4,6 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase-browser'
+import QuickActions, { SecondaryActions, type DashboardView } from '@/components/patient/QuickActions'
+import AppointmentTypeSelector from '@/components/patient/AppointmentTypeSelector'
+import PrescriptionRefillReminders from '@/components/patient/PrescriptionRefillReminders'
+import PrescriptionList from '@/components/patient/PrescriptionList'
+import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
+import BookingConfirmation from '@/components/patient/BookingConfirmation'
+import PatientMessages from '@/components/patient/PatientMessages'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -24,8 +31,16 @@ interface PatientData {
     symptomBurden: string
   } | null
   presentationId: string | null
+  presentationStatus: 'sent' | 'viewed' | null
   intakeId: string | null
 }
+
+// Dashboard phases based on patient journey
+// 1. intake_done — intake submitted, no appointment yet → "Schedule" banner + intake status left
+// 2. appointment_booked — has upcoming appointment → "Upcoming Appointment" banner + intake status left
+// 3. care_plan_ready — presentation sent but not viewed → "Health Blueprint" banner + intake status (care plan ready) left
+// 4. care_plan_viewed — presentation viewed → no banner, QuickActions left
+type DashboardPhase = 'intake_done' | 'appointment_booked' | 'care_plan_ready' | 'care_plan_viewed'
 
 // Demo data for investor demo
 const DEMO_PATIENT: PatientData = {
@@ -50,6 +65,7 @@ const DEMO_PATIENT: PatientData = {
     symptomBurden: 'high',
   },
   presentationId: 'e3303689-bda9-4044-b695-37d8c075f2bb',
+  presentationStatus: 'viewed',
   intakeId: 'demo-intake-id',
 }
 
@@ -89,42 +105,26 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
     fetchAppointments()
   }, [patientId])
 
-  return (
-    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 mt-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
-          Upcoming Appointments
-        </h3>
-        <button
-          onClick={() => router.push('/patient/schedule')}
-          className="text-xs font-sans font-medium text-violet hover:text-violet/80 transition-colors flex items-center gap-1"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Schedule New
-        </button>
-      </div>
-
-      {loading ? (
+  if (loading) {
+    return (
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
         <div className="flex items-center justify-center py-4">
           <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
         </div>
-      ) : appointments.length === 0 ? (
-        <div className="text-center py-4">
-          <p className="text-sm font-sans text-aubergine/35 mb-3">No upcoming appointments</p>
-          <button
-            onClick={() => router.push('/patient/schedule')}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-violet text-white text-sm font-sans font-medium rounded-xl hover:bg-violet/90 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Book an Appointment
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
+      </div>
+    )
+  }
+
+  // Don't render the card at all if no appointments
+  if (appointments.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
+      <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
+        Upcoming Appointments
+      </h3>
+
+      <div className="space-y-3">
           {appointments.map((apt: any) => (
             <div key={apt.id} className="flex items-center gap-3 p-3 rounded-xl bg-human/50 border border-aubergine/5">
               <div
@@ -172,7 +172,6 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
             </div>
           ))}
         </div>
-      )}
     </div>
   )
 }
@@ -185,6 +184,20 @@ export default function PatientDashboardPage() {
   const [fadeIn, setFadeIn] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [membershipLoading, setMembershipLoading] = useState(false)
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true)
+  const [activeView, setActiveView] = useState<DashboardView>('dashboard')
+
+  // Inline scheduling state
+  type BookingStep = 'select-type' | 'pick-time' | 'confirm' | 'success'
+  const [bookingStep, setBookingStep] = useState<BookingStep>('select-type')
+  const [selectedType, setSelectedType] = useState<any>(null)
+  const [selectedSlot, setSelectedSlot] = useState<any>(null)
+  const [patientNotes, setPatientNotes] = useState('')
+  const [bookingInProgress, setBookingInProgress] = useState(false)
+
+  const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
+
   const menuRef = useRef<HTMLDivElement>(null)
   const membershipParam = searchParams.get('membership')
 
@@ -206,6 +219,68 @@ export default function PatientDashboardPage() {
     }
   }
 
+  const refreshAppointments = async () => {
+    if (!patient?.patientId) return
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&startDate=${today}`)
+      const data = await res.json()
+      setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+    } catch (err) {
+      console.error('Failed to refresh appointments:', err)
+    }
+  }
+
+  const handleBookAppointment = async () => {
+    if (!patient || !selectedType || !selectedSlot) return
+    setBookingInProgress(true)
+    try {
+      const res = await fetch('/api/scheduling/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: patient.patientId,
+          providerId: PROVIDER_ID,
+          appointmentTypeId: selectedType.id,
+          startsAt: selectedSlot.start,
+          endsAt: selectedSlot.end,
+          patientNotes,
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        console.error('Booking error:', data.error)
+        setBookingInProgress(false)
+        return
+      }
+
+      if (data.checkoutUrl) {
+        // Non-member: redirect to Stripe
+        window.location.href = data.checkoutUrl
+        return
+      }
+
+      // Member: booking confirmed — show success immediately
+      setBookingStep('success')
+      setBookingInProgress(false)
+
+      // Refresh appointments in the background
+      await refreshAppointments()
+    } catch (err) {
+      console.error('Booking failed:', err)
+      setBookingInProgress(false)
+    }
+  }
+
+  const resetBookingFlow = () => {
+    setBookingStep('select-type')
+    setSelectedType(null)
+    setSelectedSlot(null)
+    setPatientNotes('')
+    setBookingInProgress(false)
+  }
+
   useEffect(() => {
     loadPatientData()
   }, [])
@@ -217,6 +292,33 @@ export default function PatientDashboardPage() {
       })
     }
   }, [loading])
+
+  // Fetch appointments at dashboard level for banner logic
+  useEffect(() => {
+    if (!patient?.patientId) { setAppointmentsLoading(false); return }
+    const fetchAppointments = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&startDate=${today}`)
+        const data = await res.json()
+        setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+      } catch (err) {
+        console.error('Failed to fetch appointments:', err)
+      } finally {
+        setAppointmentsLoading(false)
+      }
+    }
+    fetchAppointments()
+  }, [patient?.patientId])
+
+  // Derive dashboard phase from patient journey state
+  const dashboardPhase: DashboardPhase = (() => {
+    if (!patient) return 'intake_done'
+    if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
+    if (patient.presentationId) return 'care_plan_ready'
+    if (appointments.length > 0) return 'appointment_booked'
+    return 'intake_done'
+  })()
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -347,16 +449,18 @@ export default function PatientDashboardPage() {
 
       // Check for care presentation
       let presentationId: string | null = null
+      let presentationStatus: 'sent' | 'viewed' | null = null
       if (patientRecord) {
         const { data: presData } = await supabase
           .from('care_presentations')
-          .select('id')
+          .select('id, status')
           .eq('patient_id', patientRecord.id)
           .in('status', ['sent', 'viewed'])
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
         presentationId = presData?.id || null
+        presentationStatus = (presData?.status as 'sent' | 'viewed') || null
       }
 
       setPatient({
@@ -370,6 +474,7 @@ export default function PatientDashboardPage() {
         membershipRenewal,
         intakeSummary,
         presentationId,
+        presentationStatus,
         intakeId: intakeData?.id || null,
       })
     } catch (err) {
@@ -499,8 +604,8 @@ export default function PatientDashboardPage() {
           </p>
         </div>
 
-        {/* Scheduling banner — show when paid but no upcoming appointments */}
-        {patient.intakeStatus && patient.intakeStatus !== 'draft' && (
+        {/* Smart banner — adapts to dashboard phase */}
+        {dashboardPhase === 'intake_done' && (
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
               <h2 className="font-serif text-lg text-aubergine mb-1">
@@ -522,6 +627,81 @@ export default function PatientDashboardPage() {
           </div>
         )}
 
+        {dashboardPhase === 'appointment_booked' && appointments[0] && (
+          <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <h2 className="font-serif text-lg text-aubergine mb-1">
+                Your appointment is scheduled
+              </h2>
+              <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
+                {appointments[0].appointment_types?.name || 'Consultation'} on{' '}
+                {new Date(appointments[0].starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {' at '}
+                {new Date(appointments[0].starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={`/api/scheduling/calendar-export?appointmentId=${appointments[0].id}`}
+                className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/60 rounded-pill hover:bg-aubergine/5 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                Add to Calendar
+              </a>
+              {appointments[0].video_room_url && (
+                <a
+                  href={appointments[0].video_room_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                  Join Call
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {dashboardPhase === 'care_plan_ready' && patient.presentationId && (
+          <div
+            className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
+            style={{ minHeight: '200px' }}
+            onClick={() => router.push(`/presentation/${patient.presentationId}`)}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+              style={{ backgroundImage: 'url(/care-presentation-bg.png)' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-aubergine/85 via-aubergine/60 to-transparent" />
+            <div className="relative z-10 flex flex-col justify-end h-full p-8 md:p-10" style={{ minHeight: '200px' }}>
+              <div className="max-w-[400px]">
+                <h2 className="font-serif text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
+                  Your Future Health Blueprint is Ready
+                </h2>
+                <p className="text-sm font-sans text-white/70 leading-relaxed mb-5">
+                  Dr. Urban has put together a personalized blueprint based on your consultation.
+                </p>
+                <span
+                  className="inline-flex items-center gap-3 pl-6 pr-1.5 py-1.5 rounded-full font-sans text-sm font-semibold
+                             bg-violet text-white group-hover:bg-violet/90 transition-all duration-300"
+                >
+                  View Your Health Blueprint
+                  <span className="w-9 h-9 rounded-full bg-aubergine flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Membership notification */}
         {membershipParam === 'active' && (
           <div className="mb-6 px-4 py-3 rounded-brand bg-[#4ECDC4]/10 border border-[#4ECDC4]/20 flex items-center gap-3">
@@ -535,311 +715,615 @@ export default function PatientDashboardPage() {
         )}
 
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Left column: status + membership */}
+          {/* Left column: status/actions + membership */}
           <div className="md:col-span-1 space-y-6">
-            {/* Intake status card */}
-            <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
-              <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
-                Intake Status
-              </h3>
+            {/* Phase 1-3: Intake status tracker */}
+            {dashboardPhase !== 'care_plan_viewed' && (
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
+                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
+                  Intake Status
+                </h3>
 
-              {statusConfig ? (
-                <>
-                  <div
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-sans ${statusConfig.bg} ${statusConfig.color}`}
-                  >
-                    {patient.intakeStatus === 'submitted' && (
-                      <span className="w-2 h-2 rounded-full bg-violet animate-pulse" />
-                    )}
-                    {statusConfig.label}
-                  </div>
+                {statusConfig ? (
+                  <>
+                    <div
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-sans ${
+                        dashboardPhase === 'care_plan_ready'
+                          ? STATUS_CONFIG.care_plan_sent.bg + ' ' + STATUS_CONFIG.care_plan_sent.color
+                          : statusConfig.bg + ' ' + statusConfig.color
+                      }`}
+                    >
+                      {patient.intakeStatus === 'submitted' && (
+                        <span className="w-2 h-2 rounded-full bg-violet animate-pulse" />
+                      )}
+                      {dashboardPhase === 'care_plan_ready' ? 'Care Plan Ready' : statusConfig.label}
+                    </div>
 
-                  <div className="mt-5 space-y-3">
-                    {/* Status timeline */}
-                    {[
-                      {
-                        label: 'Intake submitted',
-                        date: patient.intakeSubmittedAt,
-                        done: !!patient.intakeSubmittedAt,
-                      },
-                      {
-                        label: 'Provider review',
-                        date: patient.intakeReviewedAt,
-                        done: !!patient.intakeReviewedAt,
-                        active:
-                          patient.intakeStatus === 'submitted',
-                      },
-                      {
-                        label: 'Care plan ready',
-                        date: null,
-                        done: patient.intakeStatus === 'care_plan_sent',
-                        active:
-                          patient.intakeStatus === 'reviewed',
-                      },
-                    ].map((step, i) => (
-                      <div key={i} className="flex items-start gap-3">
-                        <div
-                          className={`w-5 h-5 mt-0.5 rounded-full flex items-center justify-center shrink-0 ${
-                            step.done
-                              ? 'bg-[#4ECDC4]/20'
-                              : step.active
-                              ? 'bg-violet/20'
-                              : 'bg-human'
-                          }`}
-                        >
-                          {step.done ? (
-                            <svg
-                              className="w-3 h-3 text-[#4ECDC4]"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={3}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          ) : step.active ? (
-                            <span className="w-1.5 h-1.5 rounded-full bg-violet animate-pulse" />
-                          ) : (
-                            <span className="w-1.5 h-1.5 rounded-full bg-aubergine/15" />
-                          )}
-                        </div>
-                        <div>
-                          <p
-                            className={`text-sm font-sans ${
+                    <div className="mt-5 space-y-3">
+                      {[
+                        {
+                          label: 'Intake submitted',
+                          date: patient.intakeSubmittedAt,
+                          done: !!patient.intakeSubmittedAt,
+                        },
+                        {
+                          label: 'Provider review',
+                          date: patient.intakeReviewedAt,
+                          done: !!patient.intakeReviewedAt,
+                          active: patient.intakeStatus === 'submitted',
+                        },
+                        {
+                          label: 'Care plan ready',
+                          date: null,
+                          done: dashboardPhase === 'care_plan_ready' || patient.intakeStatus === 'care_plan_sent',
+                          active: patient.intakeStatus === 'reviewed' && !patient.presentationId,
+                        },
+                      ].map((step, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div
+                            className={`w-5 h-5 mt-0.5 rounded-full flex items-center justify-center shrink-0 ${
                               step.done
-                                ? 'text-aubergine/70'
+                                ? 'bg-[#4ECDC4]/20'
                                 : step.active
-                                ? 'text-violet'
-                                : 'text-aubergine/30'
+                                ? 'bg-violet/20'
+                                : 'bg-human'
                             }`}
                           >
-                            {step.label}
-                          </p>
-                          {step.date && (
-                            <p className="text-xs font-sans text-aubergine/30 mt-0.5">
-                              {new Date(step.date).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })}
+                            {step.done ? (
+                              <svg className="w-3 h-3 text-[#4ECDC4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : step.active ? (
+                              <span className="w-1.5 h-1.5 rounded-full bg-violet animate-pulse" />
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-aubergine/15" />
+                            )}
+                          </div>
+                          <div>
+                            <p
+                              className={`text-sm font-sans ${
+                                step.done ? 'text-aubergine/70' : step.active ? 'text-violet' : 'text-aubergine/30'
+                              }`}
+                            >
+                              {step.label}
                             </p>
-                          )}
+                            {step.date && (
+                              <p className="text-xs font-sans text-aubergine/30 mt-0.5">
+                                {new Date(step.date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                          </div>
                         </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <p className="text-sm font-sans text-aubergine/40 mb-4">
+                      You haven&apos;t started your intake yet.
+                    </p>
+                    <a
+                      href="/intake"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold
+                                 bg-violet text-white hover:bg-violet-dark shadow-sm
+                                 transition-all duration-300"
+                    >
+                      Begin Intake
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Phase 4: Quick Actions replaces intake status */}
+            {dashboardPhase === 'care_plan_viewed' && (
+              <QuickActions
+                presentationId={patient.presentationId}
+                activeView={activeView}
+                onSelectView={(view) => {
+                  // Blueprint opens in its own page
+                  if (view === 'blueprint' && patient.presentationId) {
+                    window.open(`/presentation/${patient.presentationId}`, '_blank')
+                    return
+                  }
+                  // Reset booking flow when switching away from schedule
+                  if (activeView === 'schedule' && view !== 'schedule') {
+                    resetBookingFlow()
+                  }
+                  setActiveView(view)
+                }}
+              />
+            )}
+
+            {/* Phase 4: Secondary actions (blueprint, intake summary, billing) */}
+            {dashboardPhase === 'care_plan_viewed' && (
+              <SecondaryActions
+                presentationId={patient.presentationId}
+                activeView={activeView}
+                onSelectView={(view) => {
+                  if (view === 'blueprint' && patient.presentationId) {
+                    window.open(`/presentation/${patient.presentationId}`, '_blank')
+                    return
+                  }
+                  if (activeView === 'schedule' && view !== 'schedule') {
+                    resetBookingFlow()
+                  }
+                  setActiveView(view)
+                }}
+              />
+            )}
+
+          </div>
+
+          {/* Right column: view-switchable content */}
+          <div className="md:col-span-2 space-y-6">
+
+            {/* Dashboard view — upcoming appointment + intake summary */}
+            {(activeView === 'dashboard' || dashboardPhase !== 'care_plan_viewed') && (
+              <>
+                {/* Upcoming appointment — always at top of dashboard */}
+                {dashboardPhase !== 'appointment_booked' && (
+                  <UpcomingAppointments key={appointments.length} patientId={patient.patientId} />
+                )}
+
+                {/* Prescription refill reminders */}
+                <PrescriptionRefillReminders
+                  patientId={patient.patientId}
+                  onRequestRefill={() => setActiveView('refill')}
+                />
+
+                {patient.intakeSummary ? (
+                  <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                    <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
+                      Your Intake Summary
+                    </h3>
+
+                    <div className="mb-6 p-4 rounded-brand bg-cream border border-aubergine/5">
+                      <p className="text-xs font-sans font-semibold text-aubergine/30 mb-1.5">
+                        Primary concern
+                      </p>
+                      <p className="text-sm font-sans text-aubergine/70 italic">
+                        &ldquo;{patient.intakeSummary.topConcern}&rdquo;
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <span className="px-3 py-1 rounded-full bg-violet/5 border border-violet/10 text-xs font-sans text-violet">
+                        {patient.intakeSummary.menopausalStage}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-sans ${
+                          SEVERITY_COLORS[patient.intakeSummary.symptomBurden] || SEVERITY_COLORS.moderate
+                        }`}
+                      >
+                        Symptom burden: {patient.intakeSummary.symptomBurden.charAt(0).toUpperCase() + patient.intakeSummary.symptomBurden.slice(1)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 mt-8">
+                      <p className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
+                        Symptom domains assessed
+                      </p>
+                      {patient.intakeSummary.domains.map((d, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between py-2.5 border-b border-aubergine/5 last:border-0"
+                        >
+                          <span className="text-sm font-sans text-aubergine/70">{d.domain}</span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-sans ${
+                              SEVERITY_COLORS[d.severity] || SEVERITY_COLORS.mild
+                            }`}
+                          >
+                            {d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
+                      <p className="text-xs font-sans text-violet/70 leading-relaxed">
+                        This is a summary of your intake responses — not a diagnosis. Your provider will
+                        review your full clinical brief and discuss findings during your consultation.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/5 mb-4">
+                      <svg className="w-8 h-8 text-violet/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                      </svg>
+                    </div>
+                    <h3 className="font-serif text-lg text-aubergine mb-2">No intake summary yet</h3>
+                    <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
+                      Once you complete your intake and it&apos;s been processed, your summary will appear here.
+                    </p>
+                  </div>
+                )}
+
+              </>
+            )}
+
+            {/* Schedule view — inline 3-step booking flow */}
+            {activeView === 'schedule' && dashboardPhase === 'care_plan_viewed' && (
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                {/* Header */}
+                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
+                  Schedule Appointment
+                </h3>
+
+                {/* Clickable step indicators */}
+                {bookingStep !== 'success' && (
+                  <div className="flex items-center justify-center gap-2 mt-7 mb-6">
+                    {['Appointment type', 'Date & time', 'Confirm'].map((label, i) => {
+                      const steps: BookingStep[] = ['select-type', 'pick-time', 'confirm']
+                      const stepIndex = steps.indexOf(bookingStep)
+                      const isActive = i === stepIndex
+                      const isDone = i < stepIndex
+                      const isClickable = isDone
+
+                      const handleStepClick = () => {
+                        if (!isClickable) return
+                        if (i === 0) {
+                          setSelectedType(null)
+                          setSelectedSlot(null)
+                          setBookingStep('select-type')
+                        } else if (i === 1) {
+                          setSelectedSlot(null)
+                          setBookingStep('pick-time')
+                        }
+                      }
+
+                      return (
+                        <div key={label} className="flex items-center gap-2">
+                          {i > 0 && (
+                            <div className={`w-6 h-px ${isDone ? 'bg-[#4ECDC4]/40' : 'bg-aubergine/10'}`} />
+                          )}
+                          <button
+                            type="button"
+                            disabled={!isClickable}
+                            onClick={handleStepClick}
+                            className={`flex items-center gap-1.5 ${isClickable ? 'cursor-pointer hover:opacity-70' : 'cursor-default'} transition-opacity`}
+                          >
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-sans font-medium
+                              ${isDone ? 'bg-[#4ECDC4]/15 text-[#4ECDC4]' : isActive ? 'bg-violet/10 text-violet' : 'bg-aubergine/5 text-aubergine/25'}`}>
+                              {isDone ? (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                i + 1
+                              )}
+                            </div>
+                            <span className={`text-xs font-sans ${isActive ? 'text-aubergine/60' : isDone ? 'text-[#4ECDC4]/70' : 'text-aubergine/25'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Step 1: Select appointment type */}
+                {bookingStep === 'select-type' && (
+                  <AppointmentTypeSelector
+                    providerId={PROVIDER_ID}
+                    isMember={patient.membershipStatus === 'active'}
+                    excludeNames={['initial consultation']}
+                    onSelect={(type) => {
+                      setSelectedType(type)
+                      setBookingStep('pick-time')
+                    }}
+                  />
+                )}
+
+                {/* Step 2: Pick date & time */}
+                {bookingStep === 'pick-time' && selectedType && (
+                  <div>
+                    <div className="mb-4">
+                      <p className="text-sm font-sans text-aubergine/60">
+                        {selectedType.name}
+                        <span className="text-aubergine/30 mx-1.5">&middot;</span>
+                        <span className="text-aubergine/40">{selectedType.duration_minutes} min</span>
+                      </p>
+                    </div>
+                    <TimeSlotPicker
+                      providerId={PROVIDER_ID}
+                      appointmentTypeId={selectedType.id}
+                      durationMinutes={selectedType.duration_minutes}
+                      onSelect={(slot) => {
+                        setSelectedSlot(slot)
+                        setBookingStep('confirm')
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Step 3: Confirm booking */}
+                {bookingStep === 'confirm' && selectedType && selectedSlot && (
+                  <BookingConfirmation
+                    appointmentType={selectedType}
+                    slot={selectedSlot}
+                    isMember={patient.membershipStatus === 'active'}
+                    patientNotes={patientNotes}
+                    onNotesChange={setPatientNotes}
+                    onBook={handleBookAppointment}
+                    booking={bookingInProgress}
+                  />
+                )}
+
+                {/* Success state */}
+                {bookingStep === 'success' && (
+                  <div className="text-center py-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4ECDC4]/10 mb-4">
+                      <svg className="w-8 h-8 text-[#4ECDC4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="font-serif text-xl text-aubergine mb-2">
+                      Appointment booked
+                    </h3>
+                    <p className="text-sm font-sans text-aubergine/50 mb-6 max-w-sm mx-auto">
+                      You&apos;ll receive a confirmation email with details and a link to join your video visit.
+                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        onClick={() => {
+                          resetBookingFlow()
+                          setActiveView('dashboard')
+                        }}
+                        className="px-5 py-2.5 text-sm font-sans font-medium text-aubergine/60 border border-aubergine/10 rounded-pill hover:bg-aubergine/5 transition-all"
+                      >
+                        Back to Dashboard
+                      </button>
+                      <button
+                        onClick={resetBookingFlow}
+                        className="px-5 py-2.5 text-sm font-sans font-medium text-violet border border-violet/20 rounded-pill hover:bg-violet/5 transition-all"
+                      >
+                        Book Another
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show upcoming appointments below the flow */}
+                {bookingStep !== 'success' && appointments.length > 0 && (
+                  <div className="mt-8 pt-6 border-t border-aubergine/5">
+                    <h4 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
+                      Upcoming Appointments
+                    </h4>
+                    <div className="space-y-3">
+                      {appointments.map((apt: any) => (
+                        <div key={apt.id} className="flex items-center gap-3 p-3 rounded-xl bg-cream border border-aubergine/5">
+                          <div
+                            className="w-1.5 h-10 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: apt.appointment_types?.color || '#944fed' }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-sans font-medium text-aubergine truncate">
+                              {apt.appointment_types?.name || 'Appointment'}
+                            </p>
+                            <p className="text-xs font-sans text-aubergine/45">
+                              {new Date(apt.starts_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {' at '}
+                              {new Date(apt.starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </p>
+                          </div>
+                          <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill bg-emerald-50 border border-emerald-200 text-emerald-600">
+                            Confirmed
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rx Refill view */}
+            {activeView === 'refill' && dashboardPhase === 'care_plan_viewed' && (
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-2">
+                  Your Prescriptions
+                </h3>
+                <p className="text-sm font-sans text-aubergine/40 mb-6">
+                  Submit a refill request and Dr. Urban&apos;s team will review it within 1-2 business days.
+                </p>
+                <PrescriptionList patientId={patient.patientId} />
+              </div>
+            )}
+
+            {/* Message view */}
+            {activeView === 'message' && dashboardPhase === 'care_plan_viewed' && (
+              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-2">
+                  Message Dr. Urban
+                </h3>
+                <p className="text-sm font-sans text-aubergine/40 mb-6">
+                  Send a secure message to Dr. Urban&apos;s care team. You&apos;ll receive a response within 1-2 business days.
+                </p>
+                <PatientMessages patientId={patient.patientId} />
+              </div>
+            )}
+
+            {/* Billing view */}
+            {/* Intake Summary view */}
+            {activeView === 'intake-summary' && dashboardPhase === 'care_plan_viewed' && (
+              patient.intakeSummary ? (
+                <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                  <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
+                    Your Intake Summary
+                  </h3>
+
+                  <div className="mb-6 p-4 rounded-brand bg-cream border border-aubergine/5">
+                    <p className="text-xs font-sans font-semibold text-aubergine/30 mb-1.5">
+                      Primary concern
+                    </p>
+                    <p className="text-sm font-sans text-aubergine/70 italic">
+                      &ldquo;{patient.intakeSummary.topConcern}&rdquo;
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <span className="px-3 py-1 rounded-full bg-violet/5 border border-violet/10 text-xs font-sans text-violet">
+                      {patient.intakeSummary.menopausalStage}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-sans ${
+                        SEVERITY_COLORS[patient.intakeSummary.symptomBurden] || SEVERITY_COLORS.moderate
+                      }`}
+                    >
+                      Symptom burden: {patient.intakeSummary.symptomBurden.charAt(0).toUpperCase() + patient.intakeSummary.symptomBurden.slice(1)}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 mt-8">
+                    <p className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
+                      Symptom domains assessed
+                    </p>
+                    {patient.intakeSummary.domains.map((d, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between py-2.5 border-b border-aubergine/5 last:border-0"
+                      >
+                        <span className="text-sm font-sans text-aubergine/70">{d.domain}</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-sans ${
+                            SEVERITY_COLORS[d.severity] || SEVERITY_COLORS.mild
+                          }`}
+                        >
+                          {d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}
+                        </span>
                       </div>
                     ))}
                   </div>
-                </>
-              ) : (
-                <div>
-                  <p className="text-sm font-sans text-aubergine/40 mb-4">
-                    You haven't started your intake yet.
-                  </p>
-                  <a
-                    href="/intake"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold
-                               bg-violet text-white hover:bg-violet-dark shadow-sm
-                               transition-all duration-300"
-                  >
-                    Begin Intake
-                  </a>
-                </div>
-              )}
-            </div>
 
-            {/* Membership card */}
-            <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
-              <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
-                Membership
-              </h3>
-
-              {patient.membershipStatus === 'active' ? (
-                <>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[#4ECDC4]/5 border-[#4ECDC4]/20 text-sm font-sans text-[#4ECDC4]">
-                    Active Member
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex justify-between text-sm font-sans">
-                      <span className="text-aubergine/40">Plan</span>
-                      <span className="text-aubergine/70">$200/month</span>
-                    </div>
-                    {patient.membershipRenewal && (
-                      <div className="flex justify-between text-sm font-sans">
-                        <span className="text-aubergine/40">Next renewal</span>
-                        <span className="text-aubergine/70">
-                          {new Date(patient.membershipRenewal).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs font-sans text-aubergine/25 mt-4">
-                    Includes follow-ups, prescriptions, progress tracking, and care presentations.
-                  </p>
-                </>
-              ) : patient.membershipStatus === 'past_due' ? (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-amber-50 border-amber-200 text-sm font-sans text-amber-600">
-                  Payment Past Due
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-sans text-aubergine/60 mb-2">
-                    Continue with membership
-                  </p>
-                  <p className="text-xs font-sans text-aubergine/35 mb-4 leading-relaxed">
-                    Get ongoing care for $200/month — follow-up visits, progress tracking, prescription management, and personalized care presentations.
-                  </p>
-                  <button
-                    onClick={handleMembershipEnroll}
-                    disabled={membershipLoading}
-                    className="w-full py-2.5 rounded-full font-sans text-sm font-semibold
-                               bg-violet text-white hover:bg-violet/90
-                               disabled:opacity-50 transition-all duration-300"
-                  >
-                    {membershipLoading ? 'Loading...' : 'Enroll — $200/month'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Right column: care presentation + intake summary */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Care Presentation — hero card at top of right column */}
-            {patient.presentationId && (
-              <div
-                className="relative rounded-[20px] overflow-hidden group"
-                style={{ minHeight: '240px' }}
-              >
-                {/* Background image */}
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                  style={{ backgroundImage: 'url(/care-presentation-bg.png)' }}
-                />
-                {/* Dark gradient overlay — stronger on the left for text readability */}
-                <div className="absolute inset-0 bg-gradient-to-r from-aubergine/85 via-aubergine/60 to-transparent" />
-                {/* Content */}
-                <div className="relative z-10 flex flex-col justify-end h-full p-8 md:p-10" style={{ minHeight: '240px' }}>
-                  <div className="max-w-[340px]">
-                    <h3 className="font-serif text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
-                      Your Future Health Blueprint is Ready
-                    </h3>
-                    <p className="text-sm font-sans text-white/70 leading-relaxed mb-6">
-                      Dr. Urban has put together a personalized blueprint based on your one-on-one.
+                  <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
+                    <p className="text-xs font-sans text-violet/70 leading-relaxed">
+                      This is a summary of your intake responses — not a diagnosis. Your provider will
+                      review your full clinical brief and discuss findings during your consultation.
                     </p>
-                    <button
-                      onClick={() => router.push(`/presentation/${patient.presentationId}`)}
-                      className="inline-flex items-center gap-3 pl-6 pr-1.5 py-1.5 rounded-full font-sans text-sm font-semibold
-                                 bg-violet text-white hover:bg-violet/90
-                                 transition-all duration-300"
-                    >
-                      View Your Future Health Blueprint
-                      <span className="w-9 h-9 rounded-full bg-aubergine flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                        </svg>
-                      </span>
-                    </button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8 text-center">
+                  <h3 className="font-serif text-lg text-aubergine mb-2">No intake summary yet</h3>
+                  <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
+                    Once you complete your intake and it&apos;s been processed, your summary will appear here.
+                  </p>
+                </div>
+              )
             )}
 
-            {patient.intakeSummary ? (
+            {activeView === 'billing' && dashboardPhase === 'care_plan_viewed' && (
               <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                 <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
-                  Your Intake Summary
+                  Billing & Membership
                 </h3>
-
-                {/* Top concern */}
-                <div className="mb-6 p-4 rounded-brand bg-cream border border-aubergine/5">
-                  <p className="text-xs font-sans font-semibold text-aubergine/30 mb-1.5">
-                    Primary concern
-                  </p>
-                  <p className="text-sm font-sans text-aubergine/70 italic">
-                    "{patient.intakeSummary.topConcern}"
-                  </p>
-                </div>
-
-                {/* Metadata badges */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="px-3 py-1 rounded-full bg-violet/5 border border-violet/10 text-xs font-sans text-violet">
-                    {patient.intakeSummary.menopausalStage}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-sans ${
-                      SEVERITY_COLORS[patient.intakeSummary.symptomBurden] || SEVERITY_COLORS.moderate
-                    }`}
-                  >
-                    Symptom burden: {patient.intakeSummary.symptomBurden.charAt(0).toUpperCase() + patient.intakeSummary.symptomBurden.slice(1)}
-                  </span>
-                </div>
-
-                {/* Symptom domains */}
-                <div className="space-y-3 mt-8">
-                  <p className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
-                    Symptom domains assessed
-                  </p>
-                  {patient.intakeSummary.domains.map((d, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between py-2.5 border-b border-aubergine/5 last:border-0"
-                    >
-                      <span className="text-sm font-sans text-aubergine/70">{d.domain}</span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-sans ${
-                          SEVERITY_COLORS[d.severity] || SEVERITY_COLORS.mild
-                        }`}
-                      >
-                        {d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}
-                      </span>
+                {patient.membershipStatus === 'active' ? (
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[#4ECDC4]/5 border-[#4ECDC4]/20 text-sm font-sans text-[#4ECDC4] mb-6">
+                      Active Member
                     </div>
-                  ))}
-                </div>
-
-                {/* Note */}
-                <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
-                  <p className="text-xs font-sans text-violet/70 leading-relaxed">
-                    This is a summary of your intake responses — not a diagnosis. Your provider will
-                    review your full clinical brief and discuss findings during your consultation.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/5 mb-4">
-                  <svg
-                    className="w-8 h-8 text-violet/30"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="font-serif text-lg text-aubergine mb-2">
-                  No intake summary yet
-                </h3>
-                <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
-                  Once you complete your intake and it's been processed, your summary will appear here.
-                </p>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                        <span className="text-aubergine/40">Plan</span>
+                        <span className="text-aubergine/70">Womenkind Membership</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                        <span className="text-aubergine/40">Monthly cost</span>
+                        <span className="text-aubergine/70">$200/month</span>
+                      </div>
+                      {patient.membershipRenewal && (
+                        <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                          <span className="text-aubergine/40">Next renewal</span>
+                          <span className="text-aubergine/70">
+                            {new Date(patient.membershipRenewal).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
+                      <p className="text-xs font-sans text-violet/70 leading-relaxed">
+                        Your membership includes follow-up visits, prescription management, progress tracking, and personalized care presentations.
+                      </p>
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-aubergine/5">
+                      <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Payment Method</p>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/stripe/portal', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ patientId: patient.patientId }),
+                            })
+                            const data = await res.json()
+                            if (data.url) {
+                              window.open(data.url, '_blank')
+                            }
+                          } catch (err) {
+                            console.error('Failed to open billing portal:', err)
+                          }
+                        }}
+                        className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-violet border border-violet/25 hover:bg-violet/5 transition-all"
+                      >
+                        Manage Payment Method
+                      </button>
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-aubergine/5">
+                      <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Cancel Membership</p>
+                      <p className="text-xs font-sans text-aubergine/40 leading-relaxed mb-3">
+                        Your membership will remain active until the end of your current billing period. You can re-enroll at any time.
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Are you sure you want to cancel your membership? You will retain access until the end of your current billing period.')) return
+                          try {
+                            const res = await fetch('/api/stripe/cancel', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ patientId: patient.patientId }),
+                            })
+                            const data = await res.json()
+                            if (res.ok) {
+                              window.location.reload()
+                            } else {
+                              console.error('Cancel failed:', data.error)
+                            }
+                          } catch (err) {
+                            console.error('Failed to cancel membership:', err)
+                          }
+                        }}
+                        className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-red-500 border border-red-200 hover:bg-red-50 transition-all"
+                      >
+                        Cancel Membership
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-sans text-aubergine/60 mb-4 leading-relaxed">
+                      Get ongoing care for $200/month — follow-up visits, progress tracking, prescription management, and personalized care presentations.
+                    </p>
+                    <button
+                      onClick={handleMembershipEnroll}
+                      disabled={membershipLoading}
+                      className="px-6 py-3 rounded-full font-sans text-sm font-semibold bg-violet text-white hover:bg-violet/90 disabled:opacity-50 transition-all duration-300"
+                    >
+                      {membershipLoading ? 'Loading...' : 'Enroll — $200/month'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Upcoming Appointments */}
-            <UpcomingAppointments patientId={patient.patientId} />
 
           </div>
         </div>

@@ -5,14 +5,18 @@ import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
+export type ProviderTab = 'queue' | 'patients' | 'schedule' | 'messages' | 'refills'
+
 interface ProviderNavProps {
   providerName?: string
   /** Dashboard passes these to control tab state locally */
-  activeTab?: 'queue' | 'patients' | 'schedule'
-  onTabChange?: (tab: 'queue' | 'patients' | 'schedule') => void
+  activeTab?: ProviderTab
+  onTabChange?: (tab: ProviderTab) => void
   newIntakeCount?: number
   patientCount?: number
   appointmentCount?: number
+  unreadMessageCount?: number
+  pendingRefillCount?: number
 }
 
 export default function ProviderNav({
@@ -22,6 +26,8 @@ export default function ProviderNav({
   newIntakeCount,
   patientCount,
   appointmentCount,
+  unreadMessageCount,
+  pendingRefillCount,
 }: ProviderNavProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -47,7 +53,7 @@ export default function ProviderNav({
   // Determine which tab is active
   const isDashboard = pathname === '/provider/dashboard'
   const isSchedule = pathname === '/provider/schedule'
-  const resolvedTab: 'queue' | 'patients' | 'schedule' = controlledTab
+  const resolvedTab: ProviderTab = controlledTab
     ? controlledTab
     : isSchedule
       ? 'schedule'
@@ -55,7 +61,7 @@ export default function ProviderNav({
         ? 'patients'
         : 'queue'
 
-  const handleTabClick = (tab: 'queue' | 'patients' | 'schedule') => {
+  const handleTabClick = (tab: ProviderTab) => {
     if (tab === 'schedule') {
       router.push('/provider/schedule')
       return
@@ -236,6 +242,47 @@ export default function ProviderNav({
                   {(appointmentCount ?? 0) > 0 && (
                     <span className="bg-violet/20 text-violet text-xs px-1.5 py-0.5 rounded-pill font-medium">
                       {appointmentCount}
+                    </span>
+                  )}
+                </span>
+              </button>
+              <button
+                onClick={() => handleTabClick('messages')}
+                className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
+                  ${resolvedTab === 'messages'
+                    ? 'border-violet text-violet'
+                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                  Messages
+                  {(unreadMessageCount ?? 0) > 0 && (
+                    <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
+                      {unreadMessageCount}
+                    </span>
+                  )}
+                </span>
+              </button>
+              <button
+                onClick={() => handleTabClick('refills')}
+                className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
+                  ${resolvedTab === 'refills'
+                    ? 'border-violet text-violet'
+                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 8.5l7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.636 15.364a5 5 0 010-7.071l4.95-4.95a5 5 0 017.07 7.07l-4.95 4.95a5 5 0 01-7.07 0z" />
+                  </svg>
+                  Refill Requests
+                  {(pendingRefillCount ?? 0) > 0 && (
+                    <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
+                      {pendingRefillCount}
                     </span>
                   )}
                 </span>

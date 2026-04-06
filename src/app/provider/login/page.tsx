@@ -46,7 +46,9 @@ export default function ProviderLoginPage() {
   }
 
   // Demo login — skip auth for investor demo
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
+    // Sign out any existing auth session so RLS falls back to anon role
+    await supabase.auth.signOut()
     // Store demo session in localStorage
     localStorage.setItem('womenkind_demo_provider', JSON.stringify({
       id: 'b0000000-0000-0000-0000-000000000001',
