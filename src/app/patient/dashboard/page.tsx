@@ -712,28 +712,42 @@ export default function PatientDashboardPage() {
 
           {/* Right column: care presentation + intake summary */}
           <div className="md:col-span-2 space-y-6">
-            {/* Care Presentation — top of right column when available */}
+            {/* Care Presentation — hero card at top of right column */}
             {patient.presentationId && (
-              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-1">
-                      Care Presentation
+              <div
+                className="relative rounded-[20px] overflow-hidden group"
+                style={{ minHeight: '240px' }}
+              >
+                {/* Background image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                  style={{ backgroundImage: 'url(/care-presentation-bg.png)' }}
+                />
+                {/* Dark gradient overlay — stronger on the left for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-r from-aubergine/85 via-aubergine/60 to-transparent" />
+                {/* Content */}
+                <div className="relative z-10 flex flex-col justify-end h-full p-8 md:p-10" style={{ minHeight: '240px' }}>
+                  <div className="max-w-[340px]">
+                    <h3 className="font-serif text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
+                      Your Future Health Blueprint is Ready
                     </h3>
-                    <p className="text-sm font-sans text-aubergine/50">
-                      Your personalized care summary from Dr. Urban is ready
+                    <p className="text-sm font-sans text-white/70 leading-relaxed mb-6">
+                      Dr. Urban has put together a personalized blueprint based on your one-on-one.
                     </p>
+                    <button
+                      onClick={() => router.push(`/presentation/${patient.presentationId}`)}
+                      className="inline-flex items-center gap-3 pl-6 pr-1.5 py-1.5 rounded-full font-sans text-sm font-semibold
+                                 bg-violet text-white hover:bg-violet/90
+                                 transition-all duration-300"
+                    >
+                      View Your Future Health Blueprint
+                      <span className="w-9 h-9 rounded-full bg-aubergine flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                      </span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => router.push(`/presentation/${patient.presentationId}`)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-aubergine text-white text-sm font-sans rounded-brand hover:bg-aubergine/90 transition-colors shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    View Presentation
-                  </button>
                 </div>
               </div>
             )}
