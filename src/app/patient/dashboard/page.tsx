@@ -11,8 +11,8 @@ import PrescriptionList from '@/components/patient/PrescriptionList'
 import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
 import BookingConfirmation from '@/components/patient/BookingConfirmation'
 import PatientMessages from '@/components/patient/PatientMessages'
-import WearableConnect from '@/components/patient/WearableConnect'
 import WearableTrends from '@/components/patient/WearableTrends'
+import PatientSettings from '@/components/patient/PatientSettings'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -554,7 +554,7 @@ export default function PatientDashboardPage() {
                     Profile
                   </button>
                   <button
-                    onClick={() => { setMenuOpen(false) }}
+                    onClick={() => { setMenuOpen(false); setActiveView('settings') }}
                     className="w-full text-left px-4 py-2.5 text-sm font-sans text-aubergine/70 hover:bg-violet/5 hover:text-aubergine transition-colors flex items-center gap-3"
                   >
                     <svg className="w-4 h-4 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1157,10 +1157,12 @@ export default function PatientDashboardPage() {
 
             {/* Wearables / Health Trends view */}
             {activeView === 'wearables' && dashboardPhase === 'care_plan_viewed' && (
-              <div className="space-y-4">
-                <WearableConnect patientId={patient.patientId} />
-                <WearableTrends patientId={patient.patientId} />
-              </div>
+              <WearableTrends patientId={patient.patientId} onGoToSettings={() => setActiveView('settings')} />
+            )}
+
+            {/* Settings view */}
+            {activeView === 'settings' && dashboardPhase === 'care_plan_viewed' && (
+              <PatientSettings patientId={patient.patientId} />
             )}
 
             {/* Billing view */}

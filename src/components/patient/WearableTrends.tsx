@@ -14,6 +14,7 @@ import {
 interface WearableTrendsProps {
   patientId: string
   dateRange?: number // days, default 30
+  onGoToSettings?: () => void
 }
 
 interface MetricRow {
@@ -250,7 +251,7 @@ function SleepBreakdown({ data }: { data: MetricRow[] }) {
   )
 }
 
-export default function WearableTrends({ patientId, dateRange = 30 }: WearableTrendsProps) {
+export default function WearableTrends({ patientId, dateRange = 30, onGoToSettings }: WearableTrendsProps) {
   const [metrics, setMetrics] = useState<MetricRow[]>([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState(dateRange)
@@ -324,8 +325,24 @@ export default function WearableTrends({ patientId, dateRange = 30 }: WearableTr
 
   if (metrics.length === 0) {
     return (
-      <div className="bg-white rounded-card p-8 shadow-sm border border-aubergine/5 text-center">
-        <p className="text-sm font-sans text-aubergine/40">No wearable data yet. Data will appear after your Oura Ring syncs.</p>
+      <div className="bg-white rounded-card p-10 shadow-sm border border-aubergine/5 text-center">
+        <div className="w-14 h-14 rounded-full bg-violet/10 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-7 h-7 text-violet/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </div>
+        <h3 className="font-sans text-sm font-semibold text-aubergine mb-1">No Health Data Yet</h3>
+        <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto mb-5">
+          Connect your Oura Ring in Settings to automatically track sleep, temperature, HRV, and heart rate between visits.
+        </p>
+        {onGoToSettings && (
+          <button
+            onClick={onGoToSettings}
+            className="bg-violet hover:bg-violet/90 text-white text-sm font-sans font-medium px-5 py-2.5 rounded-pill transition-colors"
+          >
+            Go to Settings
+          </button>
+        )}
       </div>
     )
   }

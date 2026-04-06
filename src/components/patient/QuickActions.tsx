@@ -1,6 +1,6 @@
 'use client'
 
-export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables'
+export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables' | 'settings'
 
 interface QuickActionsProps {
   presentationId?: string | null
