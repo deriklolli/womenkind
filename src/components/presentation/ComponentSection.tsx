@@ -10,6 +10,7 @@ interface ComponentSectionProps {
   index: number
   total: number
   providerName: string
+  onCreamBackground?: boolean
 }
 
 export default function ComponentSection({
@@ -18,6 +19,7 @@ export default function ComponentSection({
   index,
   total,
   providerName,
+  onCreamBackground = true,
 }: ComponentSectionProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10% 0px' })
@@ -85,27 +87,19 @@ export default function ComponentSection({
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="rounded-2xl p-6 md:p-8 border"
+              className="rounded-2xl border flex items-start gap-5 p-6 md:p-8"
               style={{
-                backgroundColor: `${component.color}06`,
-                borderColor: `${component.color}12`,
+                backgroundColor: onCreamBackground ? '#ffffff' : '#f7f3ee',
+                borderColor: onCreamBackground ? '#e8e4df' : '#ebe7e2',
               }}
             >
-              <div className="flex items-center gap-3 mb-4">
-                <img
-                  src="/dr-urban.jpg"
-                  alt={providerName}
-                  className="w-9 h-9 rounded-full object-cover object-top"
-                />
-                <div>
-                  <span className="text-sm font-sans font-medium text-aubergine">
-                    {providerName}
-                  </span>
-                  <p className="text-xs font-sans text-aubergine/40">Your physician</p>
-                </div>
-              </div>
-              <p className="text-base font-sans leading-relaxed italic" style={{ color: '#422a1f' }}>
-                &ldquo;{providerNote}&rdquo;
+              <img
+                src="/dr-urban.jpg"
+                alt={providerName}
+                className="w-[62px] h-[62px] rounded-full object-cover object-top flex-shrink-0"
+              />
+              <p className="text-base font-sans leading-relaxed" style={{ color: '#422a1f' }}>
+                {providerNote}
               </p>
             </motion.div>
           )}

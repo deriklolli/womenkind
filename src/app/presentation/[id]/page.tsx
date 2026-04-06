@@ -125,7 +125,7 @@ export default function PresentationViewerPage() {
               alt="Womenkind"
               width={200}
               height={45}
-              className="h-8 w-auto mx-auto mb-12 opacity-60"
+              className="h-[42px] w-auto mx-auto mb-12 opacity-60"
             />
           </motion.div>
 
@@ -135,7 +135,7 @@ export default function PresentationViewerPage() {
             transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
             className="font-serif text-3xl md:text-4xl text-white mb-6 leading-tight"
           >
-            Your Personalized<br />Care Summary
+            Your Future Health<br />Blueprint Summary
           </motion.h1>
 
           <motion.p
@@ -308,6 +308,7 @@ export default function PresentationViewerPage() {
               index={i}
               total={components.length}
               providerName="Dr. Urban"
+              onCreamBackground={i % 2 === 0}
             />
           </div>
         ))}
