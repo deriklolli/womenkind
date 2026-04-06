@@ -1162,7 +1162,13 @@ export default function PatientDashboardPage() {
 
             {/* Settings view */}
             {activeView === 'settings' && dashboardPhase === 'care_plan_viewed' && (
-              <PatientSettings patientId={patient.patientId} />
+              <PatientSettings
+                patientId={patient.patientId}
+                membershipStatus={patient.membershipStatus}
+                membershipRenewal={patient.membershipRenewal}
+                onEnrollMembership={handleMembershipEnroll}
+                membershipLoading={membershipLoading}
+              />
             )}
 
             {/* Billing view */}
@@ -1234,108 +1240,6 @@ export default function PatientDashboardPage() {
               )
             )}
 
-            {activeView === 'billing' && dashboardPhase === 'care_plan_viewed' && (
-              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
-                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
-                  Billing & Membership
-                </h3>
-                {patient.membershipStatus === 'active' ? (
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[#4ECDC4]/5 border-[#4ECDC4]/20 text-sm font-sans text-[#4ECDC4] mb-6">
-                      Active Member
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
-                        <span className="text-aubergine/40">Plan</span>
-                        <span className="text-aubergine/70">Womenkind Membership</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
-                        <span className="text-aubergine/40">Monthly cost</span>
-                        <span className="text-aubergine/70">$200/month</span>
-                      </div>
-                      {patient.membershipRenewal && (
-                        <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
-                          <span className="text-aubergine/40">Next renewal</span>
-                          <span className="text-aubergine/70">
-                            {new Date(patient.membershipRenewal).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
-                      <p className="text-xs font-sans text-violet/70 leading-relaxed">
-                        Your membership includes follow-up visits, prescription management, progress tracking, and personalized care presentations.
-                      </p>
-                    </div>
-                    <div className="mt-6 pt-6 border-t border-aubergine/5">
-                      <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Payment Method</p>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const res = await fetch('/api/stripe/portal', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ patientId: patient.patientId }),
-                            })
-                            const data = await res.json()
-                            if (data.url) {
-                              window.open(data.url, '_blank')
-                            }
-                          } catch (err) {
-                            console.error('Failed to open billing portal:', err)
-                          }
-                        }}
-                        className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-violet border border-violet/25 hover:bg-violet/5 transition-all"
-                      >
-                        Manage Payment Method
-                      </button>
-                    </div>
-                    <div className="mt-6 pt-6 border-t border-aubergine/5">
-                      <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Cancel Membership</p>
-                      <p className="text-xs font-sans text-aubergine/40 leading-relaxed mb-3">
-                        Your membership will remain active until the end of your current billing period. You can re-enroll at any time.
-                      </p>
-                      <button
-                        onClick={async () => {
-                          if (!confirm('Are you sure you want to cancel your membership? You will retain access until the end of your current billing period.')) return
-                          try {
-                            const res = await fetch('/api/stripe/cancel', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ patientId: patient.patientId }),
-                            })
-                            const data = await res.json()
-                            if (res.ok) {
-                              window.location.reload()
-                            } else {
-                              console.error('Cancel failed:', data.error)
-                            }
-                          } catch (err) {
-                            console.error('Failed to cancel membership:', err)
-                          }
-                        }}
-                        className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-red-500 border border-red-200 hover:bg-red-50 transition-all"
-                      >
-                        Cancel Membership
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-sans text-aubergine/60 mb-4 leading-relaxed">
-                      Get ongoing care for $200/month — follow-up visits, progress tracking, prescription management, and personalized care presentations.
-                    </p>
-                    <button
-                      onClick={handleMembershipEnroll}
-                      disabled={membershipLoading}
-                      className="px-6 py-3 rounded-full font-sans text-sm font-semibold bg-violet text-white hover:bg-violet/90 disabled:opacity-50 transition-all duration-300"
-                    >
-                      {membershipLoading ? 'Loading...' : 'Enroll — $200/month'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
 
           </div>
         </div>

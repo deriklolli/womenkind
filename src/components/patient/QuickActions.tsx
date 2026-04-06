@@ -77,14 +77,6 @@ const secondaryActions: ActionItem[] = [
     color: '#4ECDC4',
     bg: 'rgba(78, 205, 196, 0.08)',
   },
-  {
-    key: 'billing',
-    label: 'Billing & Membership',
-    subtitle: 'Manage your plan',
-    icon: 'billing',
-    color: '#4ECDC4',
-    bg: 'rgba(78, 205, 196, 0.08)',
-  },
 ]
 
 function ActionIcon({ type, color }: { type: string; color: string }) {

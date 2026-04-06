@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 
 interface PatientSettingsProps {
   patientId: string
+  membershipStatus: 'active' | 'canceled' | 'past_due' | 'none'
+  membershipRenewal: string | null
+  onEnrollMembership?: () => void
+  membershipLoading?: boolean
 }
 
 interface ConnectionStatus {
@@ -13,12 +17,20 @@ interface ConnectionStatus {
   lastSyncedAt: string | null
 }
 
-export default function PatientSettings({ patientId }: PatientSettingsProps) {
+export default function PatientSettings({
+  patientId,
+  membershipStatus,
+  membershipRenewal,
+  onEnrollMembership,
+  membershipLoading,
+}: PatientSettingsProps) {
   const [status, setStatus] = useState<ConnectionStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [canceling, setCanceling] = useState(false)
 
   useEffect(() => {
     fetchStatus()
@@ -69,12 +81,49 @@ export default function PatientSettings({ patientId }: PatientSettingsProps) {
     }
   }
 
+  async function handleOpenBillingPortal() {
+    try {
+      const res = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.open(data.url, '_blank')
+      }
+    } catch (err) {
+      console.error('Failed to open billing portal:', err)
+    }
+  }
+
+  async function handleCancelMembership() {
+    setCanceling(true)
+    try {
+      const res = await fetch('/api/stripe/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId }),
+      })
+      if (res.ok) {
+        window.location.reload()
+      } else {
+        const data = await res.json()
+        console.error('Cancel failed:', data.error)
+      }
+    } catch (err) {
+      console.error('Failed to cancel membership:', err)
+    } finally {
+      setCanceling(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div>
         <h2 className="font-serif text-xl text-aubergine">Settings</h2>
-        <p className="text-sm font-sans text-aubergine/40 mt-1">Manage your connected devices and preferences.</p>
+        <p className="text-sm font-sans text-aubergine/40 mt-1">Manage your connected devices, membership, and preferences.</p>
       </div>
 
       {/* Connected Devices section */}
@@ -90,7 +139,6 @@ export default function PatientSettings({ patientId }: PatientSettingsProps) {
               <div className="h-4 bg-aubergine/5 rounded w-64" />
             </div>
           ) : status?.connected ? (
-            /* Connected state */
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -120,7 +168,6 @@ export default function PatientSettings({ patientId }: PatientSettingsProps) {
                 </div>
               </div>
 
-              {/* Disconnect option */}
               <div className="mt-5 pt-4 border-t border-aubergine/5">
                 {!showDisconnectConfirm ? (
                   <button
@@ -154,7 +201,6 @@ export default function PatientSettings({ patientId }: PatientSettingsProps) {
               </div>
             </div>
           ) : (
-            /* Not connected state */
             <div className="flex items-start gap-4">
               <div className="w-11 h-11 rounded-full bg-aubergine/5 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-aubergine/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -180,17 +226,102 @@ export default function PatientSettings({ patientId }: PatientSettingsProps) {
         </div>
       </div>
 
-      {/* Placeholder for future settings sections */}
-      {/*
+      {/* Billing & Membership section */}
       <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
         <div className="px-6 py-4 border-b border-aubergine/5">
-          <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">Notifications</h3>
+          <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">Billing & Membership</h3>
         </div>
+
         <div className="px-6 py-5">
-          ...
+          {membershipStatus === 'active' ? (
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[#4ECDC4]/5 border-[#4ECDC4]/20 text-sm font-sans text-[#4ECDC4] mb-5">
+                Active Member
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                  <span className="text-aubergine/40">Plan</span>
+                  <span className="text-aubergine/70">Womenkind Membership</span>
+                </div>
+                <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                  <span className="text-aubergine/40">Monthly cost</span>
+                  <span className="text-aubergine/70">$200/month</span>
+                </div>
+                {membershipRenewal && (
+                  <div className="flex justify-between text-sm font-sans py-2.5 border-b border-aubergine/5">
+                    <span className="text-aubergine/40">Next renewal</span>
+                    <span className="text-aubergine/70">
+                      {new Date(membershipRenewal).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
+                <p className="text-xs font-sans text-violet/70 leading-relaxed">
+                  Your membership includes follow-up visits, prescription management, progress tracking, and personalized care presentations.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-aubergine/5">
+                <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Payment Method</p>
+                <button
+                  onClick={handleOpenBillingPortal}
+                  className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-violet border border-violet/25 hover:bg-violet/5 transition-all"
+                >
+                  Manage Payment Method
+                </button>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-aubergine/5">
+                <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-3">Cancel Membership</p>
+                {!showCancelConfirm ? (
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="text-xs font-sans font-medium text-aubergine/30 hover:text-red-500 transition-colors"
+                  >
+                    Cancel Membership
+                  </button>
+                ) : (
+                  <div className="p-4 bg-red-50/50 rounded-brand border border-red-200/50">
+                    <p className="text-sm font-sans text-aubergine/70 mb-3">
+                      Cancel your membership? You will retain access until the end of your current billing period. You can re-enroll at any time.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCancelMembership}
+                        disabled={canceling}
+                        className="text-xs font-sans font-medium text-red-600 px-3 py-1.5 rounded-pill border border-red-300 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {canceling ? 'Canceling...' : 'Yes, Cancel Membership'}
+                      </button>
+                      <button
+                        onClick={() => setShowCancelConfirm(false)}
+                        className="text-xs font-sans font-medium text-aubergine/50 px-3 py-1.5 rounded-pill border border-aubergine/10 hover:border-aubergine/20 transition-colors"
+                      >
+                        Keep Membership
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-sans text-aubergine/60 mb-4 leading-relaxed">
+                Get ongoing care for $200/month — follow-up visits, progress tracking, prescription management, and personalized care presentations.
+              </p>
+              <button
+                onClick={onEnrollMembership}
+                disabled={membershipLoading}
+                className="px-6 py-3 rounded-full font-sans text-sm font-semibold bg-violet text-white hover:bg-violet/90 disabled:opacity-50 transition-all duration-300"
+              >
+                {membershipLoading ? 'Loading...' : 'Enroll — $200/month'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
-      */}
     </div>
   )
 }
