@@ -152,15 +152,15 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
 
                 {isExpanded && (
                   <div className="px-5 pb-5 md:px-6 md:pb-6 pt-0">
-                    <div className="border-t border-aubergine/5 pt-4">
+                    <div className="pt-2">
                       {/* Results table */}
                       <div className="space-y-0">
                         {/* Header row */}
-                        <div className="hidden md:grid grid-cols-12 gap-3 pb-2 mb-1 border-b border-aubergine/5">
-                          <span className="col-span-4 text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider">Test</span>
-                          <span className="col-span-2 text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider text-right">Result</span>
-                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider text-right">Reference Range</span>
-                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider text-right">Status</span>
+                        <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2.5 rounded-lg bg-aubergine/[0.04]">
+                          <span className="col-span-4 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider">Test</span>
+                          <span className="col-span-2 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Result</span>
+                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Reference Range</span>
+                          <span className="col-span-3 text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider text-right">Status</span>
                         </div>
 
                         {results.map((r, i) => {
@@ -170,8 +170,8 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
                           return (
                             <div
                               key={i}
-                              className={`grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-3 py-3 border-b border-aubergine/5 last:border-0 ${
-                                flag !== 'normal' ? 'bg-orange-50/30 -mx-2 px-2 rounded-lg' : ''
+                              className={`grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-3 px-3 py-3 border-b border-aubergine/5 last:border-0 ${
+                                flag !== 'normal' ? 'bg-orange-50/30 rounded-lg' : ''
                               }`}
                             >
                               {/* Test name */}

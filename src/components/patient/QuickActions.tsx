@@ -169,10 +169,11 @@ function ActionIcon({ type, color }: { type: string; color: string }) {
   }
 }
 
-function ActionButton({ action, isActive, onSelect, teal }: { action: ActionItem; isActive: boolean; onSelect: () => void; teal?: boolean }) {
+function ActionButton({ action, isActive, onSelect, teal, alwaysColorIcon }: { action: ActionItem; isActive: boolean; onSelect: () => void; teal?: boolean; alwaysColorIcon?: boolean }) {
   const activeColor = teal ? '#4ECDC4' : '#944fed'
   const activeBg = teal ? 'bg-[#4ECDC4]/[0.06]' : 'bg-violet/[0.06]'
   const hoverBg = teal ? 'hover:bg-[#4ECDC4]/[0.03]' : 'hover:bg-violet/[0.03]'
+  const showColorIcon = isActive || alwaysColorIcon
 
   return (
     <button
@@ -183,9 +184,9 @@ function ActionButton({ action, isActive, onSelect, teal }: { action: ActionItem
     >
       <div
         className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: isActive ? `${activeColor}20` : action.bg }}
+        style={{ backgroundColor: showColorIcon ? `${activeColor}20` : action.bg }}
       >
-        <ActionIcon type={action.icon} color={isActive ? activeColor : action.color} />
+        <ActionIcon type={action.icon} color={showColorIcon ? activeColor : action.color} />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -225,6 +226,7 @@ export default function QuickActions({ presentationId, activeView = 'dashboard',
             key={action.key}
             action={action}
             isActive={activeView === action.key}
+            alwaysColorIcon={action.key === 'dashboard'}
             onSelect={() => onSelectView?.(action.key)}
           />
         ))}
@@ -237,19 +239,15 @@ export function SecondaryActions({ presentationId, activeView = 'dashboard', onS
   return (
     <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
       <div className="flex flex-col gap-1">
-        {secondaryActions.map((action) => {
-          if (action.key === 'blueprint' && !presentationId) return null
-
-          return (
-            <ActionButton
-              key={action.key}
-              action={action}
-              isActive={activeView === action.key}
-              onSelect={() => onSelectView?.(action.key)}
-              teal
-            />
-          )
-        })}
+        {secondaryActions.map((action) => (
+          <ActionButton
+            key={action.key}
+            action={action}
+            isActive={activeView === action.key}
+            onSelect={() => onSelectView?.(action.key)}
+            teal
+          />
+        ))}
       </div>
     </div>
   )

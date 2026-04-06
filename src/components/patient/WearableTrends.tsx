@@ -48,7 +48,7 @@ const CHART_CONFIG: {
   },
   {
     key: 'temperature_deviation',
-    label: 'Skin Temperature',
+    label: 'Skin Temp',
     unit: '°C',
     suffix: '°C',
     domain: [-2, 2],
@@ -81,6 +81,34 @@ const CHART_CONFIG: {
   },
 ]
 
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <svg
+        className="w-3.5 h-3.5 text-aubergine/25 hover:text-aubergine/40 transition-colors cursor-help"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
+      </svg>
+      {show && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-aubergine text-white text-xs font-sans leading-relaxed whitespace-nowrap shadow-lg z-20 pointer-events-none">
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
 function MetricTooltip({ active, payload, label, config }: any) {
   if (!active || !payload?.length) return null
   const val = payload[0]?.value
@@ -108,8 +136,10 @@ function MetricChart({ data, config }: { data: MetricRow[]; config: (typeof CHAR
   if (chartData.length === 0) {
     return (
       <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-        <h4 className="text-sm font-sans font-medium text-aubergine mb-1">{config.label}</h4>
-        <p className="text-xs font-sans text-aubergine/30 mb-3">{config.description}</p>
+        <div className="flex items-center gap-1.5 mb-3">
+          <h4 className="text-sm font-sans font-medium text-aubergine">{config.label}</h4>
+          <InfoTooltip text={config.description} />
+        </div>
         <div className="flex items-center justify-center h-36 text-xs font-sans text-aubergine/20">
           No data yet
         </div>
@@ -134,9 +164,9 @@ function MetricChart({ data, config }: { data: MetricRow[]; config: (typeof CHAR
   return (
     <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
       <div className="flex items-start justify-between mb-1">
-        <div>
+        <div className="flex items-center gap-1.5">
           <h4 className="text-sm font-sans font-medium text-aubergine">{config.label}</h4>
-          <p className="text-xs font-sans text-aubergine/30">{config.description}</p>
+          <InfoTooltip text={config.description} />
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
           <span className="text-lg font-sans font-semibold text-aubergine">
@@ -190,6 +220,7 @@ function MetricChart({ data, config }: { data: MetricRow[]; config: (typeof CHAR
               stroke={config.color}
               strokeWidth={2.5}
               fill={`url(#gradient-${config.key})`}
+              baseValue={typeof yDomain[0] === 'number' ? yDomain[0] : undefined}
               dot={{ r: 3, fill: config.color, stroke: '#fff', strokeWidth: 2 }}
               activeDot={{ r: 5, fill: config.color, stroke: '#fff', strokeWidth: 2 }}
             />
@@ -349,28 +380,29 @@ export default function WearableTrends({ patientId, dateRange = 30, onGoToSettin
 
   return (
     <div className="space-y-4">
-      {/* Date range selector */}
-      <div className="flex justify-end gap-1">
-        {[7, 30, 90].map(d => (
-          <button
-            key={d}
-            onClick={() => setRange(d)}
-            className={`text-xs font-sans font-medium px-3 py-1.5 rounded-pill transition-colors ${
-              range === d
-                ? 'bg-violet text-white'
-                : 'text-aubergine/40 hover:text-aubergine/60 border border-aubergine/10 hover:border-aubergine/20'
-            }`}
-          >
-            {d}d
-          </button>
-        ))}
-      </div>
-
-      {/* 2x2 chart grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {CHART_CONFIG.map(config => (
-          <MetricChart key={config.key} data={metrics} config={config} />
-        ))}
+      {/* Date pills + chart grid wrapper — negative top margin pulls charts up to align with sidebar */}
+      <div className="-mt-[34px]">
+        {/* Date range selector — right-aligned, compact row above charts */}
+        <div className="flex justify-end gap-1 mb-1.5 -mt-2">
+          {[7, 30, 90].map(d => (
+            <button
+              key={d}
+              onClick={() => setRange(d)}
+              className={`text-xs font-sans font-medium px-3 py-1 rounded-pill transition-colors ${
+                range === d
+                  ? 'bg-violet text-white shadow-sm'
+                  : 'text-aubergine/40 hover:text-aubergine/60 border border-aubergine/10 hover:border-aubergine/20'
+              }`}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {CHART_CONFIG.map(config => (
+            <MetricChart key={config.key} data={metrics} config={config} />
+          ))}
+        </div>
       </div>
 
       {/* Sleep breakdown stats */}

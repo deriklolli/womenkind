@@ -14,6 +14,9 @@ import PatientMessages from '@/components/patient/PatientMessages'
 import WearableTrends from '@/components/patient/WearableTrends'
 import PatientSettings from '@/components/patient/PatientSettings'
 import PatientLabResults from '@/components/patient/PatientLabResults'
+import HealthBlueprintList from '@/components/patient/HealthBlueprintList'
+import NotificationBell from '@/components/patient/NotificationBell'
+import DashboardAlerts from '@/components/patient/DashboardAlerts'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -519,6 +522,8 @@ export default function PatientDashboardPage() {
             height={90}
             className="h-16 w-auto -ml-2"
           />
+          <div className="flex items-center gap-1">
+            <NotificationBell patientId={patient.patientId} onNavigate={(view) => setActiveView(view)} />
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -589,6 +594,7 @@ export default function PatientDashboardPage() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </nav>
@@ -829,12 +835,6 @@ export default function PatientDashboardPage() {
                 presentationId={patient.presentationId}
                 activeView={activeView}
                 onSelectView={(view) => {
-                  // Blueprint opens in its own page
-                  if (view === 'blueprint' && patient.presentationId) {
-                    window.open(`/presentation/${patient.presentationId}`, '_blank')
-                    return
-                  }
-                  // Reset booking flow when switching away from schedule
                   if (activeView === 'schedule' && view !== 'schedule') {
                     resetBookingFlow()
                   }
@@ -849,10 +849,6 @@ export default function PatientDashboardPage() {
                 presentationId={patient.presentationId}
                 activeView={activeView}
                 onSelectView={(view) => {
-                  if (view === 'blueprint' && patient.presentationId) {
-                    window.open(`/presentation/${patient.presentationId}`, '_blank')
-                    return
-                  }
                   if (activeView === 'schedule' && view !== 'schedule') {
                     resetBookingFlow()
                   }
@@ -873,6 +869,9 @@ export default function PatientDashboardPage() {
                 {dashboardPhase !== 'appointment_booked' && (
                   <UpcomingAppointments key={appointments.length} patientId={patient.patientId} />
                 )}
+
+                {/* New lab results / health blueprint alerts */}
+                <DashboardAlerts patientId={patient.patientId} onNavigate={(view) => setActiveView(view)} />
 
                 {/* Prescription refill reminders */}
                 <PrescriptionRefillReminders
@@ -1170,6 +1169,11 @@ export default function PatientDashboardPage() {
                 onEnrollMembership={handleMembershipEnroll}
                 membershipLoading={membershipLoading}
               />
+            )}
+
+            {/* Health Blueprint view */}
+            {activeView === 'blueprint' && dashboardPhase === 'care_plan_viewed' && (
+              <HealthBlueprintList patientId={patient.patientId} />
             )}
 
             {/* Lab Results view */}
