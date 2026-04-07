@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState, useRef, useCallback } from 'react'
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface LabResultItem {
   testCode: string
@@ -205,21 +206,35 @@ function getTestInfo(code: string): { summary: string; relevance: string } | und
 /* ── Info tooltip (matches WearableTrends pattern) ──────────────────── */
 
 function LabInfoTooltip({ info }: { info: { summary: string; relevance: string } }) {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const [show, setShow] = useState(false)
   const iconRef = useRef<HTMLSpanElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
 
-  const handleEnter = useCallback(() => {
+  const updatePos = useCallback(() => {
     if (!iconRef.current) return
     const rect = iconRef.current.getBoundingClientRect()
     setPos({ x: rect.left + rect.width / 2, y: rect.top })
   }, [])
 
-  const handleLeave = useCallback(() => setPos(null), [])
+  const handleEnter = useCallback(() => {
+    updatePos()
+    setShow(true)
+  }, [updatePos])
+
+  const handleLeave = useCallback(() => setShow(false), [])
+
+  // Keep position updated while visible (handles scroll)
+  useEffect(() => {
+    if (!show) return
+    const onScroll = () => updatePos()
+    window.addEventListener('scroll', onScroll, true)
+    return () => window.removeEventListener('scroll', onScroll, true)
+  }, [show, updatePos])
 
   return (
     <span
       ref={iconRef}
-      className="inline-flex flex-shrink-0"
+      className="inline-flex flex-shrink-0 relative"
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
@@ -233,7 +248,7 @@ function LabInfoTooltip({ info }: { info: { summary: string; relevance: string }
         <circle cx="12" cy="12" r="10" />
         <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
       </svg>
-      {pos && (
+      {show && createPortal(
         <span
           className="fixed w-64 px-3 py-2.5 rounded-lg bg-aubergine text-white text-xs font-sans leading-relaxed shadow-lg pointer-events-none"
           style={{
@@ -248,7 +263,8 @@ function LabInfoTooltip({ info }: { info: { summary: string; relevance: string }
             <span className="text-white/80 font-medium">Why it matters: </span>
             {info.relevance}
           </span>
-        </span>
+        </span>,
+        document.body
       )}
     </span>
   )
