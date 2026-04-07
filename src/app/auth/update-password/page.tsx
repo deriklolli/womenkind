@@ -97,7 +97,7 @@ function UpdatePasswordForm() {
         <div className="mb-5 px-3 py-2.5 rounded-brand bg-red-50 border border-red-100">
           <p className="text-sm font-sans text-red-600">{error}</p>
           <button
-            onClick={() => router.push(from === 'patient' ? '/patient/login' : '/provider/login')}
+            onClick={() => router.push('/patient/login')}
             className="text-xs font-sans text-violet mt-1 hover:underline"
           >
             Back to login
