@@ -109,7 +109,7 @@ export default function PatientLoginPage() {
 
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md -mt-[60px]">
         {/* Logo */}
         <div className="text-center mb-8">
           <Image
@@ -117,7 +117,7 @@ export default function PatientLoginPage() {
             alt="Womenkind"
             width={600}
             height={135}
-            className="h-[120px] w-auto mx-auto mb-2"
+            className="h-[102px] w-auto mx-auto mb-2"
             priority
           />
           <p className="text-sm font-sans text-aubergine/50 mt-3">Patient Portal</p>
