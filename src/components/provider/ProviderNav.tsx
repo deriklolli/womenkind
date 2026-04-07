@@ -35,7 +35,8 @@ export default function ProviderNav({
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Self-fetch badge counts when not provided by the parent page
+  // Self-fetch provider name and badge counts when not provided by the parent page
+  const [selfProviderName, setSelfProviderName] = useState('')
   const [selfIntakeCount, setSelfIntakeCount] = useState(0)
   const [selfMessageCount, setSelfMessageCount] = useState(0)
   const [selfRefillCount, setSelfRefillCount] = useState(0)
@@ -44,6 +45,18 @@ export default function ProviderNav({
     newIntakeCountProp === undefined &&
     unreadMessageCountProp === undefined &&
     pendingRefillCountProp === undefined
+
+  // Always self-fetch provider name when not passed as a prop
+  useEffect(() => {
+    if (providerName) return
+    const loadName = async () => {
+      try {
+        const session = await getProviderSession()
+        if (session?.providerName) setSelfProviderName(session.providerName)
+      } catch {}
+    }
+    loadName()
+  }, [providerName])
 
   useEffect(() => {
     if (!needsSelfFetch) return
@@ -82,8 +95,8 @@ export default function ProviderNav({
     router.push('/provider/login')
   }
 
-  // Resolve provider name from props or localStorage
-  const displayName = providerName || (() => {
+  // Resolve provider name: prop → self-fetched session → localStorage demo fallback
+  const displayName = providerName || selfProviderName || (() => {
     if (typeof window === 'undefined') return ''
     try {
       const demo = localStorage.getItem('womenkind_demo_provider')
