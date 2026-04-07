@@ -59,16 +59,26 @@ export default function SettingsPage() {
 
       const { data: patientRow } = await supabase
         .from('patients')
-        .select('id, stripe_subscription_status, stripe_current_period_end')
+        .select('id')
         .eq('profile_id', session.user.id)
         .maybeSingle()
 
       if (!patientRow) { router.push('/patient/login'); return }
 
+      // Stripe subscription data lives in the subscriptions table
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('status, current_period_end')
+        .eq('patient_id', patientRow.id)
+        .eq('plan_type', 'membership')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
       const membershipStatus: MembershipStatus =
-        patientRow.stripe_subscription_status === 'active' ? 'active'
-        : patientRow.stripe_subscription_status === 'canceled' ? 'canceled'
-        : patientRow.stripe_subscription_status === 'past_due' ? 'past_due'
+        subscription?.status === 'active' ? 'active'
+        : subscription?.status === 'canceled' ? 'canceled'
+        : subscription?.status === 'past_due' ? 'past_due'
         : 'none'
 
       setPatient({
@@ -76,7 +86,7 @@ export default function SettingsPage() {
         name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : session.user.email || '',
         email: profile?.email || session.user.email || '',
         membershipStatus,
-        membershipRenewal: patientRow.stripe_current_period_end || null,
+        membershipRenewal: subscription?.current_period_end || null,
       })
     } catch (err) {
       console.error('Error loading patient data:', err)
