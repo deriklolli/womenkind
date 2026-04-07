@@ -191,7 +191,7 @@ export default function CreatePresentationPage() {
           <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">
             Create Care Presentation
           </h1>
-          <p className="text-xs font-sans text-violet mt-[15px]">
+          <p className="text-xs font-sans text-aubergine/40 mt-[15px]">
             Step {step} of 2 — {step === 1 ? 'Body Systems' : 'Message & Send'}
           </p>
           <p className="text-sm font-sans text-aubergine/50 mt-1">

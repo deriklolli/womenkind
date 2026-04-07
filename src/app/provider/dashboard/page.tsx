@@ -253,7 +253,7 @@ export default function ProviderDashboard() {
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h1 className="font-serif font-normal text-2xl text-aubergine tracking-tight">Intake Queue</h1>
+                <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight">Intake Queue</h1>
                 <p className="text-sm font-sans text-aubergine/50 mt-1">
                   {counts.submitted} new {counts.submitted === 1 ? 'intake' : 'intakes'} awaiting review
                 </p>
@@ -383,7 +383,7 @@ export default function ProviderDashboard() {
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h1 className="font-serif font-normal text-2xl text-aubergine tracking-tight">My Patients</h1>
+                <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight">My Patients</h1>
                 <p className="text-sm font-sans text-aubergine/50 mt-1">
                   {patients.length} active {patients.length === 1 ? 'patient' : 'patients'}
                 </p>

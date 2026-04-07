@@ -227,7 +227,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
     <>
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Messages</h1>
+          <h1 className="font-sans font-semibold text-3xl text-aubergine tracking-tight">Messages</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
             {threads.length === 0
               ? 'No messages yet'

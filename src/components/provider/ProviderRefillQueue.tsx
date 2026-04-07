@@ -107,7 +107,7 @@ export default function ProviderRefillQueue({ providerId, onCountChange }: Props
     <>
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Refill Requests</h1>
+          <h1 className="font-sans font-semibold text-3xl text-aubergine tracking-tight">Refill Requests</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
             {counts.pending} pending {counts.pending === 1 ? 'request' : 'requests'}
           </p>
