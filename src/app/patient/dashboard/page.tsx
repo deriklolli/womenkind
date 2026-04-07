@@ -92,6 +92,25 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
   const router = useRouter()
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null)
+  const [cancelingId, setCancelingId] = useState<string | null>(null)
+
+  const handleCancel = async (appointmentId: string) => {
+    setCancelingId(appointmentId)
+    try {
+      await fetch('/api/scheduling/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId, canceledBy: 'patient' }),
+      })
+      setAppointments(prev => prev.filter(a => a.id !== appointmentId))
+    } catch (err) {
+      console.error('Failed to cancel appointment:', err)
+    } finally {
+      setCancelingId(null)
+      setCancelConfirmId(null)
+    }
+  }
 
   useEffect(() => {
     if (!patientId) { setLoading(false); return }
@@ -173,6 +192,33 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
                     Confirmed
                   </span>
                 )}
+                {cancelConfirmId === apt.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleCancel(apt.id)}
+                      disabled={cancelingId === apt.id}
+                      className="px-2 py-1 text-[10px] font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {cancelingId === apt.id ? 'Canceling...' : 'Yes, cancel'}
+                    </button>
+                    <button
+                      onClick={() => setCancelConfirmId(null)}
+                      className="px-2 py-1 text-[10px] font-sans font-medium text-aubergine/50 hover:text-aubergine transition-colors"
+                    >
+                      Keep
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setCancelConfirmId(apt.id)}
+                    className="p-1.5 text-aubergine/20 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Cancel appointment"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -192,6 +238,27 @@ export default function PatientDashboardPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [appointmentsLoading, setAppointmentsLoading] = useState(true)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
+
+  const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
+  const [cancelingBanner, setCancelingBanner] = useState(false)
+
+  const handleCancelBannerAppointment = async () => {
+    if (!appointments[0]) return
+    setCancelingBanner(true)
+    try {
+      await fetch('/api/scheduling/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: appointments[0].id, canceledBy: 'patient' }),
+      })
+      setAppointments([])
+    } catch (err) {
+      console.error('Failed to cancel appointment:', err)
+    } finally {
+      setCancelingBanner(false)
+      setCancelConfirmBanner(false)
+    }
+  }
 
   // Inline scheduling state
   type BookingStep = 'select-type' | 'pick-time' | 'confirm' | 'success'
@@ -653,27 +720,54 @@ export default function PatientDashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <a
-                href={`/api/scheduling/calendar-export?appointmentId=${appointments[0].id}`}
-                className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/60 rounded-pill hover:bg-aubergine/5 transition-all"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                </svg>
-                Add to Calendar
-              </a>
-              {appointments[0].video_room_url && (
-                <a
-                  href={appointments[0].video_room_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
-                  Join Call
-                </a>
+              {cancelConfirmBanner ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-sans text-aubergine/50">Cancel this appointment?</span>
+                  <button
+                    onClick={handleCancelBannerAppointment}
+                    disabled={cancelingBanner}
+                    className="px-4 py-2 text-sm font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {cancelingBanner ? 'Canceling...' : 'Yes, cancel'}
+                  </button>
+                  <button
+                    onClick={() => setCancelConfirmBanner(false)}
+                    className="px-4 py-2 text-sm font-sans font-medium text-aubergine/50 border border-aubergine/10 rounded-pill hover:bg-aubergine/5 transition-colors"
+                  >
+                    Keep
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <a
+                    href={`/api/scheduling/calendar-export?appointmentId=${appointments[0].id}`}
+                    className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/60 rounded-pill hover:bg-aubergine/5 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                    </svg>
+                    Add to Calendar
+                  </a>
+                  <button
+                    onClick={() => setCancelConfirmBanner(true)}
+                    className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/40 rounded-pill hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
+                  >
+                    Cancel Appointment
+                  </button>
+                  {appointments[0].video_room_url && (
+                    <a
+                      href={appointments[0].video_room_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                      </svg>
+                      Join Call
+                    </a>
+                  )}
+                </>
               )}
             </div>
           </div>
