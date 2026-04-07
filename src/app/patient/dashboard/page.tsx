@@ -241,6 +241,8 @@ export default function PatientDashboardPage() {
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
   const [cancelingBanner, setCancelingBanner] = useState(false)
+  const [cancelConfirmIdTab, setCancelConfirmIdTab] = useState<string | null>(null)
+  const [cancelingIdTab, setCancelingIdTab] = useState<string | null>(null)
 
   const handleCancelBannerAppointment = async () => {
     if (!appointments[0]) return
@@ -257,6 +259,23 @@ export default function PatientDashboardPage() {
     } finally {
       setCancelingBanner(false)
       setCancelConfirmBanner(false)
+    }
+  }
+
+  const handleCancelTabAppointment = async (appointmentId: string) => {
+    setCancelingIdTab(appointmentId)
+    try {
+      await fetch('/api/scheduling/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId, canceledBy: 'patient' }),
+      })
+      setAppointments(prev => prev.filter(a => a.id !== appointmentId))
+    } catch (err) {
+      console.error('Failed to cancel appointment:', err)
+    } finally {
+      setCancelingIdTab(null)
+      setCancelConfirmIdTab(null)
     }
   }
 
@@ -1198,31 +1217,85 @@ export default function PatientDashboardPage() {
                 {/* Show upcoming appointments below the flow */}
                 {bookingStep !== 'success' && appointments.length > 0 && (
                   <div className="mt-8 pt-6 border-t border-aubergine/5">
-                    <h4 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
-                      Upcoming Appointments
-                    </h4>
-                    <div className="space-y-3">
-                      {appointments.map((apt: any) => (
-                        <div key={apt.id} className="flex items-center gap-3 p-3 rounded-xl bg-cream border border-aubergine/5">
-                          <div
-                            className="w-1.5 h-10 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: apt.appointment_types?.color || '#944fed' }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-sans font-medium text-aubergine truncate">
-                              {apt.appointment_types?.name || 'Appointment'}
-                            </p>
-                            <p className="text-xs font-sans text-aubergine/45">
-                              {new Date(apt.starts_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              {' at '}
-                              {new Date(apt.starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                            </p>
+                    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
+                      <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
+                        Upcoming Appointments
+                      </h3>
+                      <div className="space-y-3">
+                        {appointments.map((apt: any) => (
+                          <div key={apt.id} className="flex items-center gap-3 p-3 rounded-xl bg-human/50 border border-aubergine/5">
+                            <div
+                              className="w-1.5 h-10 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: apt.appointment_types?.color || '#944fed' }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-sans font-medium text-aubergine truncate">
+                                {apt.appointment_types?.name || 'Appointment'}
+                              </p>
+                              <p className="text-xs font-sans text-aubergine/45">
+                                {new Date(apt.starts_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                {' at '}
+                                {new Date(apt.starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <a
+                                href={`/api/scheduling/calendar-export?appointmentId=${apt.id}`}
+                                className="p-1.5 text-aubergine/30 hover:text-violet hover:bg-violet/5 rounded-lg transition-colors"
+                                title="Add to calendar"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" />
+                                </svg>
+                              </a>
+                              {apt.video_room_url ? (
+                                <a
+                                  href={apt.video_room_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                                  </svg>
+                                  Join Call
+                                </a>
+                              ) : (
+                                <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill bg-emerald-50 border border-emerald-200 text-emerald-600">
+                                  Confirmed
+                                </span>
+                              )}
+                              {cancelConfirmIdTab === apt.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleCancelTabAppointment(apt.id)}
+                                    disabled={cancelingIdTab === apt.id}
+                                    className="px-2 py-1 text-[10px] font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                                  >
+                                    {cancelingIdTab === apt.id ? 'Canceling...' : 'Yes, cancel'}
+                                  </button>
+                                  <button
+                                    onClick={() => setCancelConfirmIdTab(null)}
+                                    className="px-2 py-1 text-[10px] font-sans font-medium text-aubergine/50 hover:text-aubergine transition-colors"
+                                  >
+                                    Keep
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setCancelConfirmIdTab(apt.id)}
+                                  className="p-1.5 text-aubergine/20 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Cancel appointment"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill bg-emerald-50 border border-emerald-200 text-emerald-600">
-                            Confirmed
-                          </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
