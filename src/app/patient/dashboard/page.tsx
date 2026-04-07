@@ -683,7 +683,10 @@ export default function PatientDashboardPage() {
           <div
             className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
             style={{ minHeight: '200px' }}
-            onClick={() => window.open(`/presentation/${patient.presentationId}`, '_blank')}
+            onClick={() => {
+              window.open(`/presentation/${patient.presentationId}`, '_blank')
+              setPatient(prev => prev ? { ...prev, presentationStatus: 'viewed' } : prev)
+            }}
           >
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
