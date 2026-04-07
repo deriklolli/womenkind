@@ -50,6 +50,8 @@ export const OURA_METRIC_TYPES = [
   'temperature_trend_deviation',
   'hrv_average',
   'resting_heart_rate',
+  'readiness_score',
+  'respiratory_rate',
 ] as const
 
 export type OuraMetricType = (typeof OURA_METRIC_TYPES)[number]
@@ -316,11 +318,21 @@ export function normalizeOuraData(
     }
   }
 
-  // Process readiness data (temperature)
+  // Process sleep periods for respiratory rate
+  for (const [date, period] of Array.from(periodsByDay.entries())) {
+    if (period.average_breath != null) {
+      metrics.push({ metric_type: 'respiratory_rate', metric_date: date, value: Math.round(period.average_breath * 10) / 10 })
+    }
+  }
+
+  // Process readiness data (temperature + readiness score)
   for (const day of readinessData.data || []) {
     const date = day.day
     if (!date) continue
 
+    if (day.score != null) {
+      metrics.push({ metric_type: 'readiness_score', metric_date: date, value: day.score })
+    }
     if (day.temperature_deviation != null) {
       metrics.push({ metric_type: 'temperature_deviation', metric_date: date, value: day.temperature_deviation })
     }

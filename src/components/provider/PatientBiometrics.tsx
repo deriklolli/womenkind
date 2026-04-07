@@ -75,18 +75,128 @@ const CHART_CONFIG: {
     color: '#e05286',
     higherIsBetter: false,
   },
+  {
+    key: 'readiness_score',
+    label: 'Readiness Score',
+    suffix: '/100',
+    domain: [0, 100],
+    ticks: [0, 25, 50, 75, 100],
+    color: '#F59E0B',
+    higherIsBetter: true,
+  },
+  {
+    key: 'respiratory_rate',
+    label: 'Respiratory Rate',
+    suffix: ' br/min',
+    domain: [10, 'auto'],
+    ticks: undefined,
+    color: '#6366F1',
+    higherIsBetter: false,
+  },
+  {
+    key: 'sleep_efficiency',
+    label: 'Sleep Efficiency',
+    suffix: '%',
+    domain: [50, 100],
+    ticks: [50, 60, 70, 80, 90, 100],
+    color: '#8B5CF6',
+    higherIsBetter: true,
+  },
+  {
+    key: 'sleep_deep_minutes',
+    label: 'Deep Sleep',
+    suffix: ' min',
+    domain: [0, 'auto'],
+    ticks: undefined,
+    color: '#280f49',
+    higherIsBetter: true,
+  },
+  {
+    key: 'sleep_rem_minutes',
+    label: 'REM Sleep',
+    suffix: ' min',
+    domain: [0, 'auto'],
+    ticks: undefined,
+    color: '#4ECDC4',
+    higherIsBetter: true,
+  },
 ]
+
+/** Returns a short clinical insight for the provider based on the latest metric value. */
+function getProviderInsight(key: string, latest: number, avg: number, dataPoints: number): { text: string; tone: 'good' | 'caution' | 'neutral' } {
+  if (dataPoints < 3) return { text: 'Insufficient data — 3+ days needed for trends.', tone: 'neutral' }
+
+  switch (key) {
+    case 'sleep_score':
+      if (avg >= 85) return { text: 'Consistently high sleep quality. Current treatment is well-tolerated.', tone: 'good' }
+      if (avg >= 70) return { text: 'Sleep is adequate. Monitor for correlation with symptom reports.', tone: 'neutral' }
+      return { text: 'Chronic poor sleep — consider sleep hygiene counseling or medication review.', tone: 'caution' }
+
+    case 'temperature_deviation':
+      if (Math.abs(avg) <= 0.3) return { text: 'Thermoregulation is stable. No vasomotor concerns.', tone: 'good' }
+      if (Math.abs(avg) <= 0.7) return { text: 'Mild fluctuations consistent with perimenopause.', tone: 'neutral' }
+      return { text: 'Significant thermal instability — may indicate active vasomotor symptoms.', tone: 'caution' }
+
+    case 'hrv_average':
+      if (avg >= 40) return { text: 'Strong autonomic function and stress resilience.', tone: 'good' }
+      if (avg >= 25) return { text: 'Moderate HRV — within normal range for age group.', tone: 'neutral' }
+      return { text: 'Low HRV may reflect chronic stress or autonomic dysfunction.', tone: 'caution' }
+
+    case 'resting_heart_rate':
+      if (avg <= 60) return { text: 'Excellent cardiovascular baseline.', tone: 'good' }
+      if (avg <= 72) return { text: 'Resting heart rate is within normal limits.', tone: 'neutral' }
+      return { text: 'Elevated RHR — assess for anxiety, deconditioning, or thyroid changes.', tone: 'caution' }
+
+    case 'readiness_score':
+      if (avg >= 80) return { text: 'Patient is recovering well between days. Treatment tolerance is good.', tone: 'good' }
+      if (avg >= 60) return { text: 'Moderate recovery capacity. May benefit from lifestyle adjustments.', tone: 'neutral' }
+      return { text: 'Consistently low readiness — consider systemic stressors or treatment burden.', tone: 'caution' }
+
+    case 'respiratory_rate':
+      if (avg >= 12 && avg <= 16) return { text: 'Optimal nocturnal respiratory rate.', tone: 'good' }
+      if (avg >= 10 && avg <= 20) return { text: 'Respiratory rate is within acceptable range.', tone: 'neutral' }
+      return { text: 'Abnormal breathing pattern during sleep — screen for sleep apnea.', tone: 'caution' }
+
+    case 'sleep_efficiency':
+      if (avg >= 85) return { text: 'Minimal sleep disruption. No intervention needed.', tone: 'good' }
+      if (avg >= 75) return { text: 'Some fragmentation present — may correlate with night sweats.', tone: 'neutral' }
+      return { text: 'Significant sleep disruption — evaluate for insomnia or nocturnal symptoms.', tone: 'caution' }
+
+    case 'sleep_deep_minutes':
+      if (avg >= 60) return { text: 'Adequate deep sleep for physical recovery and hormone release.', tone: 'good' }
+      if (avg >= 30) return { text: 'Reduced deep sleep — common in menopause, monitor trend.', tone: 'neutral' }
+      return { text: 'Deep sleep deficit — may impact growth hormone and tissue repair.', tone: 'caution' }
+
+    case 'sleep_rem_minutes':
+      if (avg >= 90) return { text: 'Healthy REM duration supporting cognitive and emotional health.', tone: 'good' }
+      if (avg >= 50) return { text: 'REM is moderate — watch for mood or cognition complaints.', tone: 'neutral' }
+      return { text: 'Low REM may contribute to brain fog and emotional lability.', tone: 'caution' }
+
+    default:
+      return { text: '', tone: 'neutral' }
+  }
+}
+
+const PROVIDER_INSIGHT_COLORS = {
+  good: 'text-aubergine/35',
+  caution: 'text-aubergine/35',
+  neutral: 'text-aubergine/35',
+}
 
 function ProviderMetricTooltip({ active, payload, label, config }: any) {
   if (!active || !payload?.length) return null
   const val = payload[0]?.value
+  const formatted = config.key === 'temperature_deviation'
+    ? `${val > 0 ? '+' : ''}${val.toFixed(2)}${config.suffix}`
+    : config.key === 'respiratory_rate'
+      ? `${val.toFixed(1)}${config.suffix}`
+      : `${Math.round(val)}${config.suffix}`
+
   return (
     <div className="bg-white rounded-brand shadow-lg border border-aubergine/10 px-3 py-2">
       <p className="text-xs font-sans text-aubergine/50 mb-1">{label}</p>
       <p className="text-sm font-sans font-semibold" style={{ color: config.color }}>
-        {config.key === 'temperature_deviation'
-          ? `${val > 0 ? '+' : ''}${val.toFixed(2)}${config.suffix}`
-          : `${Math.round(val)}${config.suffix}`}
+        {formatted}
       </p>
     </div>
   )
@@ -112,21 +222,14 @@ function ProviderMetricChart({
       value: d.value,
     }))
 
-  if (chartData.length === 0) {
-    return (
-      <div className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5">
-        <h4 className="text-sm font-sans font-medium text-aubergine">{config.label}</h4>
-        <div className="flex items-center justify-center h-36 text-xs font-sans text-aubergine/20">
-          No data
-        </div>
-      </div>
-    )
-  }
+  if (chartData.length === 0) return null
 
   const latest = chartData[chartData.length - 1].value
   const first = chartData[0].value
   const change = latest - first
   const improved = config.higherIsBetter ? change > 0 : change < 0
+  const avg = chartData.reduce((sum, d) => sum + d.value, 0) / chartData.length
+  const insight = getProviderInsight(config.key, latest, avg, chartData.length)
 
   const values = chartData.map(d => d.value)
   const minVal = Math.min(...values)
@@ -149,7 +252,9 @@ function ProviderMetricChart({
           <span className="text-lg font-sans font-semibold text-aubergine">
             {config.key === 'temperature_deviation'
               ? `${latest > 0 ? '+' : ''}${latest.toFixed(2)}`
-              : Math.round(latest)}
+              : config.key === 'respiratory_rate'
+                ? latest.toFixed(1)
+                : Math.round(latest)}
           </span>
           <span className="text-xs font-sans text-aubergine/40">{config.suffix}</span>
           {chartData.length >= 3 && Math.abs(change) > 0.1 && (
@@ -159,11 +264,18 @@ function ProviderMetricChart({
               {improved ? (config.higherIsBetter ? '↑' : '↓') : (config.higherIsBetter ? '↓' : '↑')}
               {config.key === 'temperature_deviation'
                 ? Math.abs(change).toFixed(2)
-                : Math.abs(Math.round(change))}
+                : config.key === 'respiratory_rate'
+                  ? Math.abs(change).toFixed(1)
+                  : Math.abs(Math.round(change))}
             </span>
           )}
         </div>
       </div>
+      {insight.text && (
+        <p className={`text-xs font-sans mt-1 mb-2 ${PROVIDER_INSIGHT_COLORS[insight.tone]}`}>
+          {insight.text}
+        </p>
+      )}
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -258,7 +370,7 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4, 5, 6].map(i => (
           <div key={i} className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 animate-pulse">
             <div className="h-4 bg-aubergine/5 rounded w-32 mb-4" />
             <div className="h-40 bg-aubergine/5 rounded" />
@@ -354,8 +466,8 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
         </div>
       )}
 
-      {/* 2x2 chart grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Full-width stacked charts */}
+      <div className="grid grid-cols-1 gap-4">
         {CHART_CONFIG.map(config => (
           <ProviderMetricChart
             key={config.key}

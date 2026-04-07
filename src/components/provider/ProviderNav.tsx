@@ -23,16 +23,51 @@ export default function ProviderNav({
   providerName,
   activeTab: controlledTab,
   onTabChange,
-  newIntakeCount,
+  newIntakeCount: newIntakeCountProp,
   patientCount,
-  appointmentCount,
-  unreadMessageCount,
-  pendingRefillCount,
+  appointmentCount: appointmentCountProp,
+  unreadMessageCount: unreadMessageCountProp,
+  pendingRefillCount: pendingRefillCountProp,
 }: ProviderNavProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Self-fetch badge counts when not provided by the parent page
+  const [selfIntakeCount, setSelfIntakeCount] = useState(0)
+  const [selfMessageCount, setSelfMessageCount] = useState(0)
+  const [selfRefillCount, setSelfRefillCount] = useState(0)
+
+  const needsSelfFetch =
+    newIntakeCountProp === undefined &&
+    unreadMessageCountProp === undefined &&
+    pendingRefillCountProp === undefined
+
+  useEffect(() => {
+    if (!needsSelfFetch) return
+    const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
+    const load = async () => {
+      try {
+        const [refillRes, msgRes] = await Promise.all([
+          fetch(`/api/refill-requests?providerId=${PROVIDER_ID}&status=pending`),
+          fetch(`/api/messages?providerId=${PROVIDER_ID}`),
+        ])
+        const refillData = await refillRes.json()
+        setSelfRefillCount((refillData.refillRequests || []).length)
+
+        const msgData = await msgRes.json()
+        const unread = (msgData.threads || []).reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
+        setSelfMessageCount(unread)
+      } catch {}
+    }
+    load()
+  }, [needsSelfFetch])
+
+  const newIntakeCount = newIntakeCountProp ?? selfIntakeCount
+  const appointmentCount = appointmentCountProp ?? 0
+  const unreadMessageCount = unreadMessageCountProp ?? selfMessageCount
+  const pendingRefillCount = pendingRefillCountProp ?? selfRefillCount
 
   const handleSignOut = () => {
     localStorage.removeItem('womenkind_demo_provider')
