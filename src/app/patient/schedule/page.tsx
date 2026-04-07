@@ -215,7 +215,7 @@ export default function PatientSchedulePage() {
       const res = await fetch('/api/scheduling/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId: bookedAppointment.id }),
+        body: JSON.stringify({ appointmentId: bookedAppointment.id, canceledBy: 'patient' }),
       })
       if (res.ok) {
         setBookedAppointment({ ...bookedAppointment, status: 'canceled' })

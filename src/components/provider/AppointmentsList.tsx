@@ -80,7 +80,7 @@ export default function AppointmentsList({ providerId }: Props) {
       const res = await fetch('/api/scheduling/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId }),
+        body: JSON.stringify({ appointmentId, canceledBy: 'provider' }),
       })
       if (res.ok) {
         setCancelConfirmId(null)
