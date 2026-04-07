@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
     }
 
-    // Find all submitted intakes without briefs
+    // Find all submitted intakes without briefs (include patient_id for wearable lookup)
     const { data: intakes, error: fetchError } = await supabase
       .from('intakes')
-      .select('id, answers, status')
+      .select('id, patient_id, answers, status')
       .in('status', ['submitted', 'reviewed'])
       .is('ai_brief', null)
 
@@ -44,7 +44,20 @@ export async function POST(req: NextRequest) {
 
     for (const intake of intakes) {
       try {
-        const brief = await generateClinicalBrief(intake.answers, anthropicKey)
+        // Fetch any available Oura data for this patient (last 30 days)
+        let wearableMetrics: { metric_type: string; value: number; metric_date: string }[] = []
+        if (intake.patient_id) {
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+          const { data: metrics } = await supabase
+            .from('wearable_metrics')
+            .select('metric_type, value, metric_date')
+            .eq('patient_id', intake.patient_id)
+            .gte('metric_date', thirtyDaysAgo)
+            .order('metric_date', { ascending: false })
+          wearableMetrics = metrics || []
+        }
+
+        const brief = await generateClinicalBrief(intake.answers, anthropicKey, wearableMetrics)
 
         const { error: updateError } = await supabase
           .from('intakes')
@@ -70,8 +83,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function generateClinicalBrief(answers: Record<string, any>, apiKey: string) {
+async function generateClinicalBrief(
+  answers: Record<string, any>,
+  apiKey: string,
+  wearableMetrics: { metric_type: string; value: number; metric_date: string }[] = []
+) {
   const patientProfile = buildPatientProfile(answers)
+  const ouraSection = buildOuraProfile(wearableMetrics)
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -91,7 +109,15 @@ Key context:
 - Providers are menopause-trained clinicians — use appropriate clinical terminology
 - Reference current menopause care guidelines (IMS, NAMS, Menopause Society) where relevant
 - Preserve the patient's own words when they add clinical value
-- Be specific to THIS patient — never use generic boilerplate`,
+- Be specific to THIS patient — never use generic boilerplate
+
+When Oura Ring wearable data is present:
+- Use it to OBJECTIVELY CONFIRM or CHALLENGE subjective symptom reports
+- Temperature deviation >0.5°C spikes = objective vasomotor events — factor into VMS severity assessment and treatment urgency
+- Persistent low HRV (<30ms) + elevated RHR = autonomic burden from VMS — note in risk considerations
+- Disrupted sleep architecture (low deep sleep, low REM, low efficiency) = objective sleep impairment — flag in symptom domains and treatment pathway
+- Wearable data can escalate or de-escalate treatment pathway recommendations (e.g., frequent temp spikes despite patient minimizing symptoms = stronger HRT case)
+- Reference wearable findings explicitly in relevant symptom domains, risk flags, and treatment rationale`,
       messages: [
         {
           role: 'user',
@@ -99,7 +125,7 @@ Key context:
 
 PATIENT INTAKE DATA:
 ${patientProfile}
-
+${ouraSection ? `\n${ouraSection}\n` : ''}
 Return this exact JSON structure:
 
 {
@@ -278,4 +304,81 @@ function buildPatientProfile(answers: Record<string, any>): string {
 function formatAnswer(val: any): string {
   if (Array.isArray(val)) return val.join(', ')
   return String(val)
+}
+
+function buildOuraProfile(
+  metrics: { metric_type: string; value: number; metric_date: string }[]
+): string {
+  if (!metrics || metrics.length === 0) return ''
+
+  // Group by metric type (values are already sorted newest-first)
+  const byType: Record<string, number[]> = {}
+  for (const m of metrics) {
+    if (!byType[m.metric_type]) byType[m.metric_type] = []
+    byType[m.metric_type].push(m.value)
+  }
+
+  const avg = (vals: number[]) => (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+  const recent = (vals: number[]) => vals[0]?.toFixed(1) ?? 'N/A'
+
+  // Clinical labels and what each means for menopause treatment decisions
+  const metaMap: Record<string, { label: string; unit: string; clinicalNote: string }> = {
+    temperature_deviation:     { label: 'Skin temperature deviation', unit: '°C', clinicalNote: 'Objective VMS proxy: spikes >0.5°C = hot flash/night sweat event' },
+    temperature_trend_deviation: { label: 'Temperature trend deviation', unit: '°C', clinicalNote: 'Multi-day vasomotor trend; upward drift = worsening VMS activity' },
+    hrv_average:               { label: 'Heart rate variability (HRV)', unit: 'ms', clinicalNote: 'Autonomic health marker; <30ms = significant autonomic burden; often improves with HRT' },
+    resting_heart_rate:        { label: 'Resting heart rate', unit: 'bpm', clinicalNote: 'Elevated RHR correlates with estrogen decline and VMS frequency' },
+    sleep_score:               { label: 'Sleep quality score', unit: '/100', clinicalNote: '<70 = poor sleep quality; objective measure of sleep impairment' },
+    sleep_efficiency:          { label: 'Sleep efficiency', unit: '%', clinicalNote: '<85% = clinically relevant insomnia pattern' },
+    sleep_deep_minutes:        { label: 'Deep (N3) sleep', unit: 'min', clinicalNote: 'Reduced deep sleep is classic menopause pattern; progesterone promotes N3' },
+    sleep_rem_minutes:         { label: 'REM sleep', unit: 'min', clinicalNote: 'REM disruption correlates with mood instability and cognitive symptoms' },
+    sleep_total_minutes:       { label: 'Total sleep duration', unit: 'min', clinicalNote: '' },
+    readiness_score:           { label: 'Recovery/readiness score', unit: '/100', clinicalNote: 'Composite physiological load score; <60 = significant burden warranting treatment urgency' },
+    respiratory_rate:          { label: 'Respiratory rate', unit: 'br/min', clinicalNote: '' },
+  }
+
+  const sections: string[] = []
+
+  // Vasomotor biomarker section
+  const vmsMetrics = ['temperature_deviation', 'temperature_trend_deviation']
+  const vmsLines: string[] = []
+  for (const key of vmsMetrics) {
+    const vals = byType[key]
+    if (!vals) continue
+    const meta = metaMap[key]
+    const spikeDays = vals.filter(v => Math.abs(v) > 0.5).length
+    const spikeNote = key === 'temperature_deviation' && spikeDays > 0
+      ? ` — ${spikeDays}/${vals.length} days with spikes >0.5°C (objective VMS events)`
+      : ''
+    vmsLines.push(`  ${meta.label}: avg ${avg(vals)}${meta.unit}, recent ${recent(vals)}${meta.unit}${spikeNote}${meta.clinicalNote ? ` [${meta.clinicalNote}]` : ''}`)
+  }
+  if (vmsLines.length) sections.push(`VASOMOTOR BIOMARKER (Oura, 30-day):\n${vmsLines.join('\n')}`)
+
+  // Sleep architecture section
+  const sleepMetrics = ['sleep_score', 'sleep_efficiency', 'sleep_deep_minutes', 'sleep_rem_minutes', 'sleep_total_minutes']
+  const sleepLines: string[] = []
+  for (const key of sleepMetrics) {
+    const vals = byType[key]
+    if (!vals) continue
+    const meta = metaMap[key]
+    sleepLines.push(`  ${meta.label}: avg ${avg(vals)}${meta.unit}, recent ${recent(vals)}${meta.unit}${meta.clinicalNote ? ` [${meta.clinicalNote}]` : ''}`)
+  }
+  if (sleepLines.length) sections.push(`OBJECTIVE SLEEP ARCHITECTURE (Oura, 30-day):\n${sleepLines.join('\n')}`)
+
+  // Autonomic & cardiovascular
+  const autoMetrics = ['hrv_average', 'resting_heart_rate', 'readiness_score', 'respiratory_rate']
+  const autoLines: string[] = []
+  for (const key of autoMetrics) {
+    const vals = byType[key]
+    if (!vals) continue
+    const meta = metaMap[key]
+    autoLines.push(`  ${meta.label}: avg ${avg(vals)}${meta.unit}, recent ${recent(vals)}${meta.unit}${meta.clinicalNote ? ` [${meta.clinicalNote}]` : ''}`)
+  }
+  if (autoLines.length) sections.push(`AUTONOMIC & CARDIOVASCULAR (Oura, 30-day):\n${autoLines.join('\n')}`)
+
+  if (!sections.length) return ''
+
+  return `OURA RING WEARABLE DATA (objective biometrics, past 30 days):
+${sections.join('\n\n')}
+
+Clinical instruction: Use wearable data to confirm/challenge subjective intake responses. Temperature spike frequency informs VMS severity. Sleep architecture data informs sleep symptom severity. HRV/readiness informs treatment urgency.`
 }

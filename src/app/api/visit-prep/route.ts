@@ -204,21 +204,66 @@ export async function GET(req: NextRequest) {
     sections.push(`RECENT PATIENT MESSAGES:\n${msgLines.join('\n')}`)
   }
 
-  // Wearable trends (summarize by metric type)
+  // Wearable trends — grouped by clinical domain with menopause-specific context
   if (wearableMetrics && wearableMetrics.length > 0) {
     const byType: Record<string, number[]> = {}
     for (const m of wearableMetrics as any[]) {
       if (!byType[m.metric_type]) byType[m.metric_type] = []
       byType[m.metric_type].push(m.value)
     }
-    const trendLines = Object.entries(byType).map(([type, vals]) => {
-      const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
-      const recent = vals[0]?.toFixed(1)
-      const oldest = vals[vals.length - 1]?.toFixed(1)
-      const label = type.replace(/_/g, ' ')
-      return `- ${label}: recent ${recent}, avg ${avg} (14-day range: ${oldest}→${recent}, n=${vals.length})`
-    })
-    sections.push(`WEARABLE BIOMETRICS (past 14 days):\n${trendLines.join('\n')}`)
+
+    // Clinical labels and thresholds relevant to menopause
+    const metricMeta: Record<string, { label: string; unit: string; note?: string }> = {
+      sleep_score:               { label: 'Sleep quality score', unit: '/100', note: '<70 is clinically notable; estrogen/progesterone decline disrupts sleep architecture' },
+      sleep_deep_minutes:        { label: 'Deep (N3) sleep', unit: 'min', note: 'Reduced N3 common in menopause; progesterone promotes slow-wave sleep' },
+      sleep_rem_minutes:         { label: 'REM sleep', unit: 'min', note: 'Supports mood regulation; disruption correlates with mood/cognitive symptoms' },
+      sleep_total_minutes:       { label: 'Total sleep duration', unit: 'min' },
+      sleep_efficiency:          { label: 'Sleep efficiency', unit: '%', note: '<85% is clinically relevant; common in menopause-related insomnia' },
+      sleep_light_minutes:       { label: 'Light sleep', unit: 'min' },
+      temperature_deviation:     { label: 'Skin temperature deviation', unit: '°C', note: 'VASOMOTOR BIOMARKER: spikes >0.5°C correlate directly with hot flash/night sweat events; persistent elevation = undertreated VMS' },
+      temperature_trend_deviation: { label: 'Temperature trend deviation', unit: '°C', note: 'Multi-day trend; upward drift suggests worsening vasomotor activity' },
+      hrv_average:               { label: 'Heart rate variability (HRV)', unit: 'ms', note: 'Low HRV (<30ms) indicates autonomic stress; often improves with HRT; reflects physiological burden of VMS' },
+      resting_heart_rate:        { label: 'Resting heart rate', unit: 'bpm', note: 'Elevated RHR common with estrogen decline; tracks alongside VMS severity' },
+      readiness_score:           { label: 'Recovery/readiness score', unit: '/100', note: 'Composite of HRV, RHR, and sleep; low scores reflect cumulative physiological load' },
+      respiratory_rate:          { label: 'Respiratory rate', unit: 'br/min' },
+    }
+
+    const domainOrder = [
+      ['VASOMOTOR BIOMARKER', ['temperature_deviation', 'temperature_trend_deviation']],
+      ['SLEEP ARCHITECTURE', ['sleep_score', 'sleep_efficiency', 'sleep_deep_minutes', 'sleep_rem_minutes', 'sleep_light_minutes', 'sleep_total_minutes']],
+      ['AUTONOMIC & CARDIOVASCULAR', ['hrv_average', 'resting_heart_rate', 'respiratory_rate', 'readiness_score']],
+    ] as [string, string[]][]
+
+    const domainSections: string[] = []
+    const seen = new Set<string>()
+
+    for (const [domain, keys] of domainOrder) {
+      const lines: string[] = []
+      for (const key of keys) {
+        const vals = byType[key]
+        if (!vals || vals.length === 0) continue
+        seen.add(key)
+        const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+        const recent = vals[0]?.toFixed(1)
+        const meta = metricMeta[key] || { label: key.replace(/_/g, ' '), unit: '' }
+        const flagNote = meta.note ? ` — ${meta.note}` : ''
+        lines.push(`  • ${meta.label}: recent ${recent}${meta.unit}, avg ${avg}${meta.unit} (n=${vals.length} days)${flagNote}`)
+      }
+      if (lines.length) domainSections.push(`[${domain}]\n${lines.join('\n')}`)
+    }
+
+    // Any remaining metrics not in the domain map
+    const remaining = Object.entries(byType).filter(([k]) => !seen.has(k))
+    if (remaining.length) {
+      const extraLines = remaining.map(([type, vals]) => {
+        const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+        const recent = vals[0]?.toFixed(1)
+        return `  • ${type.replace(/_/g, ' ')}: recent ${recent}, avg ${avg} (n=${vals.length})`
+      })
+      domainSections.push(`[OTHER]\n${extraLines.join('\n')}`)
+    }
+
+    sections.push(`WEARABLE BIOMETRICS — Oura Ring (past 14 days):\n${domainSections.join('\n\n')}`)
   }
 
   const contextDocument = sections.join('\n\n')
@@ -243,6 +288,13 @@ Your role:
 - Connect dots across data sources (e.g., wearable trends + lab results + symptoms)
 - Flag anything that needs attention or follow-up
 - End with 2-3 specific talking points for the visit
+
+OURA WEARABLE CLINICAL INTERPRETATION (apply when wearable data is present):
+- Temperature deviation spikes >0.5°C are objective evidence of vasomotor events — use to confirm or challenge patient-reported hot flash frequency
+- Persistent low HRV (<30ms) with elevated RHR suggests autonomic burden from undertreated VMS; typically improves with effective HRT
+- Fragmented sleep architecture (low deep sleep, low REM, low efficiency) is a hallmark menopause pattern; correlates with mood instability and cognitive symptoms
+- Low readiness scores reflect cumulative physiological load; relevant to discussing treatment urgency
+- When wearable data conflicts with subjective report (e.g., patient minimizes symptoms but temperature spikes are frequent), note the discrepancy explicitly
 
 Tone: Clinical but readable — like a trusted colleague handing off a patient. No boilerplate.
 Format: Natural prose paragraphs. No JSON, no bullet lists, no markdown headers. Just a clean narrative that Dr. Urban can scan in 30 seconds before the call.
