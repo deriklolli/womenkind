@@ -70,7 +70,7 @@ export default function ProviderDashboard() {
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
   const [loading, setLoading] = useState(true)
-  const [providerName, setProviderName] = useState('Dr. Sarah Chen')
+  const [providerName, setProviderName] = useState('')
   const [filter, setFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
@@ -89,6 +89,30 @@ export default function ProviderDashboard() {
     if (demo) {
       const provider = JSON.parse(demo)
       setProviderName(provider.name)
+    } else {
+      // Real Supabase auth — fetch name from profiles table
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user) {
+          const meta = data.user.user_metadata
+          const first = meta?.first_name || ''
+          const last = meta?.last_name || ''
+          if (first || last) {
+            setProviderName(`Dr. ${first} ${last}`.trim())
+          } else {
+            // Fall back to profiles table
+            supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('id', data.user.id)
+              .single()
+              .then(({ data: profile }) => {
+                if (profile) {
+                  setProviderName(`Dr. ${profile.first_name || ''} ${profile.last_name || ''}`.trim())
+                }
+              })
+          }
+        }
+      })
     }
     loadIntakes()
     loadPatients()
