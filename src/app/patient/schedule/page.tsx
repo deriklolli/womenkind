@@ -55,6 +55,8 @@ export default function PatientSchedulePage() {
   const [patientNotes, setPatientNotes] = useState('')
   const [booking, setBooking] = useState(false)
   const [bookedAppointment, setBookedAppointment] = useState<BookedAppointment | null>(null)
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [canceling, setCanceling] = useState(false)
 
   // Check if we're returning from a successful payment
   const bookedId = searchParams.get('booked')
@@ -203,6 +205,26 @@ export default function PatientSchedulePage() {
       console.error('Booking error:', err)
     } finally {
       setBooking(false)
+    }
+  }
+
+  const handleCancelAppointment = async () => {
+    if (!bookedAppointment) return
+    setCanceling(true)
+    try {
+      const res = await fetch('/api/scheduling/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId: bookedAppointment.id }),
+      })
+      if (res.ok) {
+        setBookedAppointment({ ...bookedAppointment, status: 'canceled' })
+        setCancelConfirm(false)
+      }
+    } catch (err) {
+      console.error('Cancel failed:', err)
+    } finally {
+      setCanceling(false)
     }
   }
 
@@ -475,12 +497,51 @@ export default function PatientSchedulePage() {
               </div>
             )}
 
-            <button
-              onClick={() => router.push('/patient/dashboard')}
-              className="px-6 py-2.5 text-sm font-sans font-medium text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
-            >
-              Return to Dashboard
-            </button>
+            {bookedAppointment?.status !== 'canceled' ? (
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  onClick={() => router.push('/patient/dashboard')}
+                  className="px-6 py-2.5 text-sm font-sans font-medium text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
+                >
+                  Return to Dashboard
+                </button>
+                {!cancelConfirm ? (
+                  <button
+                    onClick={() => setCancelConfirm(true)}
+                    className="text-xs font-sans text-aubergine/40 hover:text-red-500 transition-colors underline underline-offset-2"
+                  >
+                    Cancel this appointment
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-sans text-aubergine/50">Are you sure?</span>
+                    <button
+                      onClick={handleCancelAppointment}
+                      disabled={canceling}
+                      className="px-3 py-1.5 text-xs font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {canceling ? 'Canceling…' : 'Yes, cancel'}
+                    </button>
+                    <button
+                      onClick={() => setCancelConfirm(false)}
+                      className="px-3 py-1.5 text-xs font-sans font-semibold text-aubergine/50 bg-aubergine/5 border border-aubergine/10 rounded-pill hover:bg-aubergine/10 transition-colors"
+                    >
+                      Keep it
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-sm font-sans text-aubergine/50">Your appointment has been canceled.</p>
+                <button
+                  onClick={() => { setStep('select-type'); setBookedAppointment(null); setCancelConfirm(false) }}
+                  className="px-6 py-2.5 text-sm font-sans font-medium text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
+                >
+                  Book a New Appointment
+                </button>
+              </div>
+            )}
           </div>
         )}
 

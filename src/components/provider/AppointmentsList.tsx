@@ -67,10 +67,31 @@ export default function AppointmentsList({ providerId }: Props) {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [visitPrepAptId, setVisitPrepAptId] = useState<string | null>(null)
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null)
+  const [cancelingId, setCancelingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAppointments()
   }, [providerId])
+
+  const handleCancel = async (appointmentId: string) => {
+    setCancelingId(appointmentId)
+    try {
+      const res = await fetch('/api/scheduling/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId }),
+      })
+      if (res.ok) {
+        setCancelConfirmId(null)
+        fetchAppointments()
+      }
+    } catch (err) {
+      console.error('Cancel failed:', err)
+    } finally {
+      setCancelingId(null)
+    }
+  }
 
   const fetchAppointments = async () => {
     setLoading(true)
@@ -184,31 +205,58 @@ export default function AppointmentsList({ providerId }: Props) {
                         {/* Actions */}
                         {apt.status === 'confirmed' && (
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setVisitPrepAptId(visitPrepAptId === apt.id ? null : apt.id)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold rounded-pill transition-colors mr-1 ${
-                                visitPrepAptId === apt.id
-                                  ? 'text-white bg-violet border border-violet'
-                                  : 'text-violet bg-violet/5 border border-violet/15 hover:bg-violet/10'
-                              }`}
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-                              </svg>
-                              Visit Prep
-                            </button>
-                            {apt.video_room_url && (
-                              <a
-                                href={apt.video_room_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors mr-1"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                                </svg>
-                                Join Call
-                              </a>
+                            {cancelConfirmId === apt.id ? (
+                              <>
+                                <span className="text-xs font-sans text-aubergine/50 mr-1">Cancel appointment?</span>
+                                <button
+                                  onClick={() => handleCancel(apt.id)}
+                                  disabled={cancelingId === apt.id}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                                >
+                                  {cancelingId === apt.id ? 'Canceling…' : 'Confirm'}
+                                </button>
+                                <button
+                                  onClick={() => setCancelConfirmId(null)}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-aubergine/50 bg-aubergine/5 border border-aubergine/10 rounded-pill hover:bg-aubergine/10 transition-colors"
+                                >
+                                  Keep
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => setVisitPrepAptId(visitPrepAptId === apt.id ? null : apt.id)}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold rounded-pill transition-colors mr-1 ${
+                                    visitPrepAptId === apt.id
+                                      ? 'text-white bg-violet border border-violet'
+                                      : 'text-violet bg-violet/5 border border-violet/15 hover:bg-violet/10'
+                                  }`}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                                  </svg>
+                                  Visit Prep
+                                </button>
+                                {apt.video_room_url && (
+                                  <a
+                                    href={apt.video_room_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors mr-1"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                                    </svg>
+                                    Join Call
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => setCancelConfirmId(apt.id)}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-red-400 bg-red-50 border border-red-100 rounded-pill hover:bg-red-100 hover:text-red-500 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </>
                             )}
                           </div>
                         )}
