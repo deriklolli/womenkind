@@ -401,13 +401,18 @@ export async function syncOuraData(
 
     return { synced: metrics.length, status: 'success' }
   } catch (err: any) {
+    console.error('[OURA SYNC ERROR] connectionId:', connectionId, '| message:', err.message, '| stack:', err.stack)
+
     // Log error
-    await supabase.from('wearable_sync_log').insert({
+    const { error: logError } = await supabase.from('wearable_sync_log').insert({
       connection_id: connectionId,
       records_fetched: 0,
       status: 'error',
       error_message: err.message,
     })
+    if (logError) {
+      console.error('[OURA SYNC] Failed to write sync log:', logError.message)
+    }
 
     return { synced: 0, status: 'error' }
   }
