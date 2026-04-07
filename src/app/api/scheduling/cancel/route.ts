@@ -91,7 +91,7 @@ async function sendCancellationEmail({
                       ${appointmentName}
                     </p>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
-                      ${durationMinutes} minutes with Dr. Joseph Urban Jr.
+                      ${durationMinutes} min
                     </p>
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49; opacity: 0.5;">${dateStr}</p>
                     <p style="margin: 0; font-size: 14px; color: #280f49; opacity: 0.5;">${startTime} – ${endTime} MT</p>
@@ -155,7 +155,8 @@ export async function POST(req: NextRequest) {
       .select(`
         *,
         appointment_types(name, duration_minutes),
-        patients(id, profiles(first_name, last_name, email))
+        patients(id, profiles(first_name, last_name, email)),
+        providers(credentials, profiles(first_name, last_name))
       `)
       .eq('id', appointmentId)
       .single()
@@ -200,13 +201,20 @@ export async function POST(req: NextRequest) {
     const appointmentTypeName = (appointment as any).appointment_types?.name || 'Appointment'
     const durationMinutes = (appointment as any).appointment_types?.duration_minutes || 30
 
+    // Build provider display name dynamically
+    const providerProfile = (appointment as any).providers?.profiles
+    const providerCredentials = (appointment as any).providers?.credentials || ''
+    const providerDisplayName = providerProfile
+      ? `${providerCredentials ? providerCredentials + ' ' : ''}${providerProfile.first_name || ''} ${providerProfile.last_name || ''}`.trim()
+      : 'Your provider'
+
     if (canceledBy === 'provider') {
       // Provider canceled — notify the patient
       if (patientEmail) {
         await sendCancellationEmail({
           toEmail: patientEmail,
           toName: patientName,
-          canceledByName: 'Dr. Joseph Urban Jr.',
+          canceledByName: providerDisplayName,
           appointmentName: appointmentTypeName,
           durationMinutes,
           startsAt: appointment.starts_at,

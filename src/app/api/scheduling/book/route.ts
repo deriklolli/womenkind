@@ -96,7 +96,7 @@ async function sendBookingConfirmationEmail({
                       ${appointmentName}
                     </p>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
-                      ${durationMinutes} minutes with Dr. Joseph Urban Jr.
+                      ${durationMinutes} min
                     </p>
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
@@ -141,7 +141,7 @@ async function sendBookingConfirmationEmail({
                   <td align="center">
                     <p style="margin: 0 0 10px 0; font-size: 12px; color: #422a1f; opacity: 0.4;">Add to your calendar</p>
                     <a href="${appUrl}/api/scheduling/calendar-export?appointmentId=${appointmentId}" style="font-size: 13px; color: #944fed; text-decoration: none; margin-right: 16px;">Apple / Outlook</a>
-                    <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointmentName + ' — Womenkind')}&dates=${new Date(startsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}/${new Date(endsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}&details=${encodeURIComponent('Appointment with Dr. Joseph Urban Jr.')}&location=${encodeURIComponent('Virtual (video call)')}" target="_blank" style="font-size: 13px; color: #944fed; text-decoration: none;">Google Calendar</a>
+                    <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointmentName + ' — Womenkind')}&dates=${new Date(startsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}/${new Date(endsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}&details=${encodeURIComponent('Womenkind appointment')}&location=${encodeURIComponent('Virtual (video call)')}" target="_blank" style="font-size: 13px; color: #944fed; text-decoration: none;">Google Calendar</a>
                   </td>
                 </tr>
               </table>

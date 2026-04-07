@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import ProviderNav from '@/components/provider/ProviderNav'
+import { getProviderSession } from '@/lib/getProviderSession'
 
 interface CalendarStatus {
   connected: boolean
@@ -21,15 +22,11 @@ export default function ProviderSettingsPage() {
   const [providerId, setProviderId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
-  // Get provider ID from localStorage
+  // Resolve provider ID — demo mode or real Supabase auth
   useEffect(() => {
-    try {
-      const demo = localStorage.getItem('womenkind_demo_provider')
-      if (demo) {
-        const parsed = JSON.parse(demo)
-        setProviderId(parsed.id)
-      }
-    } catch {}
+    getProviderSession().then(session => {
+      if (session?.providerId) setProviderId(session.providerId)
+    })
   }, [])
 
   // Check for OAuth callback params

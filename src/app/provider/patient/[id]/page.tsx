@@ -12,6 +12,7 @@ import NotesPanel from '@/components/provider/NotesPanel'
 import PatientMessagesPanel from '@/components/provider/PatientMessagesPanel'
 import PatientBiometrics from '@/components/provider/PatientBiometrics'
 import { useChatContext } from '@/lib/chat-context'
+import { getProviderSession } from '@/lib/getProviderSession'
 
 interface PatientProfile {
   id: string
@@ -112,22 +113,22 @@ export default function PatientProfilePage() {
   const [messageThreadCount, setMessageThreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
-
-  // Resolve provider ID from localStorage for demo mode
-  const getProviderId = () => {
-    if (typeof window === 'undefined') return ''
-    try {
-      const demo = localStorage.getItem('womenkind_demo_provider')
-      if (demo) return JSON.parse(demo).id || ''
-    } catch {}
-    return ''
-  }
+  const [providerId, setProviderId] = useState<string>('')
 
   const { setPageContext } = useChatContext()
 
   useEffect(() => {
+    resolveProviderId()
+  }, [])
+
+  useEffect(() => {
     loadPatientData()
   }, [patientId])
+
+  const resolveProviderId = async () => {
+    const session = await getProviderSession()
+    if (session?.providerId) setProviderId(session.providerId)
+  }
 
   const loadPatientData = async () => {
     setLoading(true)
@@ -510,7 +511,7 @@ export default function PatientProfilePage() {
         {activeTab === 'prescriptions' && (
           <PrescriptionsPanel
             patientId={patientId}
-            providerId={getProviderId()}
+            providerId={providerId}
             prescriptions={prescriptions}
             onPrescriptionSent={reloadPrescriptions}
           />
@@ -519,7 +520,7 @@ export default function PatientProfilePage() {
         {activeTab === 'labs' && (
           <LabOrdersPanel
             patientId={patientId}
-            providerId={getProviderId()}
+            providerId={providerId}
             labOrders={labOrders}
             onLabOrderSent={reloadLabOrders}
           />
@@ -528,7 +529,7 @@ export default function PatientProfilePage() {
         {activeTab === 'notes' && (
           <NotesPanel
             patientId={patientId}
-            providerId={getProviderId()}
+            providerId={providerId}
             visits={visits}
             providerNotes={providerNotes}
             onNoteAdded={reloadProviderNotes}
@@ -538,7 +539,7 @@ export default function PatientProfilePage() {
         {activeTab === 'messages' && (
           <PatientMessagesPanel
             patientId={patientId}
-            providerId={getProviderId()}
+            providerId={providerId}
             patientName={name || 'Patient'}
           />
         )}

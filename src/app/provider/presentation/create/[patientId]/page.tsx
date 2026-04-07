@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
 import { PRESENTATION_COMPONENTS, type PresentationComponent } from '@/lib/presentation-components'
 import { useChatContext } from '@/lib/chat-context'
+import { getProviderSession } from '@/lib/getProviderSession'
 
 interface PatientInfo {
   id: string
@@ -46,26 +47,8 @@ export default function CreatePresentationPage() {
   }, [patientId])
 
   const loadProviderId = async () => {
-    // Try demo mode first
-    try {
-      if (typeof window !== 'undefined') {
-        const demo = localStorage.getItem('womenkind_demo_provider')
-        if (demo) {
-          const parsed = JSON.parse(demo)
-          if (parsed.id) { setProviderId(parsed.id); return }
-        }
-      }
-    } catch {}
-    // Fall back to real Supabase auth
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data } = await supabase
-        .from('providers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      if (data?.id) setProviderId(data.id)
-    }
+    const session = await getProviderSession()
+    if (session?.providerId) setProviderId(session.providerId)
   }
 
   const loadPatient = async () => {

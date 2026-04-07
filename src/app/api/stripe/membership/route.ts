@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         .eq('intake_id', intakeId)
         .not('stripe_customer_id', 'is', null)
         .limit(1)
-        .single()
+        .maybeSingle()
 
       customerId = sub?.stripe_customer_id
     }

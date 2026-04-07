@@ -174,29 +174,31 @@ async function handleIntakePayment(
     amountPaid: number | null
   }
 ) {
-  // Mark intake as paid (status goes from 'submitted' to 'paid')
+  // Mark intake as paid (status goes from 'draft' to 'submitted', record payment details)
   if (data.intakeId) {
-    await supabase
+    const { error: intakeErr } = await supabase
       .from('intakes')
       .update({
-        status: 'submitted', // Keep as submitted — provider still needs to review
+        status: 'submitted', // Provider still needs to review
         paid: true,
         paid_at: new Date().toISOString(),
         stripe_session_id: data.stripeSessionId,
       })
       .eq('id', data.intakeId)
+    if (intakeErr) console.error('[STRIPE] Failed to update intake after payment:', intakeErr.message)
   }
 
   // Create a subscription record for the intake payment
   if (data.patientId) {
-    await supabase.from('subscriptions').insert({
+    const { error: subErr } = await supabase.from('subscriptions').insert({
       patient_id: data.patientId,
       stripe_customer_id: data.stripeCustomerId,
       plan_type: 'intake',
       status: 'active',
-      intake_id: data.intakeId,
+      intake_id: data.intakeId || null,
       created_at: new Date().toISOString(),
     })
+    if (subErr) console.error('[STRIPE] Failed to create intake subscription record:', subErr.message)
   }
 }
 
@@ -321,7 +323,7 @@ async function handleAppointmentPayment(
                       ${typeName}
                     </p>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
-                      ${durationMinutes} minutes with Dr. Joseph Urban Jr.
+                      ${durationMinutes} min
                     </p>
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
