@@ -496,7 +496,7 @@ export default function PatientDashboardPage() {
   const handleLogout = async () => {
     localStorage.removeItem('womenkind_demo_patient')
     await supabase.auth.signOut()
-    router.push('/patient/login')
+    window.location.href = 'https://womenkindhealth.com/patient/login'
   }
 
   if (loading) {
@@ -683,7 +683,7 @@ export default function PatientDashboardPage() {
           <div
             className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
             style={{ minHeight: '200px' }}
-            onClick={() => router.push(`/presentation/${patient.presentationId}`)}
+            onClick={() => window.open(`/presentation/${patient.presentationId}`, '_blank')}
           >
             <div
               className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
