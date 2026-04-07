@@ -60,8 +60,8 @@ export default function SettingsPage() {
       const { data: patientRow } = await supabase
         .from('patients')
         .select('id, stripe_subscription_status, stripe_current_period_end')
-        .eq('user_id', session.user.id)
-        .single()
+        .eq('profile_id', session.user.id)
+        .maybeSingle()
 
       if (!patientRow) { router.push('/patient/login'); return }
 
