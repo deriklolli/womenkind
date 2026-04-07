@@ -18,6 +18,11 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
+    // Allow login routes through
+    if (pathname.startsWith('/patient/login') || pathname.startsWith('/provider/login')) {
+      return NextResponse.next()
+    }
+
     // Allow Next.js internals and static assets through
     if (
       pathname.startsWith('/_next') ||
