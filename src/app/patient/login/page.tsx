@@ -107,19 +107,6 @@ export default function PatientLoginPage() {
     }
   }
 
-  // Demo login — skip auth for investor demo
-  const handleDemoLogin = () => {
-    localStorage.setItem(
-      'womenkind_demo_patient',
-      JSON.stringify({
-        id: 'demo-patient',
-        name: 'Sarah Mitchell',
-        email: 'sarah@example.com',
-      })
-    )
-    router.push('/patient/dashboard')
-  }
-
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -291,25 +278,6 @@ export default function PatientLoginPage() {
             </button>
           </p>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-aubergine/10" />
-            <span className="text-xs font-sans text-aubergine/30">OR</span>
-            <div className="flex-1 h-px bg-aubergine/10" />
-          </div>
-
-          {/* Demo access */}
-          <button
-            onClick={handleDemoLogin}
-            className="w-full py-3 rounded-full font-sans text-sm font-semibold
-                       border-2 border-violet/20 text-violet hover:bg-violet/5
-                       transition-colors"
-          >
-            Enter Demo Mode
-          </button>
-          <p className="text-xs text-aubergine/30 font-sans text-center mt-3">
-            Demo mode uses sample data — no account needed
-          </p>
         </div>
       </div>
     </div>
