@@ -274,17 +274,29 @@ export async function POST(req: NextRequest) {
 
       if (insertError) throw insertError
 
-      // Fire-and-forget: video room, calendar, email run in the background
-      // so the response returns immediately to the patient
+      // Create video room synchronously so the URL is available in the response
+      let videoRoom: { url: string; roomName: string } | null = null
+      try {
+        videoRoom = await createVideoRoom({
+          appointmentId: appointment.id,
+          appointmentName: appointmentType.name,
+          startsAt,
+          endsAt,
+        })
+
+        if (videoRoom) {
+          await supabase
+            .from('appointments')
+            .update({ video_room_url: videoRoom.url, video_room_name: videoRoom.roomName })
+            .eq('id', appointment.id)
+        }
+      } catch (videoErr) {
+        console.error('Video room creation failed:', videoErr)
+      }
+
+      // Fire-and-forget: calendar event + confirmation email run in the background
       const backgroundTasks = async () => {
         try {
-          const videoRoom = await createVideoRoom({
-            appointmentId: appointment.id,
-            appointmentName: appointmentType.name,
-            startsAt,
-            endsAt,
-          })
-
           const calendarEventId = await createCalendarEvent({
             providerId,
             summary: `${appointmentType.name} — ${patientName}`,
@@ -294,13 +306,12 @@ export async function POST(req: NextRequest) {
             patientEmail,
           })
 
-          await supabase
-            .from('appointments')
-            .update({
-              google_calendar_event_id: calendarEventId,
-              ...(videoRoom ? { video_room_url: videoRoom.url, video_room_name: videoRoom.roomName } : {}),
-            })
-            .eq('id', appointment.id)
+          if (calendarEventId) {
+            await supabase
+              .from('appointments')
+              .update({ google_calendar_event_id: calendarEventId })
+              .eq('id', appointment.id)
+          }
 
           await sendBookingConfirmationEmail({
             appointmentId: appointment.id,
@@ -317,11 +328,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Don't await — let it run in the background
       backgroundTasks()
 
       return NextResponse.json({
-        appointment,
+        appointment: {
+          ...appointment,
+          video_room_url: videoRoom?.url ?? null,
+          video_room_name: videoRoom?.roomName ?? null,
+        },
         status: 'confirmed',
         message: 'Appointment booked successfully',
       })
