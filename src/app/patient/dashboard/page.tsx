@@ -608,7 +608,7 @@ export default function PatientDashboardPage() {
       >
         {/* Welcome header */}
         <div className="mb-8">
-          <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2">
+          <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
             Welcome back, {patient.name.split(' ')[0]}
           </h1>
           <p className="text-sm font-sans text-aubergine/40">
@@ -620,7 +620,7 @@ export default function PatientDashboardPage() {
         {dashboardPhase === 'intake_done' && (
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
-              <h2 className="font-sans font-semibold text-lg text-aubergine mb-1">
+              <h2 className="font-serif font-normal text-lg text-aubergine mb-1">
                 Begin your health journey
               </h2>
               <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
@@ -642,7 +642,7 @@ export default function PatientDashboardPage() {
         {dashboardPhase === 'appointment_booked' && appointments[0] && (
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
-              <h2 className="font-sans font-semibold text-lg text-aubergine mb-1">
+              <h2 className="font-serif font-normal text-lg text-aubergine mb-1">
                 Your appointment is scheduled
               </h2>
               <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
@@ -692,7 +692,7 @@ export default function PatientDashboardPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-aubergine/85 via-aubergine/60 to-transparent" />
             <div className="relative z-10 flex flex-col justify-end h-full p-8 md:p-10" style={{ minHeight: '200px' }}>
               <div className="max-w-[400px]">
-                <h2 className="font-sans font-semibold text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
+                <h2 className="font-serif font-normal text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
                   Your Future Health Blueprint is Ready
                 </h2>
                 <p className="text-sm font-sans text-white/70 leading-relaxed mb-5">

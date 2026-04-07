@@ -13,21 +13,26 @@
     @apply font-sans text-beige antialiased;
   }
 
-  /* All headings use the display serif (Vogun / Playfair Display) */
-  h1, h2, h3, h4, h5, h6 {
+  /* Display headlines — serif enforced with !important so JSX utility classes can't override */
+  h1, h2 {
+    @apply !font-serif !font-normal text-aubergine;
+  }
+
+  /* h3–h6 default to serif but can be overridden (e.g. uppercase UI labels use font-sans) */
+  h3, h4, h5, h6 {
     @apply font-serif text-aubergine;
   }
 
   h1 {
-    @apply text-5xl md:text-7xl font-normal tracking-tight leading-[1.05];
+    @apply text-5xl md:text-7xl tracking-tight leading-[1.05];
   }
 
   h2 {
-    @apply text-3xl md:text-5xl font-normal tracking-tight leading-[1.1];
+    @apply text-3xl md:text-5xl tracking-tight leading-[1.1];
   }
 
   h3 {
-    @apply text-xl md:text-2xl font-normal;
+    @apply text-xl md:text-2xl;
   }
 }
 
