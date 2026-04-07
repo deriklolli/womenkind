@@ -116,7 +116,7 @@ export default function BriefViewerPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
-          <p className="font-serif text-xl text-aubergine/40">Brief not found</p>
+          <p className="font-sans font-semibold text-xl text-aubergine/40">Brief not found</p>
           <button onClick={() => router.push('/provider/dashboard')} className="text-sm text-violet mt-4 font-sans">
             Back to dashboard
           </button>
@@ -148,7 +148,7 @@ export default function BriefViewerPage() {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="font-serif text-2xl text-aubergine">{answers.full_name || 'Unknown Patient'}</h1>
+                <h1 className="font-sans font-semibold text-2xl text-aubergine">{answers.full_name || 'Unknown Patient'}</h1>
                 {isMember && (
                   <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-pill border border-emerald-200">
                     Member
@@ -245,7 +245,7 @@ export default function BriefViewerPage() {
           {/* Sidebar — notes */}
           <div className="col-span-4">
             <div className="bg-white rounded-card shadow-sm p-5 sticky top-6">
-              <h3 className="font-serif text-base text-aubergine mb-3">Provider Notes</h3>
+              <h3 className="font-sans font-semibold text-base text-aubergine mb-3">Provider Notes</h3>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -330,7 +330,7 @@ function SymptomsTab({ brief }: { brief: any }) {
 
   return (
     <div>
-      <h2 className="font-serif text-lg text-aubergine mb-4">Symptom Summary</h2>
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">Symptom Summary</h2>
       <div className="space-y-4">
         {domains.map((d: any, i: number) => (
           <div key={i} className="p-4 rounded-brand border border-aubergine/5 bg-cream/50">
@@ -356,7 +356,7 @@ function RiskFlagsTab({ brief }: { brief: any }) {
 
   return (
     <div>
-      <h2 className="font-serif text-lg text-aubergine mb-4">Risk Flags</h2>
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">Risk Flags</h2>
 
       {/* Urgent */}
       {flags.urgent && flags.urgent.length > 0 ? (
@@ -425,7 +425,7 @@ function TreatmentTab({ brief }: { brief: any }) {
 
   return (
     <div>
-      <h2 className="font-serif text-lg text-aubergine mb-4">Treatment Pathway</h2>
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">Treatment Pathway</h2>
 
       {/* Recommended approach */}
       {pathway.recommended_approach && (
@@ -468,7 +468,7 @@ function QuestionsTab({ brief }: { brief: any }) {
 
   return (
     <div>
-      <h2 className="font-serif text-lg text-aubergine mb-1">Suggested Questions</h2>
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-1">Suggested Questions</h2>
       <p className="text-xs font-sans text-aubergine/40 mb-5">
         Conversation starters based on the intake data — saves time by not re-asking what&apos;s already covered.
       </p>

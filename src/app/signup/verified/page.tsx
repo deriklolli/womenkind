@@ -64,7 +64,7 @@ export default function VerifiedPage() {
             </svg>
           </div>
 
-          <h2 className="font-serif text-xl text-aubergine mb-3">
+          <h2 className="font-sans font-semibold text-xl text-aubergine mb-3">
             {userName ? `Welcome, ${userName}` : 'Email verified'}
           </h2>
           <p className="text-sm font-sans text-aubergine/50 leading-relaxed mb-8">

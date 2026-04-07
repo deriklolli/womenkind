@@ -202,7 +202,7 @@ export default function SettingsPage() {
             </svg>
             Back to Dashboard
           </button>
-          <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2">
+          <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2">
             Settings
           </h1>
           <p className="text-sm font-sans text-aubergine/40">

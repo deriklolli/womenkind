@@ -253,7 +253,7 @@ export default function ProviderDashboard() {
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h1 className="font-serif text-2xl text-aubergine tracking-tight">Intake Queue</h1>
+                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Intake Queue</h1>
                 <p className="text-sm font-sans text-aubergine/50 mt-1">
                   {counts.submitted} new {counts.submitted === 1 ? 'intake' : 'intakes'} awaiting review
                 </p>
@@ -293,7 +293,7 @@ export default function ProviderDashboard() {
               </div>
             ) : filteredIntakes.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-card shadow-sm">
-                <p className="text-lg font-serif text-aubergine/30">No intakes found</p>
+                <p className="text-lg font-sans font-semibold text-aubergine/30">No intakes found</p>
                 <p className="text-sm font-sans text-aubergine/20 mt-2">
                   {filter !== 'all' ? 'Try a different filter' : 'Completed intakes will appear here'}
                 </p>
@@ -321,7 +321,7 @@ export default function ProviderDashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-serif text-lg text-aubergine group-hover:text-violet transition-colors truncate">
+                            <h3 className="font-sans font-semibold text-lg text-aubergine group-hover:text-violet transition-colors truncate">
                               {name}
                             </h3>
                             {age && (
@@ -383,7 +383,7 @@ export default function ProviderDashboard() {
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h1 className="font-serif text-2xl text-aubergine tracking-tight">My Patients</h1>
+                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">My Patients</h1>
                 <p className="text-sm font-sans text-aubergine/50 mt-1">
                   {patients.length} active {patients.length === 1 ? 'patient' : 'patients'}
                 </p>
@@ -407,7 +407,7 @@ export default function ProviderDashboard() {
             {/* Patient directory list */}
             {filteredPatients.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-card shadow-sm">
-                <p className="text-lg font-serif text-aubergine/30">
+                <p className="text-lg font-sans font-semibold text-aubergine/30">
                   {searchQuery ? 'No patients match your search' : 'No patients yet'}
                 </p>
                 <p className="text-sm font-sans text-aubergine/20 mt-2">
@@ -453,7 +453,7 @@ export default function ProviderDashboard() {
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-serif text-lg text-aubergine group-hover:text-violet transition-colors truncate">
+                              <h3 className="font-sans font-semibold text-lg text-aubergine group-hover:text-violet transition-colors truncate">
                                 {name}
                               </h3>
                               {age && (

@@ -107,7 +107,7 @@ export default function ProviderRefillQueue({ providerId, onCountChange }: Props
     <>
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="font-serif text-2xl text-aubergine tracking-tight">Refill Requests</h1>
+          <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Refill Requests</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
             {counts.pending} pending {counts.pending === 1 ? 'request' : 'requests'}
           </p>
@@ -146,7 +146,7 @@ export default function ProviderRefillQueue({ providerId, onCountChange }: Props
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-card shadow-sm">
-          <p className="text-lg font-serif text-aubergine/30">No refill requests</p>
+          <p className="text-lg font-sans font-semibold text-aubergine/30">No refill requests</p>
           <p className="text-sm font-sans text-aubergine/20 mt-2">
             {filter !== 'all' ? 'Try a different filter' : 'Patient refill requests will appear here'}
           </p>
@@ -168,7 +168,7 @@ export default function ProviderRefillQueue({ providerId, onCountChange }: Props
               >
                 <div className="flex items-center justify-between gap-4 mb-1.5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <h3 className="font-serif text-lg text-aubergine truncate">
+                    <h3 className="font-sans font-semibold text-lg text-aubergine truncate">
                       {req.prescriptions?.medication_name || 'Unknown Medication'}
                     </h3>
                     <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill border flex-shrink-0 ${statusColors[req.status]}`}>

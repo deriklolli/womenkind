@@ -73,7 +73,7 @@ function IntakePaymentContent() {
 
           {/* Headline */}
           <div className="text-center mt-6 mb-14">
-            <h1 className="font-serif text-3xl md:text-4xl text-white mb-4 tracking-tight leading-tight">
+            <h1 className="font-sans font-semibold text-3xl md:text-4xl text-white mb-4 tracking-tight leading-tight">
               You&apos;ve taken the first step
             </h1>
             <p className="text-base text-white/50 font-sans leading-relaxed max-w-lg mx-auto">
@@ -103,7 +103,7 @@ function IntakePaymentContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h2 className="font-serif text-xl text-white">Intake Assessment</h2>
+                  <h2 className="font-sans font-semibold text-xl text-white">Intake Assessment</h2>
                 </div>
                 <p className="text-sm text-white/40 font-sans pl-11">
                   90-minute comprehensive consultation with your MD provider
@@ -170,7 +170,7 @@ function IntakePaymentContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                 </div>
-                <h2 className="font-serif text-xl text-white">Monthly Membership</h2>
+                <h2 className="font-sans font-semibold text-xl text-white">Monthly Membership</h2>
               </div>
               <p className="text-sm text-white/40 font-sans pl-11">
                 Ongoing care, prescription management, and provider access

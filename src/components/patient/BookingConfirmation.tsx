@@ -38,7 +38,7 @@ export default function BookingConfirmation({
 
   return (
     <div>
-      <h1 className="font-serif text-2xl md:text-3xl text-aubergine mb-2 text-center">Confirm Your Appointment</h1>
+      <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2 text-center">Confirm Your Appointment</h1>
       <p className="text-sm font-sans text-aubergine/40 mb-6 text-center">
         Review the details below and confirm your booking.
       </p>

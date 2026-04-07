@@ -121,7 +121,7 @@ export default function ProviderSettingsPage() {
       <ProviderNav />
 
       <div className="max-w-3xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-serif text-aubergine mb-1">Settings</h1>
+        <h1 className="text-2xl font-sans font-semibold text-aubergine mb-1">Settings</h1>
         <p className="text-sm font-sans text-aubergine/50 mb-8">
           Manage your calendar integration and preferences
         </p>
@@ -144,7 +144,7 @@ export default function ProviderSettingsPage() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-base font-serif text-aubergine">Google Calendar</h2>
+                <h2 className="text-base font-sans font-semibold text-aubergine">Google Calendar</h2>
                 <p className="text-xs font-sans text-aubergine/40 mt-0.5">
                   Sync your schedule so patients only see available times
                 </p>

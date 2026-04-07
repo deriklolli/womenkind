@@ -38,7 +38,7 @@ export default function SectionIntroLight({ section, intro, safetyFrame, onConti
       {/* Safety framing (for sensitive sections) */}
       {safetyFrame ? (
         <div className="mb-8">
-          <h2 className="font-serif text-2xl md:text-3xl text-aubergine mb-4 tracking-tight">
+          <h2 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-4 tracking-tight">
             {safetyFrame.title}
           </h2>
           <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto">

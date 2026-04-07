@@ -38,7 +38,7 @@ export default function SectionIntro({ section, intro, safetyFrame, onContinue }
       {/* Safety framing (for sensitive sections) */}
       {safetyFrame ? (
         <div className="mb-8">
-          <h2 className="font-serif text-2xl md:text-3xl text-white mb-4 tracking-tight">
+          <h2 className="font-sans font-semibold text-2xl md:text-3xl text-white mb-4 tracking-tight">
             {safetyFrame.title}
           </h2>
           <p className="text-base text-white/60 font-sans leading-relaxed max-w-md mx-auto">

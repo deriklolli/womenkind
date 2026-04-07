@@ -81,7 +81,7 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
         <svg className="w-10 h-10 text-aubergine/12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 3h6v5.586a1 1 0 00.293.707l3.414 3.414a3 3 0 01.879 2.121V17a4 4 0 01-4 4H8.414a4 4 0 01-4-4v-2.172a3 3 0 01.879-2.121l3.414-3.414A1 1 0 009 8.586V3z" />
         </svg>
-        <h3 className="font-serif text-lg text-aubergine mb-2">No lab results yet</h3>
+        <h3 className="font-sans font-semibold text-lg text-aubergine mb-2">No lab results yet</h3>
         <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
           When your provider orders lab work, your results will appear here once they&apos;re ready.
         </p>

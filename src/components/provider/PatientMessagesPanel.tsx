@@ -244,7 +244,7 @@ export default function PatientMessagesPanel({ patientId, providerId, patientNam
         </div>
 
         {thread?.subject && (
-          <h3 className="font-serif text-lg text-aubergine mb-4">{thread.subject}</h3>
+          <h3 className="font-sans font-semibold text-lg text-aubergine mb-4">{thread.subject}</h3>
         )}
 
         {threadLoading ? (
@@ -323,7 +323,7 @@ export default function PatientMessagesPanel({ patientId, providerId, patientNam
           <svg className="w-10 h-10 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
-          <p className="text-lg font-serif text-aubergine/30">No messages yet</p>
+          <p className="text-lg font-sans font-semibold text-aubergine/30">No messages yet</p>
           <p className="text-sm font-sans text-aubergine/20 mt-2">Start a conversation with {patientName}</p>
         </div>
       ) : (

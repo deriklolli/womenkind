@@ -82,7 +82,7 @@ export default function DashboardAlerts({
               />
               {/* Content */}
               <div className="relative z-10 flex flex-col justify-end h-full p-6 md:p-8" style={{ minHeight: '160px' }}>
-                <p className="font-serif text-xl md:text-2xl text-white leading-tight mb-2">
+                <p className="font-sans font-semibold text-xl md:text-2xl text-white leading-tight mb-2">
                   {alert.title}
                 </p>
                 {alert.body && (

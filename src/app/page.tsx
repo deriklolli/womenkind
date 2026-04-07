@@ -47,7 +47,7 @@ export default function HomePage() {
           {/* Stats block — positioned right side on desktop */}
           <div className="mt-16 md:absolute md:bottom-20 md:right-12 flex items-start gap-8">
             <div className="text-center md:text-left">
-              <p className="font-serif text-7xl md:text-8xl text-white leading-none">80%</p>
+              <p className="font-sans font-semibold text-7xl md:text-8xl text-white leading-none">80%</p>
               <p className="text-white/80 text-sm mt-3 max-w-[200px] font-sans">
                 Of women experience menopause symptoms that disrupt daily life,
                 including hot flashes, sleep disruption, brain fog, and mood changes.
@@ -55,7 +55,7 @@ export default function HomePage() {
             </div>
             <div className="stat-divider hidden md:block" />
             <div className="text-center md:text-left">
-              <p className="font-serif text-7xl md:text-8xl text-white leading-none">2%</p>
+              <p className="font-sans font-semibold text-7xl md:text-8xl text-white leading-none">2%</p>
               <p className="text-white/80 text-sm mt-3 max-w-[220px] font-sans">
                 Less than of women receive physician led hormone therapy, despite
                 strong clinical evidence supporting its safety and effectiveness
@@ -116,7 +116,7 @@ export default function HomePage() {
               >
                 {/* Placeholder for service thumbnail */}
                 <div className="w-full h-40 rounded-xl bg-gradient-to-br from-natural/30 to-airborne/30 mb-6" />
-                <h3 className="text-lg font-serif mb-2">{service.title}</h3>
+                <h3 className="text-lg font-sans font-semibold mb-2">{service.title}</h3>
                 <p className="text-beige/70 text-sm font-sans">{service.desc}</p>
               </div>
             ))}
@@ -161,7 +161,7 @@ export default function HomePage() {
             ].map((step) => (
               <div key={step.step} className="text-center md:text-left">
                 <p className="text-violet font-sans font-bold text-sm mb-3">{step.step}</p>
-                <h3 className="text-white font-serif text-xl mb-3">{step.title}</h3>
+                <h3 className="text-white font-sans font-semibold text-xl mb-3">{step.title}</h3>
                 <p className="text-natural/70 text-sm font-sans leading-relaxed">{step.desc}</p>
               </div>
             ))}
@@ -249,7 +249,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="text-center md:text-left">
-              <p className="text-natural font-serif text-xl mb-1">Womenkind</p>
+              <p className="text-natural font-sans font-semibold text-xl mb-1">Womenkind</p>
               <p className="text-natural/50 text-sm font-sans">An Allkind company</p>
             </div>
             <div className="flex gap-8 text-sm font-sans">

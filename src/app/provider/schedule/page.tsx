@@ -58,7 +58,7 @@ export default function ProviderSchedulePage() {
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-serif text-2xl text-aubergine tracking-tight">Schedule</h1>
+            <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Schedule</h1>
             <p className="text-sm font-sans text-aubergine/50 mt-1">
               Manage appointments, availability, and appointment types
             </p>

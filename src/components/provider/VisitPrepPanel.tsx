@@ -99,7 +99,7 @@ export default function VisitPrepPanel({ appointmentId, onClose }: VisitPrepPane
 
           {/* Narrative */}
           {narrative?.split('\n\n').map((paragraph, i) => (
-            <p key={i} className="text-xs font-sans text-aubergine/70 leading-relaxed mb-2 last:mb-0">
+            <p key={i} className="text-sm font-sans text-aubergine/70 leading-relaxed mb-2.5 last:mb-0">
               {paragraph}
             </p>
           ))}

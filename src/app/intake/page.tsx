@@ -291,7 +291,7 @@ export default function IntakePage() {
               />
             </div>
 
-            <h2 className="font-serif text-2xl md:text-3xl text-aubergine mb-4 tracking-tight leading-snug">
+            <h2 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-4 tracking-tight leading-snug">
               {userFirstName ? `Welcome ${userFirstName}, your` : 'Your'} intake starts here
             </h2>
             <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-10">
@@ -355,7 +355,7 @@ export default function IntakePage() {
               </svg>
             </div>
 
-            <h2 className="font-serif text-3xl md:text-4xl text-aubergine mb-4 tracking-tight">
+            <h2 className="font-sans font-semibold text-3xl md:text-4xl text-aubergine mb-4 tracking-tight">
               Intake complete
             </h2>
             <p className="text-base text-beige/70 font-sans leading-relaxed max-w-md mx-auto mb-3">

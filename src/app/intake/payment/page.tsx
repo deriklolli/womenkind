@@ -74,7 +74,7 @@ function IntakePaymentContent() {
 
           {/* Headline */}
           <div className="text-center mt-6 mb-14">
-            <h1 className="font-serif text-3xl md:text-4xl text-aubergine mb-4 tracking-tight leading-tight">
+            <h1 className="font-sans font-semibold text-3xl md:text-4xl text-aubergine mb-4 tracking-tight leading-tight">
               You&apos;ve taken the first step
             </h1>
             <p className="text-base text-beige/70 font-sans leading-relaxed max-w-lg mx-auto">
@@ -98,7 +98,7 @@ function IntakePaymentContent() {
             {/* Header bar */}
             <div className="px-6 py-5 flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h2 className="font-serif text-xl text-aubergine mb-1.5">Intake Assessment</h2>
+                <h2 className="font-sans font-semibold text-xl text-aubergine mb-1.5">Intake Assessment</h2>
                 <p className="text-sm text-beige/50 font-sans">
                   90-minute comprehensive consultation with your<br />MD provider
                 </p>
@@ -158,7 +158,7 @@ function IntakePaymentContent() {
             </div>
 
             <div className="px-6 py-5 pr-36">
-              <h2 className="font-serif text-xl text-aubergine mb-1.5">Monthly Membership</h2>
+              <h2 className="font-sans font-semibold text-xl text-aubergine mb-1.5">Monthly Membership</h2>
               <p className="text-sm text-beige/50 font-sans">
                 Ongoing care, prescription management, and provider access
               </p>

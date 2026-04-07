@@ -95,7 +95,7 @@ export default function SignUpPage() {
               </svg>
             </div>
 
-            <h2 className="font-serif text-xl text-aubergine mb-3">
+            <h2 className="font-sans font-semibold text-xl text-aubergine mb-3">
               Check your email
             </h2>
             <p className="text-sm font-sans text-aubergine/50 leading-relaxed mb-2">
@@ -140,7 +140,7 @@ export default function SignUpPage() {
 
         {/* Signup card */}
         <div className="bg-white rounded-card shadow-lg shadow-aubergine/5 p-8">
-          <h2 className="font-serif text-xl text-aubergine mb-2">
+          <h2 className="font-sans font-semibold text-xl text-aubergine mb-2">
             Create your account
           </h2>
           <p className="text-sm font-sans text-aubergine/45 mb-6 leading-relaxed">

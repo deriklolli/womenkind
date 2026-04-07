@@ -166,7 +166,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
 
         <div className="bg-white rounded-card shadow-sm p-6">
           {thread?.subject && (
-            <h2 className="font-serif text-lg text-aubergine mb-4">{thread.subject}</h2>
+            <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">{thread.subject}</h2>
           )}
 
           {threadLoading ? (
@@ -227,7 +227,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
     <>
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="font-serif text-2xl text-aubergine tracking-tight">Messages</h1>
+          <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">Messages</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
             {threads.length === 0
               ? 'No messages yet'
@@ -238,7 +238,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
 
       {threads.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-card shadow-sm">
-          <p className="text-lg font-serif text-aubergine/30">No messages</p>
+          <p className="text-lg font-sans font-semibold text-aubergine/30">No messages</p>
           <p className="text-sm font-sans text-aubergine/20 mt-2">
             Patient messages will appear here
           </p>

@@ -72,7 +72,7 @@ export default function HealthBlueprintList({ patientId }: HealthBlueprintListPr
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 19.5A2.5 2.5 0 016.5 17H20" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
         </svg>
-        <h3 className="font-serif text-lg text-aubergine mb-2">No blueprints yet</h3>
+        <h3 className="font-sans font-semibold text-lg text-aubergine mb-2">No blueprints yet</h3>
         <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
           After your consultation, Dr. Urban will prepare a personalized health blueprint for you.
         </p>

@@ -184,7 +184,7 @@ export default function CreatePresentationPage() {
             </svg>
             Back to Patient Intake
           </button>
-          <h1 className="font-serif text-2xl text-aubergine tracking-tight">
+          <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">
             Create Care Presentation
           </h1>
           <p className="text-xs font-sans text-violet mt-[15px]">
@@ -207,7 +207,7 @@ export default function CreatePresentationPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="font-serif text-xl text-aubergine mb-2">Presentation Sent</h2>
+              <h2 className="font-sans font-semibold text-xl text-aubergine mb-2">Presentation Sent</h2>
               <p className="text-sm font-sans text-aubergine/50">
                 {firstName}&apos;s personalized care presentation is ready. They&apos;ll receive a link to view it.
               </p>
@@ -434,7 +434,7 @@ function ComponentEditor({
     <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="font-serif text-lg text-aubergine">{component.label}</h3>
+          <h3 className="font-sans font-semibold text-lg text-aubergine">{component.label}</h3>
           <p className="text-xs font-sans text-aubergine/40 mt-1">{component.description}</p>
         </div>
         <div

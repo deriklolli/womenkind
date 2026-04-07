@@ -269,7 +269,7 @@ export default function PatientProfilePage() {
       <div className="min-h-screen bg-cream">
         <ProviderNav />
         <div className="text-center py-32">
-          <p className="font-serif text-xl text-aubergine/30">Patient not found</p>
+          <p className="font-sans font-semibold text-xl text-aubergine/30">Patient not found</p>
           <button onClick={() => router.push('/provider/dashboard')} className="text-sm font-sans text-violet mt-4 hover:text-violet-dark">
             ← Back to dashboard
           </button>
@@ -312,7 +312,7 @@ export default function PatientProfilePage() {
                 </span>
               </div>
               <div>
-                <h1 className="font-serif text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
                 <div className="flex items-center gap-4 mt-2">
                   {age && <span className="text-sm font-sans text-aubergine/50">{age} years old</span>}
                   {patient.state && <span className="text-sm font-sans text-aubergine/50">{patient.state}</span>}
@@ -428,7 +428,7 @@ export default function PatientProfilePage() {
           <div className="space-y-4">
             {intakes.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-card shadow-sm">
-                <p className="text-lg font-serif text-aubergine/30">No intakes on file</p>
+                <p className="text-lg font-sans font-semibold text-aubergine/30">No intakes on file</p>
                 <p className="text-sm font-sans text-aubergine/20 mt-2">Intakes will appear here once submitted</p>
               </div>
             ) : (
@@ -455,7 +455,7 @@ export default function PatientProfilePage() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-serif text-lg text-aubergine group-hover:text-violet transition-colors">
+                          <h3 className="font-sans font-semibold text-lg text-aubergine group-hover:text-violet transition-colors">
                             Intake
                           </h3>
                           <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill border ${status.color} ${status.bg}`}>

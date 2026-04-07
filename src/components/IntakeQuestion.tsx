@@ -99,7 +99,7 @@ export default function IntakeQuestionCard({
       )}
 
       {/* Label */}
-      <h2 className="font-serif text-2xl md:text-3xl text-white leading-snug mb-3 tracking-tight">
+      <h2 className="font-sans font-semibold text-2xl md:text-3xl text-white leading-snug mb-3 tracking-tight">
         {question.label}
       </h2>
 
