@@ -379,7 +379,7 @@ export default function PatientSchedulePage() {
         {/* Step content */}
         {step === 'select-type' && (
           <div>
-            <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2 text-center">Book an Appointment</h1>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">Book an Appointment</h1>
             <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">Select the type of appointment you&apos;d like to schedule with Dr. Urban.</p>
             <AppointmentTypeSelector
               providerId={providerId}
@@ -391,7 +391,7 @@ export default function PatientSchedulePage() {
 
         {step === 'pick-time' && selectedType && (
           <div>
-            <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2 text-center">Choose a Time</h1>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">Choose a Time</h1>
             <p className="text-sm font-sans text-aubergine/40 mb-6 text-center">
               Select a date and time for your {selectedType.name.toLowerCase()} ({selectedType.duration_minutes} min).
             </p>
@@ -423,7 +423,7 @@ export default function PatientSchedulePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-2">Appointment Confirmed</h1>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">Appointment Confirmed</h1>
             <p className="text-sm font-sans text-aubergine/40 mb-6">
               You&apos;re all set! We&apos;ll send you a reminder before your appointment.
             </p>

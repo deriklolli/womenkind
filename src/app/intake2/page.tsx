@@ -240,7 +240,7 @@ export default function IntakePage() {
               />
             </div>
 
-            <h2 className="font-sans font-semibold text-2xl md:text-3xl text-white mb-4 tracking-tight leading-snug">
+            <h2 className="font-serif font-normal text-2xl md:text-3xl text-white mb-4 tracking-tight leading-snug">
               Your intake starts here
             </h2>
             <p className="text-base text-white/50 font-sans leading-relaxed max-w-md mx-auto mb-4">
@@ -306,7 +306,7 @@ export default function IntakePage() {
               </svg>
             </div>
 
-            <h2 className="font-sans font-semibold text-3xl md:text-4xl text-white mb-4 tracking-tight">
+            <h2 className="font-serif font-normal text-3xl md:text-4xl text-white mb-4 tracking-tight">
               Intake complete
             </h2>
             <p className="text-base text-white/50 font-sans leading-relaxed max-w-md mx-auto mb-3">

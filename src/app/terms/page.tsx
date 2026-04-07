@@ -19,7 +19,7 @@ export default function TermsOfServicePage() {
           />
         </div>
 
-        <h1 className="font-sans font-semibold text-3xl text-aubergine tracking-tight mb-2">Terms of Service</h1>
+        <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight mb-2">Terms of Service</h1>
         <p className="text-sm font-sans text-aubergine/40 mb-10">Last updated: April 6, 2026</p>
 
         <div className="space-y-8 text-sm font-sans text-aubergine/70 leading-relaxed">

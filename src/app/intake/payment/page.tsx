@@ -74,7 +74,7 @@ function IntakePaymentContent() {
 
           {/* Headline */}
           <div className="text-center mt-6 mb-14">
-            <h1 className="font-sans font-semibold text-3xl md:text-4xl text-aubergine mb-4 tracking-tight leading-tight">
+            <h1 className="font-serif font-normal text-3xl md:text-4xl text-aubergine mb-4 tracking-tight leading-tight">
               You&apos;ve taken the first step
             </h1>
             <p className="text-base text-beige/70 font-sans leading-relaxed max-w-lg mx-auto">

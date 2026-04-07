@@ -133,7 +133,7 @@ export default function PresentationViewerPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
-            className="font-sans font-semibold text-3xl md:text-4xl text-white mb-6 leading-tight"
+            className="font-serif font-normal text-3xl md:text-4xl text-white mb-6 leading-tight"
           >
             Your Future Health<br />Blueprint Summary
           </motion.h1>
@@ -241,7 +241,7 @@ export default function PresentationViewerPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="font-sans font-semibold text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-6"
+              className="font-serif font-normal text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-6"
             >
               What We&apos;re<br />Focusing On
             </motion.h2>
@@ -329,7 +329,7 @@ export default function PresentationViewerPage() {
               </svg>
             </div>
 
-            <h2 className="font-sans font-semibold text-2xl md:text-3xl text-white mb-6">
+            <h2 className="font-serif font-normal text-2xl md:text-3xl text-white mb-6">
               You&apos;re Not Alone in This
             </h2>
 

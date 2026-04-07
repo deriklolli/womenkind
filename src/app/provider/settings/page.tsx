@@ -121,7 +121,7 @@ export default function ProviderSettingsPage() {
       <ProviderNav />
 
       <div className="max-w-3xl mx-auto px-6 py-10">
-        <h1 className="text-2xl font-sans font-semibold text-aubergine mb-1">Settings</h1>
+        <h1 className="text-2xl font-serif font-normal text-aubergine mb-1">Settings</h1>
         <p className="text-sm font-sans text-aubergine/50 mb-8">
           Manage your calendar integration and preferences
         </p>

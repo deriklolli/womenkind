@@ -18,7 +18,17 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase()
     const { intakeId, patientId, answers } = await req.json()
 
-    // 1. Update intake status to submitted (and link to patient if provided)
+    // 1. Resolve provider — look up the first active provider as the intake recipient
+    //    (single-provider MVP; extend this to match by location/specialty in multi-provider phase)
+    const { data: providerRow } = await supabase
+      .from('providers')
+      .select('id')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+    const providerId = providerRow?.id ?? null
+
+    // 2. Update intake status to submitted (and link to patient + provider if resolved)
     const { error: updateError } = await supabase
       .from('intakes')
       .update({
@@ -26,6 +36,7 @@ export async function POST(req: NextRequest) {
         answers,
         submitted_at: new Date().toISOString(),
         ...(patientId ? { patient_id: patientId } : {}),
+        ...(providerId ? { provider_id: providerId } : {}),
       })
       .eq('id', intakeId)
 

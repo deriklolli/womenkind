@@ -75,7 +75,7 @@ function PaymentSuccessContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="font-sans font-semibold text-2xl md:text-3xl text-aubergine mb-3 tracking-tight">
+              <h2 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-3 tracking-tight">
                 Payment confirmed
               </h2>
               <p className="text-sm text-beige/60 font-sans leading-relaxed max-w-sm mx-auto">
