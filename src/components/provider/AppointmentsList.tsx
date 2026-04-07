@@ -266,6 +266,8 @@ export default function AppointmentsList({ providerId }: Props) {
                       {visitPrepAptId === apt.id && (
                         <VisitPrepPanel
                           appointmentId={apt.id}
+                          patientId={apt.patients?.id}
+                          patientName={patientName}
                           onClose={() => setVisitPrepAptId(null)}
                         />
                       )}
