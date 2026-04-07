@@ -86,32 +86,6 @@ export default function AppointmentsList({ providerId }: Props) {
     }
   }
 
-  const handleMarkComplete = async (appointmentId: string) => {
-    try {
-      const res = await fetch('/api/scheduling/appointments', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId, status: 'completed' }),
-      })
-      if (res.ok) fetchAppointments()
-    } catch (err) {
-      console.error('Failed to mark complete:', err)
-    }
-  }
-
-  const handleCancel = async (appointmentId: string) => {
-    try {
-      const res = await fetch('/api/scheduling/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appointmentId }),
-      })
-      if (res.ok) fetchAppointments()
-    } catch (err) {
-      console.error('Failed to cancel:', err)
-    }
-  }
-
   // Group appointments by date
   const grouped = appointments.reduce((acc, apt) => {
     const dateKey = formatDate(apt.starts_at)
@@ -228,24 +202,6 @@ export default function AppointmentsList({ providerId }: Props) {
                                 Join Call
                               </a>
                             )}
-                            <button
-                              onClick={() => handleMarkComplete(apt.id)}
-                              className="p-1.5 text-emerald-500/60 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="Mark as completed"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleCancel(apt.id)}
-                              className="p-1.5 text-red-400/60 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Cancel appointment"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
                           </div>
                         )}
                       </div>
