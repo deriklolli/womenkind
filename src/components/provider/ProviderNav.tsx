@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
+import { getProviderSession } from '@/lib/getProviderSession'
 
 export type ProviderTab = 'queue' | 'patients' | 'schedule' | 'messages' | 'refills'
 
@@ -46,12 +47,14 @@ export default function ProviderNav({
 
   useEffect(() => {
     if (!needsSelfFetch) return
-    const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
     const load = async () => {
       try {
+        const session = await getProviderSession()
+        if (!session) return
+        const resolvedProviderId = session.providerId
         const [refillRes, msgRes, intakeRes] = await Promise.all([
-          fetch(`/api/refill-requests?providerId=${PROVIDER_ID}&status=pending`),
-          fetch(`/api/messages?providerId=${PROVIDER_ID}`),
+          fetch(`/api/refill-requests?providerId=${resolvedProviderId}&status=pending`),
+          fetch(`/api/messages?providerId=${resolvedProviderId}`),
           supabase.from('intakes').select('id').eq('status', 'submitted'),
         ])
         const refillData = await refillRes.json()

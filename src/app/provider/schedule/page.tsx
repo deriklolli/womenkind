@@ -6,29 +6,28 @@ import ProviderNav from '@/components/provider/ProviderNav'
 import AppointmentTypesManager from '@/components/provider/AppointmentTypesManager'
 import AvailabilityEditor from '@/components/provider/AvailabilityEditor'
 import AppointmentsList from '@/components/provider/AppointmentsList'
-// Google Calendar connection status is fetched via API
+import { getProviderSession } from '@/lib/getProviderSession'
 
 type ScheduleTab = 'appointments' | 'types' | 'availability'
-
-const DEMO_PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 
 export default function ProviderSchedulePage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ScheduleTab>('appointments')
-  const [providerId, setProviderId] = useState<string>(DEMO_PROVIDER_ID)
+  const [providerId, setProviderId] = useState<string>('')
+  const [providerName, setProviderName] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [gcalConnected, setGcalConnected] = useState(false)
 
   useEffect(() => {
-    // Check auth (demo mode or Supabase)
-    const demo = localStorage.getItem('womenkind_demo_provider')
-    if (demo) {
-      setProviderId(DEMO_PROVIDER_ID)
+    getProviderSession().then(session => {
+      if (!session) {
+        router.push('/provider/login')
+        return
+      }
+      setProviderId(session.providerId)
+      setProviderName(session.providerName)
       setLoading(false)
-    } else {
-      // Real auth — would check Supabase session + get provider ID
-      setLoading(false)
-    }
+    })
   }, [])
 
   // Check Google Calendar connection status
@@ -53,7 +52,7 @@ export default function ProviderSchedulePage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <ProviderNav activeTab="schedule" />
+      <ProviderNav activeTab="schedule" providerName={providerName} />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page header */}

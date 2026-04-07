@@ -7,6 +7,7 @@ import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import { useChatContext } from '@/lib/chat-context'
+import { getProviderSession } from '@/lib/getProviderSession'
 
 type DashboardTab = ProviderTab
 
@@ -71,12 +72,11 @@ export default function ProviderDashboard() {
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
   const [loading, setLoading] = useState(true)
   const [providerName, setProviderName] = useState('')
+  const [providerId, setProviderId] = useState<string>('')
   const [filter, setFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [unreadMessageCount, setUnreadMessageCount] = useState(0)
   const [pendingRefillCount, setPendingRefillCount] = useState(0)
-
-  const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 
   const { setPageContext } = useChatContext()
 
@@ -85,49 +85,33 @@ export default function ProviderDashboard() {
   }, [])
 
   useEffect(() => {
-    const demo = localStorage.getItem('womenkind_demo_provider')
-    if (demo) {
-      const provider = JSON.parse(demo)
-      setProviderName(provider.name)
-    } else {
-      // Real Supabase auth — fetch name from profiles table
-      supabase.auth.getUser().then(({ data }) => {
-        if (data?.user) {
-          const meta = data.user.user_metadata
-          const first = meta?.first_name || ''
-          const last = meta?.last_name || ''
-          if (first || last) {
-            setProviderName(`Dr. ${first} ${last}`.trim())
-          } else {
-            // Fall back to profiles table
-            supabase
-              .from('profiles')
-              .select('first_name, last_name')
-              .eq('id', data.user.id)
-              .single()
-              .then(({ data: profile }) => {
-                if (profile) {
-                  setProviderName(`Dr. ${profile.first_name || ''} ${profile.last_name || ''}`.trim())
-                }
-              })
-          }
-        }
-      })
-    }
+    getProviderSession().then(session => {
+      if (!session) {
+        router.push('/provider/login')
+        return
+      }
+      setProviderName(session.providerName)
+      setProviderId(session.providerId)
+    })
     loadIntakes()
     loadPatients()
-    loadCounts()
   }, [])
+
+  // Load badge counts once we have a provider ID
+  useEffect(() => {
+    if (!providerId) return
+    loadCounts()
+  }, [providerId])
 
   const loadCounts = async () => {
     try {
       // Fetch pending refill count
-      const refillRes = await fetch(`/api/refill-requests?providerId=${PROVIDER_ID}&status=pending`)
+      const refillRes = await fetch(`/api/refill-requests?providerId=${providerId}&status=pending`)
       const refillData = await refillRes.json()
       setPendingRefillCount((refillData.refillRequests || []).length)
 
       // Fetch unread message count
-      const msgRes = await fetch(`/api/messages?providerId=${PROVIDER_ID}`)
+      const msgRes = await fetch(`/api/messages?providerId=${providerId}`)
       const msgData = await msgRes.json()
       const unread = (msgData.threads || []).reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
       setUnreadMessageCount(unread)
@@ -512,12 +496,12 @@ export default function ProviderDashboard() {
 
         {activeTab === 'messages' && (
           /* ====== MESSAGES TAB ====== */
-          <ProviderMessagesInbox providerId={PROVIDER_ID} onCountChange={setUnreadMessageCount} />
+          <ProviderMessagesInbox providerId={providerId} onCountChange={setUnreadMessageCount} />
         )}
 
         {activeTab === 'refills' && (
           /* ====== REFILL REQUESTS TAB ====== */
-          <ProviderRefillQueue providerId={PROVIDER_ID} onCountChange={setPendingRefillCount} />
+          <ProviderRefillQueue providerId={providerId} onCountChange={setPendingRefillCount} />
         )}
       </div>
     </div>
