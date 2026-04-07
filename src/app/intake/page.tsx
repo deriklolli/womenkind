@@ -338,6 +338,7 @@ export default function IntakePage() {
             onBack={handleBack}
             isFirst={screen.index === 0}
             isLast={screen.index === visibleQuestions.length - 1}
+            isSubmitting={screen.index === visibleQuestions.length - 1 && isSubmitting}
             animDirection={animDirection}
           />
         )}
