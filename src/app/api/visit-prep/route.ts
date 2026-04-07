@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, starts_at, patient_id, provider_id,
       appointment_types ( name, duration_minutes ),
-      patients ( id, profiles ( first_name, last_name, email, phone, dob, state ) )
+      patients ( id, date_of_birth, state, phone, profiles ( first_name, last_name, email ) )
     `)
     .eq('id', appointmentId)
     .single()
@@ -69,30 +69,30 @@ export async function GET(req: NextRequest) {
     // Latest intake with AI brief
     supabase
       .from('intakes')
-      .select('answers, ai_brief, status, created_at')
+      .select('answers, ai_brief, status, submitted_at')
       .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
+      .order('submitted_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
 
     // Lab orders (all if no prior visit, otherwise since last visit)
     supabase
       .from('lab_orders')
-      .select('lab_partner, tests, clinical_indication, status, results, ordered_at')
+      .select('lab_partner, tests, clinical_indication, status, results, ordered_at, created_at')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false }),
 
     // Active prescriptions
     supabase
       .from('prescriptions')
-      .select('medication_name, dosage, frequency, status, prescribed_at, notes')
+      .select('medication_name, dosage, frequency, status, prescribed_at')
       .eq('patient_id', patientId)
       .order('prescribed_at', { ascending: false }),
 
-    // Refill requests
+    // Refill requests (join prescription for medication name)
     supabase
       .from('refill_requests')
-      .select('medication_name, status, notes, provider_notes, created_at')
+      .select('status, patient_note, provider_note, created_at, prescriptions ( medication_name )')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false })
       .limit(10),
@@ -100,25 +100,27 @@ export async function GET(req: NextRequest) {
     // Recent messages from patient
     supabase
       .from('messages')
-      .select('subject, body, sender_role, created_at')
-      .eq('patient_id', patientId)
+      .select('subject, body, sender_type, sender_id, created_at')
+      .eq('sender_id', patientId)
+      .eq('sender_type', 'patient')
       .order('created_at', { ascending: false })
       .limit(10),
 
     // Wearable metrics (last 14 days)
     supabase
       .from('wearable_metrics')
-      .select('metric_type, value, recorded_date')
+      .select('metric_type, value, metric_date')
       .eq('patient_id', patientId)
-      .gte('recorded_date', new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0])
-      .order('recorded_date', { ascending: false }),
+      .gte('metric_date', new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0])
+      .order('metric_date', { ascending: false }),
   ])
 
   // ── 4. Build the context document ──
   const sections: string[] = []
 
   // Patient basics
-  const profile = (appointment as any).patients?.profiles
+  const patient = (appointment as any).patients
+  const profile = patient?.profiles
   const patientName = profile
     ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
     : 'Patient'
@@ -129,7 +131,7 @@ export async function GET(req: NextRequest) {
   })
 
   sections.push(`UPCOMING VISIT: ${aptType} (${aptDuration} min) on ${aptDate}`)
-  sections.push(`PATIENT: ${patientName}${profile?.dob ? `, DOB: ${profile.dob}` : ''}${profile?.state ? `, ${profile.state}` : ''}`)
+  sections.push(`PATIENT: ${patientName}${patient?.date_of_birth ? `, DOB: ${patient.date_of_birth}` : ''}${patient?.state ? `, ${patient.state}` : ''}`)
 
   if (lastVisit) {
     const lastDate = new Date(lastVisit.completed_at || lastVisit.starts_at).toLocaleDateString('en-US', {
@@ -186,22 +188,20 @@ export async function GET(req: NextRequest) {
   if (refillRequests && refillRequests.length > 0) {
     const refillLines = refillRequests.map((r: any) => {
       const date = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      return `- ${r.medication_name} — ${r.status} (${date})${r.notes ? ` — Patient: "${r.notes}"` : ''}`
+      const medName = r.prescriptions?.medication_name || 'Unknown medication'
+      return `- ${medName} — ${r.status} (${date})${r.patient_note ? ` — Patient: "${r.patient_note}"` : ''}`
     })
     sections.push(`REFILL REQUESTS:\n${refillLines.join('\n')}`)
   }
 
-  // Messages from patient
+  // Messages from patient (already filtered in query)
   if (messages && messages.length > 0) {
-    const patientMsgs = messages.filter((m: any) => m.sender_role === 'patient')
-    if (patientMsgs.length > 0) {
-      const msgLines = patientMsgs.slice(0, 5).map((m: any) => {
-        const date = new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        const preview = m.body?.length > 120 ? m.body.slice(0, 120) + '...' : m.body
-        return `- [${date}] ${m.subject || '(no subject)'}: "${preview}"`
-      })
-      sections.push(`RECENT PATIENT MESSAGES:\n${msgLines.join('\n')}`)
-    }
+    const msgLines = messages.slice(0, 5).map((m: any) => {
+      const date = new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      const preview = m.body?.length > 120 ? m.body.slice(0, 120) + '...' : m.body
+      return `- [${date}] ${m.subject || '(no subject)'}: "${preview}"`
+    })
+    sections.push(`RECENT PATIENT MESSAGES:\n${msgLines.join('\n')}`)
   }
 
   // Wearable trends (summarize by metric type)
