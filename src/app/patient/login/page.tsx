@@ -63,6 +63,7 @@ export default function PatientLoginPage() {
         throw new Error('This account is not a patient account. Please use the provider login.')
       }
 
+      localStorage.removeItem('womenkind_demo_patient')
       router.push('/patient/dashboard')
     } catch (err: any) {
       setError(err.message || 'Login failed')
@@ -97,6 +98,7 @@ export default function PatientLoginPage() {
         return
       }
 
+      localStorage.removeItem('womenkind_demo_patient')
       router.push('/patient/dashboard')
     } catch (err: any) {
       setError(err.message || 'Sign up failed')
