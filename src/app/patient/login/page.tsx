@@ -26,7 +26,7 @@ export default function PatientLoginPage() {
     setLoading(true)
     setError('')
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/patient/login`,
+      redirectTo: `${window.location.origin}/auth/update-password?from=patient`,
     })
     setLoading(false)
     if (resetError) {

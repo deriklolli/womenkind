@@ -23,7 +23,7 @@ export default function ProviderLoginPage() {
     setLoading(true)
     setError('')
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/provider/login`,
+      redirectTo: `${window.location.origin}/auth/update-password?from=provider`,
     })
     setLoading(false)
     if (resetError) {
