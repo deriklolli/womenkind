@@ -29,6 +29,7 @@ interface Props {
   onBack: () => void
   isFirst: boolean
   isLast: boolean
+  isSubmitting?: boolean
   animDirection: 'forward' | 'backward'
 }
 
@@ -40,6 +41,7 @@ export default function IntakeQuestionLight({
   onBack,
   isFirst,
   isLast,
+  isSubmitting = false,
   animDirection,
 }: Props) {
   const [isVisible, setIsVisible] = useState(false)
@@ -242,22 +244,31 @@ export default function IntakeQuestionLight({
         {(question.type !== 'single' || !canProceed) && (
           <button
             onClick={onNext}
-            disabled={!canProceed}
+            disabled={!canProceed || isSubmitting}
             className={`flex items-center gap-3 px-7 py-3.5 rounded-full font-sans text-sm font-semibold transition-all duration-300
               ${
-                canProceed
+                canProceed && !isSubmitting
                   ? 'bg-violet text-white hover:bg-violet-dark'
+                  : isSubmitting
+                  ? 'bg-violet/80 text-white cursor-wait'
                   : 'bg-aubergine/10 text-beige/30 cursor-not-allowed'
               }`}
           >
-            {isLast ? 'Submit' : 'Next'}
+            {isLast && isSubmitting ? 'Submitting…' : isLast ? 'Submit' : 'Next'}
             <span
               className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300
               ${canProceed ? 'bg-white/20' : 'bg-white/10'}`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
+              {isLast && isSubmitting ? (
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              )}
             </span>
           </button>
         )}
@@ -266,12 +277,21 @@ export default function IntakeQuestionLight({
         {question.type === 'single' && canProceed && (
           <button
             onClick={onNext}
-            className="flex items-center gap-2 px-5 py-3 rounded-full font-sans text-sm font-medium text-beige/40 hover:text-aubergine hover:bg-aubergine/5 transition-all duration-200"
+            disabled={isSubmitting}
+            className={`flex items-center gap-2 px-5 py-3 rounded-full font-sans text-sm font-medium transition-all duration-200
+              ${isSubmitting ? 'text-beige/40 cursor-wait' : 'text-beige/40 hover:text-aubergine hover:bg-aubergine/5'}`}
           >
-            {isLast ? 'Submit' : 'Next'}
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            {isLast && isSubmitting ? 'Submitting…' : isLast ? 'Submit' : 'Next'}
+            {isLast && isSubmitting ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            )}
           </button>
         )}
       </div>
