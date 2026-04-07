@@ -18,8 +18,8 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
-    // Allow login routes through
-    if (pathname.startsWith('/patient/login') || pathname.startsWith('/provider/login')) {
+    // Allow all authenticated app routes through
+    if (pathname.startsWith('/patient') || pathname.startsWith('/provider') || pathname.startsWith('/intake') || pathname.startsWith('/signup') || pathname.startsWith('/auth') || pathname.startsWith('/presentation')) {
       return NextResponse.next()
     }
 
