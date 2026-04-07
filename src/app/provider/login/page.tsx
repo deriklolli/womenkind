@@ -22,8 +22,9 @@ export default function ProviderLoginPage() {
     }
     setLoading(true)
     setError('')
+    const canonicalOrigin = window.location.origin.replace(/^https?:\/\/www\./, 'https://')
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/update-password?from=provider`,
+      redirectTo: `${canonicalOrigin}/auth/update-password`,
     })
     setLoading(false)
     if (resetError) {

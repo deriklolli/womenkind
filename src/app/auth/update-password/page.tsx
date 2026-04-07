@@ -15,12 +15,12 @@ function UpdatePasswordForm() {
   const [exchanging, setExchanging] = useState(true)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
-  const from = searchParams.get('from') || 'provider'
 
   useEffect(() => {
     const code = searchParams.get('code')
 
     if (code) {
+      // PKCE flow — exchange code for session
       supabase.auth.exchangeCodeForSession(code).then(({ error: exchError }) => {
         setExchanging(false)
         if (exchError) {
@@ -29,17 +29,32 @@ function UpdatePasswordForm() {
           setReady(true)
         }
       })
-    } else {
-      // No code — check if there's already an active recovery session (implicit flow)
-      supabase.auth.getSession().then(({ data }) => {
-        setExchanging(false)
-        if (data.session) {
-          setReady(true)
-        } else {
-          setError('Invalid or expired reset link. Please request a new one.')
-        }
-      })
+      return
     }
+
+    // Implicit flow — token arrives in URL hash (#access_token=...&type=recovery)
+    // Supabase JS auto-processes the hash and fires PASSWORD_RECOVERY
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setExchanging(false)
+        setReady(true)
+      }
+    })
+
+    // Also check if session is already available (hash processed before listener registered)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setExchanging(false)
+        setReady(true)
+      } else if (typeof window !== 'undefined' && !window.location.hash.includes('access_token')) {
+        // No code, no hash token, no session — invalid link
+        setExchanging(false)
+        setError('Invalid or expired reset link. Please request a new one.')
+      }
+      // else: hash token present, waiting for PASSWORD_RECOVERY event above
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -59,7 +74,14 @@ function UpdatePasswordForm() {
     if (updateError) {
       setError(updateError.message)
     } else {
-      const loginPath = from === 'patient' ? '/patient/login' : '/provider/login'
+      // Determine user type from DB rather than URL param
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: providerRow } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('profile_id', user?.id)
+        .maybeSingle()
+      const loginPath = providerRow ? '/provider/login' : '/patient/login'
       router.push(`${loginPath}?reset=success`)
     }
   }
