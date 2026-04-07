@@ -236,8 +236,8 @@ export async function getProviderBusyTimes(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      timeMin: `${startDate}T00:00:00`,
-      timeMax: `${endDate}T23:59:59`,
+      timeMin: `${startDate}T00:00:00Z`,
+      timeMax: `${endDate}T23:59:59Z`,
       timeZone: timezone,
       items: [{ id: calendarId }],
     }),

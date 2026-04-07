@@ -333,11 +333,29 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
   const [metrics, setMetrics] = useState<MetricRow[]>([])
   const [status, setStatus] = useState<ConnectionStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [range, setRange] = useState(30)
 
   useEffect(() => {
     fetchAll()
   }, [patientId, range])
+
+  async function triggerSync() {
+    setSyncing(true)
+    try {
+      await fetch('/api/wearables/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, days: 30 }),
+      })
+      // After sync, re-fetch metrics
+      await fetchAll()
+    } catch (err) {
+      console.error('Sync failed:', err)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function fetchAll() {
     setLoading(true)
@@ -355,6 +373,11 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
 
       setMetrics(metricsData.metrics || [])
       setStatus(statusData)
+
+      // If ring is connected but no data has ever synced, trigger sync automatically
+      if (statusData?.connected && !statusData?.lastSyncedAt && metricsData.metrics?.length === 0) {
+        triggerSync()
+      }
     } catch (err) {
       console.error('Failed to fetch biometrics:', err)
     } finally {
@@ -413,10 +436,33 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
               Oura Ring Connected
             </span>
           )}
-          {status?.lastSyncedAt && (
+          {status?.lastSyncedAt ? (
             <span className="text-xs font-sans text-aubergine/30">
               Last synced {new Date(status.lastSyncedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </span>
+          ) : status?.connected ? (
+            <span className="text-xs font-sans text-aubergine/30">Never synced</span>
+          ) : null}
+          {status?.connected && (
+            <button
+              onClick={triggerSync}
+              disabled={syncing}
+              className="text-xs font-sans text-violet/60 hover:text-violet transition-colors disabled:opacity-40 flex items-center gap-1"
+            >
+              {syncing ? (
+                <>
+                  <div className="w-3 h-3 border border-violet/30 border-t-violet rounded-full animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Sync now
+                </>
+              )}
+            </button>
           )}
         </div>
         <div className="flex gap-1">

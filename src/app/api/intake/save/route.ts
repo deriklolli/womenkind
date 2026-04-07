@@ -38,10 +38,7 @@ export async function POST(req: NextRequest) {
     // Update existing intake
     const { error } = await supabase
       .from('intakes')
-      .update({
-        answers,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ answers })
       .eq('id', intakeId)
 
     if (error) throw error

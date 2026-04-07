@@ -35,21 +35,38 @@ export default function CreatePresentationPage() {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [draftingAI, setDraftingAI] = useState<string | null>(null)
-
-  const getProviderId = () => {
-    if (typeof window === 'undefined') return ''
-    try {
-      const demo = localStorage.getItem('womenkind_demo_provider')
-      if (demo) return JSON.parse(demo).id || ''
-    } catch {}
-    return ''
-  }
+  const [providerId, setProviderId] = useState<string>('')
+  const [sendError, setSendError] = useState<string | null>(null)
 
   const { setPageContext } = useChatContext()
 
   useEffect(() => {
     loadPatient()
+    loadProviderId()
   }, [patientId])
+
+  const loadProviderId = async () => {
+    // Try demo mode first
+    try {
+      if (typeof window !== 'undefined') {
+        const demo = localStorage.getItem('womenkind_demo_provider')
+        if (demo) {
+          const parsed = JSON.parse(demo)
+          if (parsed.id) { setProviderId(parsed.id); return }
+        }
+      }
+    } catch {}
+    // Fall back to real Supabase auth
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      if (data?.id) setProviderId(data.id)
+    }
+  }
 
   const loadPatient = async () => {
     try {
@@ -130,13 +147,14 @@ export default function CreatePresentationPage() {
   const handleSend = async () => {
     if (selected.size === 0) return
     setSending(true)
+    setSendError(null)
     try {
       const res = await fetch('/api/presentation/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId,
-          providerId: getProviderId(),
+          providerId,
           selectedComponents: Array.from(selected),
           componentNotes: notes,
           welcomeMessage: welcomeMessage || `${firstName}, I've put together a personalized summary of what's happening in your body and how we're going to address it together.`,
@@ -149,9 +167,12 @@ export default function CreatePresentationPage() {
         setTimeout(() => {
           router.push(`/provider/patient/${patientId}`)
         }, 2000)
+      } else {
+        setSendError(data.error || 'Failed to generate presentation. Please try again.')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to generate presentation:', err)
+      setSendError('Something went wrong. Please try again.')
     } finally {
       setSending(false)
     }
@@ -375,6 +396,13 @@ export default function CreatePresentationPage() {
                 className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y"
               />
             </div>
+
+            {/* Error message */}
+            {sendError && (
+              <div className="mb-4 p-3 rounded-brand bg-red-50 border border-red-100 text-sm font-sans text-red-600">
+                {sendError}
+              </div>
+            )}
 
             {/* Back and Send buttons */}
             <div className="flex justify-between">
