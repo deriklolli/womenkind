@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useCallback } from 'react'
 
 interface LabResultItem {
   testCode: string
@@ -53,6 +53,207 @@ function getMeta(flag: string | null) {
   return FLAG_META[flag || 'normal'] || FLAG_META.normal
 }
 
+/* ── Test info descriptions ──────────────────────────────────────────── */
+
+const _INFO: Record<string, { summary: string; relevance: string }> = {
+  // ── Hormone Panel ──
+  FSH: {
+    summary: 'Follicle-stimulating hormone is produced by the pituitary gland and stimulates ovarian follicle growth.',
+    relevance: 'Rising FSH is one of the earliest and most reliable indicators of perimenopause. Elevated levels signal that the ovaries are becoming less responsive to hormonal signals.',
+  },
+  LH: {
+    summary: 'Luteinizing hormone triggers ovulation and supports the menstrual cycle.',
+    relevance: 'LH rises alongside FSH during menopause. The FSH-to-LH ratio helps confirm menopausal transition versus other hormonal conditions.',
+  },
+  E2: {
+    summary: 'Estradiol is the primary form of estrogen produced by the ovaries.',
+    relevance: 'Declining estradiol drives most menopausal symptoms — hot flashes, sleep disruption, mood changes, and bone density loss. This value helps guide hormone therapy decisions.',
+  },
+  TESTO: {
+    summary: 'Testosterone supports energy, libido, muscle mass, and mood in women.',
+    relevance: 'Testosterone declines gradually through perimenopause. Low levels can contribute to fatigue, reduced libido, and difficulty maintaining muscle mass.',
+  },
+  PROG: {
+    summary: 'Progesterone is produced after ovulation and supports the uterine lining.',
+    relevance: 'Low progesterone in perimenopause leads to irregular cycles and can contribute to sleep problems and anxiety. It is also essential for endometrial protection during estrogen therapy.',
+  },
+  'DHEA-S': {
+    summary: 'DHEA sulfate is an adrenal hormone that serves as a precursor to both estrogen and testosterone.',
+    relevance: 'DHEA-S declines steadily with age and drops more sharply during menopause. Low levels are associated with fatigue, reduced libido, and diminished sense of well-being.',
+  },
+  // ── Thyroid Panel ──
+  TSH: {
+    summary: 'Thyroid-stimulating hormone regulates your thyroid gland, which controls metabolism.',
+    relevance: 'Thyroid dysfunction can mimic menopausal symptoms (fatigue, weight changes, mood swings). Testing TSH helps rule out or identify a thyroid condition that may need separate treatment.',
+  },
+  FT4: {
+    summary: 'Free T4 is the active form of the main thyroid hormone thyroxine.',
+    relevance: 'Measured alongside TSH to distinguish between different types of thyroid dysfunction and assess how well the thyroid is actually functioning.',
+  },
+  FT3: {
+    summary: 'Free T3 is the most active thyroid hormone, converted from T4 in the body.',
+    relevance: 'Low FT3 with normal TSH can indicate conversion issues that cause fatigue and brain fog — symptoms often mistakenly attributed to menopause alone.',
+  },
+  // ── Lipid Panel ──
+  TCHOL: {
+    summary: 'Total cholesterol is the combined measure of all cholesterol types in your blood.',
+    relevance: 'Cholesterol often rises after menopause due to declining estrogen, which previously helped keep LDL in check. Monitoring helps assess cardiovascular risk.',
+  },
+  TC: {
+    summary: 'Total cholesterol is the combined measure of all cholesterol types in your blood.',
+    relevance: 'Cholesterol often rises after menopause due to declining estrogen, which previously helped keep LDL in check. Monitoring helps assess cardiovascular risk.',
+  },
+  LDL: {
+    summary: 'LDL ("bad") cholesterol can build up in artery walls over time.',
+    relevance: 'Estrogen decline in menopause removes a protective effect on LDL levels. Elevated LDL is a key cardiovascular risk factor to watch during this transition.',
+  },
+  HDL: {
+    summary: 'HDL ("good") cholesterol helps remove other cholesterol from the bloodstream.',
+    relevance: 'Higher HDL is protective. Menopause can lower HDL, so tracking it helps your provider assess whether lifestyle changes or treatment adjustments are needed.',
+  },
+  TRIG: {
+    summary: 'Triglycerides are a type of fat in your blood, influenced by diet and metabolism.',
+    relevance: 'Elevated triglycerides increase cardiovascular risk, especially in combination with other lipid changes during menopause.',
+  },
+  TG: {
+    summary: 'Triglycerides are a type of fat in your blood, influenced by diet and metabolism.',
+    relevance: 'Elevated triglycerides increase cardiovascular risk, especially in combination with other lipid changes during menopause.',
+  },
+  // ── Metabolic Panel ──
+  GLU: {
+    summary: 'Fasting glucose measures blood sugar levels after an overnight fast.',
+    relevance: 'Insulin resistance becomes more common during menopause due to hormonal shifts. Elevated fasting glucose is an early sign that metabolic health needs attention.',
+  },
+  HBA1C: {
+    summary: 'Hemoglobin A1c reflects your average blood sugar over the past 2-3 months.',
+    relevance: 'Provides a longer-term picture of blood sugar control than a single fasting glucose test. Helps catch prediabetes, which becomes more common after menopause.',
+  },
+  INS: {
+    summary: 'Fasting insulin measures how much insulin your body needs to manage blood sugar.',
+    relevance: 'High fasting insulin (even with normal glucose) suggests early insulin resistance — a metabolic shift that can accelerate weight gain, inflammation, and cardiovascular risk during menopause.',
+  },
+  BUN: {
+    summary: 'Blood urea nitrogen measures how well your kidneys are filtering waste from your blood.',
+    relevance: 'Kidney function is part of a baseline metabolic assessment. Abnormal BUN can signal dehydration or kidney issues that may affect medication dosing for hormone therapy.',
+  },
+  CREAT: {
+    summary: 'Creatinine is a waste product from muscle metabolism, filtered by the kidneys.',
+    relevance: 'Used alongside BUN to assess kidney function. Important for establishing a baseline before starting any new medications or hormone therapy.',
+  },
+  // ── Bone Health ──
+  VITD: {
+    summary: 'Vitamin D supports calcium absorption, bone health, and immune function.',
+    relevance: 'Vitamin D deficiency is very common and worsens the bone loss that accelerates after menopause. Adequate levels are essential for maintaining bone density.',
+  },
+  CA: {
+    summary: 'Calcium is the primary mineral in bones and teeth.',
+    relevance: 'Blood calcium levels are tightly regulated, but abnormal values can signal parathyroid issues or other conditions that compound menopausal bone loss.',
+  },
+  CTX: {
+    summary: 'C-telopeptide is a bone breakdown marker — it measures how fast bone is being resorbed.',
+    relevance: 'Elevated CTX indicates accelerated bone loss, which is common in the years around menopause. This helps your provider decide if bone-protective treatment is needed.',
+  },
+  // ── CBC + Iron ──
+  CBC: {
+    summary: 'A complete blood count measures red cells, white cells, and platelets.',
+    relevance: 'Heavy or irregular periods during perimenopause can cause anemia. A CBC screens for this and provides a baseline for overall blood health.',
+  },
+  WBC: {
+    summary: 'White blood cells are your immune system\'s primary defense against infection.',
+    relevance: 'Included as part of a complete blood count to screen for infection, inflammation, or immune system issues that could complicate treatment.',
+  },
+  HGB: {
+    summary: 'Hemoglobin is the protein in red blood cells that carries oxygen throughout your body.',
+    relevance: 'Low hemoglobin indicates anemia, which is common in perimenopausal women with heavy or irregular periods and causes fatigue often mistaken for menopausal symptoms.',
+  },
+  HCT: {
+    summary: 'Hematocrit measures the percentage of your blood volume made up of red blood cells.',
+    relevance: 'Works alongside hemoglobin to assess for anemia. Low hematocrit from heavy perimenopausal bleeding can cause dizziness, fatigue, and shortness of breath.',
+  },
+  PLT: {
+    summary: 'Platelets are cell fragments that help your blood clot when you have an injury.',
+    relevance: 'Platelet count is part of a baseline blood health assessment. Abnormal levels are important to identify before starting hormone therapy, which can affect clotting.',
+  },
+  FE: {
+    summary: 'Serum iron measures the amount of circulating iron in your blood.',
+    relevance: 'Iron deficiency from heavy perimenopausal bleeding causes fatigue that can overlap with menopausal symptoms. Testing helps identify a treatable cause.',
+  },
+  FER: {
+    summary: 'Ferritin reflects your body\'s stored iron reserves.',
+    relevance: 'Ferritin drops before serum iron does, making it an early warning sign. Low ferritin is one of the most common and overlooked causes of exhaustion in perimenopausal women.',
+  },
+  FERR: {
+    summary: 'Ferritin reflects your body\'s stored iron reserves.',
+    relevance: 'Ferritin drops before serum iron does, making it an early warning sign. Low ferritin is one of the most common and overlooked causes of exhaustion in perimenopausal women.',
+  },
+  TIBC: {
+    summary: 'Total iron binding capacity measures how much iron your blood could carry.',
+    relevance: 'High TIBC suggests your body is trying to compensate for low iron stores. Combined with ferritin and serum iron, it gives a complete picture of iron status.',
+  },
+  // ── Vitamins ──
+  B12: {
+    summary: 'Vitamin B12 is essential for nerve function, red blood cell production, and DNA synthesis.',
+    relevance: 'B12 deficiency causes fatigue, brain fog, and numbness that can mimic or worsen menopausal symptoms. Absorption decreases with age, making screening important.',
+  },
+}
+
+/** Look up test info by code — case-insensitive, trims whitespace. */
+function getTestInfo(code: string): { summary: string; relevance: string } | undefined {
+  return _INFO[code] || _INFO[code.toUpperCase()] || _INFO[code.trim()]
+}
+
+/* ── Info tooltip (matches WearableTrends pattern) ──────────────────── */
+
+function LabInfoTooltip({ info }: { info: { summary: string; relevance: string } }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  const iconRef = useRef<HTMLSpanElement>(null)
+
+  const handleEnter = useCallback(() => {
+    if (!iconRef.current) return
+    const rect = iconRef.current.getBoundingClientRect()
+    setPos({ x: rect.left + rect.width / 2, y: rect.top })
+  }, [])
+
+  const handleLeave = useCallback(() => setPos(null), [])
+
+  return (
+    <span
+      ref={iconRef}
+      className="inline-flex flex-shrink-0"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      <svg
+        className="w-4 h-4 text-aubergine/25 hover:text-aubergine/40 transition-colors cursor-help"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
+      </svg>
+      {pos && (
+        <span
+          className="fixed w-64 px-3 py-2.5 rounded-lg bg-aubergine text-white text-xs font-sans leading-relaxed shadow-lg pointer-events-none"
+          style={{
+            left: `${pos.x}px`,
+            top: `${pos.y}px`,
+            transform: 'translate(-50%, -100%) translateY(-8px)',
+            zIndex: 9999,
+          }}
+        >
+          <span className="block mb-1">{info.summary}</span>
+          <span className="block text-white/60">
+            <span className="text-white/80 font-medium">Why it matters: </span>
+            {info.relevance}
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
 /* ── Single range row ────────────────────────────────────────────────── */
 
 function RangeRow({ result }: { result: LabResultItem }) {
@@ -65,6 +266,7 @@ function RangeRow({ result }: { result: LabResultItem }) {
   const flag = result.flag || 'normal'
   const meta = getMeta(flag)
   const isFlagged = flag !== 'normal'
+  const info = getTestInfo(result.testCode)
 
   // Where the "normal zone" sits on the bar
   const zonePctLeft = normalise(range.low, range.low, range.high)
@@ -74,8 +276,9 @@ function RangeRow({ result }: { result: LabResultItem }) {
     <div className={`rounded-brand px-4 py-3 ${isFlagged ? 'bg-aubergine/[0.02]' : ''}`}>
       {/* Top line — test name + value + flag */}
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
-        <span className="text-sm font-sans font-medium text-aubergine">
+        <span className="text-sm font-sans font-medium text-aubergine flex items-center gap-1.5">
           {result.testName}
+          <LabInfoTooltip info={info || { summary: result.testName, relevance: 'Your provider included this test as part of your evaluation. Ask about it at your next visit.' }} />
         </span>
         <div className="flex items-baseline gap-2 flex-shrink-0">
           <span
