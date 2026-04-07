@@ -73,6 +73,30 @@ export async function POST(req: NextRequest) {
 
           await handleMembershipStart(supabase, {
             intakeId: metadata.intakeId,
+            patientId: metadata.patientId,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+          })
+        } else if (metadata.type === 'intake_and_membership') {
+          // Intake + membership purchased together
+          const subscriptionId =
+            typeof session.subscription === 'string'
+              ? session.subscription
+              : session.subscription?.id || null
+
+          // Handle intake portion
+          await handleIntakePayment(supabase, {
+            intakeId: metadata.intakeId,
+            patientId: metadata.patientId,
+            stripeCustomerId: customerId,
+            stripeSessionId: session.id,
+            amountPaid: session.amount_total,
+          })
+
+          // Handle membership portion
+          await handleMembershipStart(supabase, {
+            intakeId: metadata.intakeId,
+            patientId: metadata.patientId,
             stripeCustomerId: customerId,
             stripeSubscriptionId: subscriptionId,
           })
@@ -387,14 +411,16 @@ async function handleAppointmentPayment(
 async function handleMembershipStart(
   supabase: ReturnType<typeof getServiceSupabase>,
   data: {
-    intakeId: string
+    intakeId?: string
+    patientId?: string
     stripeCustomerId: string | null
     stripeSubscriptionId: string | null
   }
 ) {
-  // Look up patient from intake
-  let patientId: string | null = null
-  if (data.intakeId) {
+  // Resolve patientId — prefer direct value, fall back to intake lookup
+  let patientId: string | null = data.patientId || null
+
+  if (!patientId && data.intakeId) {
     const { data: intake } = await supabase
       .from('intakes')
       .select('patient_id')
