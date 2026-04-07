@@ -796,9 +796,14 @@ export default function PatientDashboardPage() {
           <div
             className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
             style={{ minHeight: '200px' }}
-            onClick={() => {
+            onClick={async () => {
               window.open(`/presentation/${patient.presentationId}`, '_blank')
               setPatient(prev => prev ? { ...prev, presentationStatus: 'viewed' } : prev)
+              // Persist to DB so the dashboard stays in viewed state after navigation
+              await supabase
+                .from('care_presentations')
+                .update({ status: 'viewed', viewed_at: new Date().toISOString() })
+                .eq('id', patient.presentationId)
             }}
           >
             <div
