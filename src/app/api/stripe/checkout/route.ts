@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       .from('intakes')
       .select('id, patient_id, answers')
       .eq('id', intakeId)
-      .single()
+      .maybeSingle()
 
     // Determine patient email from intake answers or parameter
     const email =
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         .eq('patient_id', intake.patient_id)
         .not('stripe_customer_id', 'is', null)
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (subscription?.stripe_customer_id) {
         customerId = subscription.stripe_customer_id

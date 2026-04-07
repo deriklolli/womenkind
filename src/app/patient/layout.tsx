@@ -19,19 +19,14 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     }
 
     const checkAccess = async () => {
-      // Check demo session first
-      const demo = localStorage.getItem('womenkind_demo_patient')
-      if (demo) {
-        setAuthorized(true)
-        setChecking(false)
-        return
-      }
-
-      // Check Supabase auth
+      // Real session always takes priority — check it first
       const {
         data: { session },
       } = await supabase.auth.getSession()
       if (session) {
+        // Clear stale demo key so it can never interfere with real auth
+        localStorage.removeItem('womenkind_demo_patient')
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -43,6 +38,18 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
           setChecking(false)
           return
         }
+
+        // Logged in but not a patient — redirect
+        router.replace('/patient/login')
+        return
+      }
+
+      // No real session — fall back to demo mode
+      const demo = localStorage.getItem('womenkind_demo_patient')
+      if (demo) {
+        setAuthorized(true)
+        setChecking(false)
+        return
       }
 
       // Not authorized — redirect to login
