@@ -99,7 +99,7 @@ export default function ProviderLoginPage() {
 
         {/* Login card */}
         <div className="bg-white rounded-card shadow-lg shadow-aubergine/5 p-8">
-          <h2 className="font-sans font-semibold text-xl text-aubergine mb-6">Sign in to your account</h2>
+          <h2 className="font-serif font-normal text-xl text-aubergine mb-6">Sign in to your account</h2>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>

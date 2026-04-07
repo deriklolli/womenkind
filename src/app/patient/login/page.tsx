@@ -135,7 +135,7 @@ export default function PatientLoginPage() {
 
         {/* Login/Signup card */}
         <div className="bg-white rounded-card shadow-lg shadow-aubergine/5 p-8">
-          <h2 className="font-sans font-semibold text-xl text-aubergine mb-6">
+          <h2 className="font-serif font-normal text-xl text-aubergine mb-6">
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </h2>
 
