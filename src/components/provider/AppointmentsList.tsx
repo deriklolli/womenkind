@@ -86,8 +86,12 @@ export default function AppointmentsList({ providerId }: Props) {
     }
   }
 
+  // Filter out past appointments
+  const now = new Date()
+  const upcoming = appointments.filter(apt => new Date(apt.ends_at) > now)
+
   // Group appointments by date
-  const grouped = appointments.reduce((acc, apt) => {
+  const grouped = upcoming.reduce((acc, apt) => {
     const dateKey = formatDate(apt.starts_at)
     if (!acc[dateKey]) acc[dateKey] = []
     acc[dateKey].push(apt)
@@ -100,7 +104,7 @@ export default function AppointmentsList({ providerId }: Props) {
         <div className="flex items-center justify-center h-40">
           <div className="w-6 h-6 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />
         </div>
-      ) : appointments.length === 0 ? (
+      ) : upcoming.length === 0 ? (
         <div className="bg-white rounded-card border border-aubergine/10 p-12 text-center shadow-sm">
           <svg className="w-12 h-12 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
