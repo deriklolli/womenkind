@@ -22,7 +22,28 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: true })
 
       if (error) throw error
-      return NextResponse.json({ messages: data })
+
+      // Look up names for all patient senders in this thread
+      const patientSenderIds = [...new Set(
+        (data || []).filter(m => m.sender_type === 'patient').map(m => m.sender_id)
+      )]
+      const nameMap = new Map<string, string>()
+      if (patientSenderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', patientSenderIds)
+        for (const p of profiles || []) {
+          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim())
+        }
+      }
+
+      const messages = (data || []).map(msg => ({
+        ...msg,
+        senderName: msg.sender_type === 'patient' ? (nameMap.get(msg.sender_id) || 'Patient') : null,
+      }))
+
+      return NextResponse.json({ messages })
     }
 
     // Get thread summaries (latest message per thread)
@@ -62,6 +83,28 @@ export async function GET(req: NextRequest) {
       ...msg,
       unreadCount: unreadCounts.get(msg.thread_id) || 0,
     }))
+
+    // For provider inbox: look up patient names for all patient-originated threads
+    if (providerId) {
+      const patientSenderIds = [...new Set(
+        threads.filter(t => t.sender_type === 'patient').map(t => t.sender_id)
+      )]
+      if (patientSenderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', patientSenderIds)
+        const nameMap = new Map<string, string>()
+        for (const p of profiles || []) {
+          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim())
+        }
+        threads.forEach(t => {
+          if (t.sender_type === 'patient') {
+            t.senderName = nameMap.get(t.sender_id) || 'Patient'
+          }
+        })
+      }
+    }
 
     return NextResponse.json({ threads })
   } catch (err: any) {

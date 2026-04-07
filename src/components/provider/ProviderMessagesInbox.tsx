@@ -12,6 +12,7 @@ interface Message {
   body: string
   read_at: string | null
   created_at: string
+  senderName?: string
 }
 
 interface Thread {
@@ -25,6 +26,7 @@ interface Thread {
   read_at: string | null
   created_at: string
   unreadCount: number
+  senderName?: string
 }
 
 interface Props {
@@ -185,7 +187,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
                         : 'bg-cream border border-aubergine/5 text-aubergine'
                     }`}>
                       <p className="text-[11px] font-sans font-medium mb-1 opacity-50">
-                        {isProvider ? 'You' : 'Patient'}
+                        {isProvider ? 'You' : (msg.senderName || 'Patient')}
                       </p>
                       <p className="text-sm font-sans leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                       <p className="text-[10px] font-sans opacity-30 mt-1.5 text-right">
@@ -265,7 +267,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-sans font-medium text-aubergine group-hover:text-violet transition-colors truncate">
-                        {thread.subject || 'Message from Patient'}
+                        {thread.subject || `Message from ${thread.senderName || 'Patient'}`}
                       </p>
                       {thread.unreadCount > 0 && (
                         <span className="shrink-0 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-sans font-semibold flex items-center justify-center">
@@ -274,7 +276,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
                       )}
                     </div>
                     <p className="text-xs font-sans text-aubergine/40 truncate">
-                      {thread.sender_type === 'patient' ? 'Patient: ' : 'You: '}{thread.body}
+                      {thread.sender_type === 'patient' ? `${thread.senderName || 'Patient'}: ` : 'You: '}{thread.body}
                     </p>
                   </div>
                 </div>
