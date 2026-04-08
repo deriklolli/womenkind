@@ -150,8 +150,11 @@ export default function BriefViewerPage() {
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="font-sans font-semibold text-2xl text-aubergine">{answers.full_name || 'Unknown Patient'}</h1>
                 {isMember && (
-                  <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-pill border border-emerald-200">
-                    Member
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
                   </span>
                 )}
               </div>
@@ -176,13 +179,13 @@ export default function BriefViewerPage() {
                       brief.metadata.symptom_burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
                       'text-amber-600 bg-amber-50 border-amber-200'}`}
                   >
-                    {brief.metadata.symptom_burden} burden
+                    {brief.metadata.symptom_burden?.charAt(0).toUpperCase() + brief.metadata.symptom_burden?.slice(1)} Burden
                   </span>
                   <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-violet bg-violet/5 border-violet/20">
-                    {brief.metadata.menopausal_stage}
+                    {brief.metadata.menopausal_stage?.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                   </span>
                   <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-aubergine/50 bg-aubergine/5 border-aubergine/10">
-                    {brief.metadata.complexity} complexity
+                    {brief.metadata.complexity?.charAt(0).toUpperCase() + brief.metadata.complexity?.slice(1)} Complexity
                   </span>
                 </div>
               )}

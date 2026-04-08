@@ -146,41 +146,6 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
 
   return (
     <div className="space-y-6">
-      {/* Header + New Note button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
-            <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            All Notes
-          </h3>
-          <p className="text-xs font-sans text-aubergine/40 mt-0.5">
-            Visit notes and standalone notes, newest first
-          </p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-violet border border-violet/30 text-sm font-sans font-medium rounded-brand hover:bg-violet/5 transition-colors"
-        >
-          {showForm ? (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Cancel
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Add Note
-            </>
-          )}
-        </button>
-      </div>
-
       {/* New note form */}
       {showForm && (
         <div className="bg-white rounded-card p-6 shadow-sm border border-violet/15">
@@ -266,22 +231,42 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
         </div>
       )}
 
-      {/* Timeline */}
-      {timeline.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-card border border-aubergine/5">
-          <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          <p className="text-sm font-sans text-aubergine/30">No notes yet</p>
-          <p className="text-xs font-sans text-aubergine/20 mt-1">Click &ldquo;Add Note&rdquo; to create the first one</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {timeline.map((note) => (
-            <div
-              key={note.id}
-              className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 hover:border-aubergine/10 transition-colors"
+      {/* Notes container */}
+      {!showForm && (
+        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
+          {/* Header inside card */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-aubergine/5">
+            <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
+              <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              All Notes
+            </h3>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-violet border border-violet/30 text-sm font-sans font-medium rounded-brand hover:bg-violet/5 transition-colors"
             >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Note
+            </button>
+          </div>
+
+          {timeline.length === 0 ? (
+            <div className="text-center py-16">
+              <svg className="w-10 h-10 mx-auto text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <p className="text-sm font-sans text-aubergine/30">No notes yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-aubergine/5">
+              {timeline.map((note) => (
+                <div
+                  key={note.id}
+                  className="p-5 hover:bg-aubergine/[0.01] transition-colors"
+                >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {note.source === 'visit' ? (
@@ -308,7 +293,9 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
                 {note.content}
               </p>
             </div>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

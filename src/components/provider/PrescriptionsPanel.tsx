@@ -107,30 +107,6 @@ export default function PrescriptionsPanel({
 
   return (
     <div className="space-y-6">
-      {/* Header + New button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
-            <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-            </svg>
-            Prescriptions
-          </h3>
-          <p className="text-xs font-sans text-aubergine/40 mt-0.5">{prescriptions.length} on file</p>
-        </div>
-        {!showForm && (
-          <button
-            onClick={() => { resetForm(); setShowForm(true) }}
-            className="text-sm font-sans font-medium text-violet bg-white border border-violet/30 hover:bg-violet/5 px-4 py-2 rounded-brand transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            New Prescription
-          </button>
-        )}
-      </div>
-
       {/* New Prescription Form */}
       {showForm && (
         <div className="bg-white rounded-card p-6 shadow-sm border border-violet/15">
@@ -271,22 +247,46 @@ export default function PrescriptionsPanel({
       )}
 
       {/* Prescription History */}
-      {prescriptions.length === 0 && !showForm ? (
-        <div className="text-center py-12 bg-white rounded-card shadow-sm border border-aubergine/5">
-          <svg className="w-8 h-8 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-          </svg>
-          <p className="text-sm font-sans text-aubergine/30">No prescriptions yet</p>
-          <p className="text-xs font-sans text-aubergine/20 mt-1">Click &ldquo;New Prescription&rdquo; to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {prescriptions.map((rx) => {
+      {!showForm && (
+        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
+          {/* Header inside card */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-aubergine/5">
+            <div>
+              <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
+                <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                Prescriptions
+              </h3>
+              {prescriptions.length > 0 && <p className="text-xs font-sans text-aubergine/40 mt-0.5">{prescriptions.length} on file</p>}
+            </div>
+            <button
+              onClick={() => { resetForm(); setShowForm(true) }}
+              className="text-sm font-sans font-medium text-violet bg-white border border-violet/30 hover:bg-violet/5 px-4 py-2 rounded-brand transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New Prescription
+            </button>
+          </div>
+
+          {/* Empty state or list */}
+          {prescriptions.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="w-8 h-8 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <p className="text-sm font-sans text-aubergine/30">No prescriptions yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-aubergine/5">
+              {prescriptions.map((rx) => {
             const st = STATUS_STYLES[rx.status] || STATUS_STYLES.draft
             return (
               <div
                 key={rx.id}
-                className="bg-white rounded-card p-4 shadow-sm border border-aubergine/5"
+                className="px-6 py-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -313,7 +313,9 @@ export default function PrescriptionsPanel({
                 </div>
               </div>
             )
-          })}
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

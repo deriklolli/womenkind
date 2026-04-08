@@ -105,30 +105,6 @@ export default function LabOrdersPanel({
 
   return (
     <div className="space-y-6">
-      {/* Header + New button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
-            <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            Lab Orders
-          </h3>
-          <p className="text-xs font-sans text-aubergine/40 mt-0.5">{labOrders.length} on file</p>
-        </div>
-        {!showForm && (
-          <button
-            onClick={() => { resetForm(); setShowForm(true) }}
-            className="text-sm font-sans font-medium text-white bg-violet hover:bg-violet-dark px-4 py-2 rounded-brand shadow-sm transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Order Labs
-          </button>
-        )}
-      </div>
-
       {/* New Lab Order Form */}
       {showForm && (
         <div className="bg-white rounded-card p-6 shadow-sm border border-violet/15">
@@ -261,26 +237,49 @@ export default function LabOrdersPanel({
       )}
 
       {/* Lab Order History */}
-      {labOrders.length === 0 && !showForm ? (
-        <div className="text-center py-12 bg-white rounded-card shadow-sm border border-aubergine/5">
-          <svg className="w-8 h-8 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          <p className="text-sm font-sans text-aubergine/30">No lab orders yet</p>
-          <p className="text-xs font-sans text-aubergine/20 mt-1">Click &ldquo;Order Labs&rdquo; to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {labOrders.map((order) => {
-            const st = STATUS_STYLES[order.status] || STATUS_STYLES.draft
-            const partner = LAB_PARTNERS.find((l) => l.value === order.lab_partner)?.label || order.lab_partner
-            const hasResults = order.status === 'results_available' && order.results
-            const isExpanded = expandedResults === order.id
+      {!showForm && (
+        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
+          {/* Header inside card */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-aubergine/5">
+            <div>
+              <h3 className="text-sm font-sans font-medium text-aubergine flex items-center gap-2">
+                <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                Lab Orders
+              </h3>
+              {labOrders.length > 0 && <p className="text-xs font-sans text-aubergine/40 mt-0.5">{labOrders.length} on file</p>}
+            </div>
+            <button
+              onClick={() => { resetForm(); setShowForm(true) }}
+              className="text-sm font-sans font-medium text-violet bg-white border border-violet/30 hover:bg-violet/5 px-4 py-2 rounded-brand transition-colors flex items-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Order Labs
+            </button>
+          </div>
 
-            return (
+          {labOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="w-8 h-8 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              <p className="text-sm font-sans text-aubergine/30">No lab orders yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-aubergine/5">
+              {labOrders.map((order) => {
+                const st = STATUS_STYLES[order.status] || STATUS_STYLES.draft
+                const partner = LAB_PARTNERS.find((l) => l.value === order.lab_partner)?.label || order.lab_partner
+                const hasResults = order.status === 'results_available' && order.results
+                const isExpanded = expandedResults === order.id
+
+                return (
               <div
                 key={order.id}
-                className="bg-white rounded-card shadow-sm border border-aubergine/5"
+                className=""
               >
                 <button
                   onClick={() => hasResults && setExpandedResults(isExpanded ? null : order.id)}
@@ -353,8 +352,10 @@ export default function LabOrdersPanel({
                   </div>
                 )}
               </div>
-            )
-          })}
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -116,7 +116,7 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     localStorage.removeItem('womenkind_demo_patient')
     await supabase.auth.signOut()
-    router.push('/patient/login')
+    window.location.href = 'https://womenkindhealth.com/patient/login'
   }
 
   if (loading) {
