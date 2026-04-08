@@ -24,17 +24,19 @@ export async function GET(req: NextRequest) {
       if (error) throw error
 
       // Look up names for all patient senders in this thread
+      // sender_id on messages is patients.id (not the auth user id), so join through patients table
       const patientSenderIds = Array.from(new Set(
         (data || []).filter(m => m.sender_type === 'patient').map(m => m.sender_id)
       ))
       const nameMap = new Map<string, string>()
       if (patientSenderIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
+        const { data: patientRows } = await supabase
+          .from('patients')
+          .select('id, profiles ( first_name, last_name )')
           .in('id', patientSenderIds)
-        for (const p of profiles || []) {
-          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim())
+        for (const p of patientRows || []) {
+          const prof = p.profiles as any
+          nameMap.set(p.id, `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim() || 'Patient')
         }
       }
 
@@ -98,13 +100,15 @@ export async function GET(req: NextRequest) {
         threads.map(t => t.patientSenderId).filter(Boolean)
       ))
       if (allPatientIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
+        // sender_id on messages is patients.id (not the auth user id), so join through patients table
+        const { data: patientRows } = await supabase
+          .from('patients')
+          .select('id, profiles ( first_name, last_name )')
           .in('id', allPatientIds)
         const nameMap = new Map<string, string>()
-        for (const p of profiles || []) {
-          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim())
+        for (const p of patientRows || []) {
+          const prof = p.profiles as any
+          nameMap.set(p.id, `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim() || 'Patient')
         }
         threads.forEach(t => {
           if (t.patientSenderId) {
