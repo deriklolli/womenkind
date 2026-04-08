@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       // Look up names for all patient senders in this thread
       const patientSenderIds = Array.from(new Set(
         (data || []).filter(m => m.sender_type === 'patient').map(m => m.sender_id)
-      )]
+      ))
       const nameMap = new Map<string, string>()
       if (patientSenderIds.length > 0) {
         const { data: profiles } = await supabase
