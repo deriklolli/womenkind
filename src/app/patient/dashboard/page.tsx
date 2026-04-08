@@ -129,18 +129,8 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
     fetchAppointments()
   }, [patientId])
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
-        <div className="flex items-center justify-center py-4">
-          <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
-        </div>
-      </div>
-    )
-  }
-
-  // Don't render the card at all if no appointments
-  if (appointments.length === 0) return null
+  // Don't render anything until loaded — avoids flash of spinner when no appointments exist
+  if (loading || appointments.length === 0) return null
 
   return (
     <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
