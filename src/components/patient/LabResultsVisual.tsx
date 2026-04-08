@@ -250,7 +250,7 @@ function LabInfoTooltip({ info }: { info: { summary: string; relevance: string }
       </svg>
       {show && createPortal(
         <span
-          className="fixed w-64 px-3 py-2.5 rounded-lg bg-aubergine text-white text-xs font-sans leading-relaxed shadow-lg pointer-events-none"
+          className="fixed w-72 px-3.5 py-3 rounded-lg bg-aubergine text-white text-sm font-sans leading-relaxed shadow-lg pointer-events-none"
           style={{
             left: `${pos.x}px`,
             top: `${pos.y}px`,
