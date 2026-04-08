@@ -233,7 +233,7 @@ export default function PatientDashboardPage() {
   const [cancelingBanner, setCancelingBanner] = useState(false)
   const [cancelConfirmIdTab, setCancelConfirmIdTab] = useState<string | null>(null)
   const [cancelingIdTab, setCancelingIdTab] = useState<string | null>(null)
-  const [checkedInAppointmentIds, setCheckedInAppointmentIds] = useState<Set<string>>(new Set())
+  const [checkedInAppointmentIds, setCheckedInAppointmentIds] = useState<Set<string> | null>(null)
 
   const handleCancelBannerAppointment = async () => {
     if (!appointments[0]) return
@@ -782,7 +782,7 @@ export default function PatientDashboardPage() {
         )}
 
         {/* Check-in prompt — show when there's an upcoming appointment without a check-in */}
-        {appointments.length > 0 && !checkedInAppointmentIds.has(appointments[0].id) && (
+        {appointments.length > 0 && checkedInAppointmentIds !== null && !checkedInAppointmentIds.has(appointments[0].id) && (
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-5 flex items-center gap-4 border-l-4 border-violet">
             <div className="w-9 h-9 rounded-full bg-violet/10 flex items-center justify-center shrink-0">
               <svg className="w-4.5 h-4.5 text-violet" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
