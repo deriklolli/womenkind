@@ -263,6 +263,15 @@ function LabAudioButton({ testCode }: { testCode: string }) {
 
   const togglePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+
+    if (playing) {
+      audioRef.current?.pause()
+      setPlaying(false)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      return
+    }
+
+    // Create audio element if needed
     if (!audioRef.current) {
       audioRef.current = new Audio(src)
       audioRef.current.onended = () => {
@@ -271,15 +280,17 @@ function LabAudioButton({ testCode }: { testCode: string }) {
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
       }
     }
-    if (playing) {
-      audioRef.current.pause()
-      setPlaying(false)
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    } else {
-      audioRef.current.play().catch(() => setPlaying(false))
-      setPlaying(true)
-      rafRef.current = requestAnimationFrame(tick)
-    }
+
+    // Only set playing=true AFTER the browser confirms playback started
+    audioRef.current.play()
+      .then(() => {
+        setPlaying(true)
+        rafRef.current = requestAnimationFrame(tick)
+      })
+      .catch((err: unknown) => {
+        console.error('[LabAudio] play() failed:', err)
+        setPlaying(false)
+      })
   }, [playing, src, tick])
 
   useEffect(() => () => {
