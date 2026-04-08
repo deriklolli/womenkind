@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       if (error) throw error
 
       // Look up names for all patient senders in this thread
-      const patientSenderIds = [...new Set(
+      const patientSenderIds = Array.from(new Set(
         (data || []).filter(m => m.sender_type === 'patient').map(m => m.sender_id)
       )]
       const nameMap = new Map<string, string>()
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     // For provider inbox: look up patient names for all patient-originated threads
     if (providerId) {
-      const patientSenderIds = [...new Set(
+      const patientSenderIds = Array.from(new Set(
         threads.filter(t => t.sender_type === 'patient').map(t => t.sender_id)
       )]
       if (patientSenderIds.length > 0) {
