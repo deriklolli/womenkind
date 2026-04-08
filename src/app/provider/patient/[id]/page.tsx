@@ -325,7 +325,17 @@ export default function PatientProfilePage() {
                 </span>
               </div>
               <div>
-                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+                <div className="flex items-center gap-2.5">
+                  <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+                  {membership && (
+                    <span className="flex items-center gap-1 flex-shrink-0">
+                      <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-4 mt-2">
                   {age && <span className="text-sm font-sans text-aubergine/50">{age} years old</span>}
                   {heightStr && <span className="text-sm font-sans text-aubergine/50">{heightStr}</span>}
@@ -362,15 +372,6 @@ export default function PatientProfilePage() {
                   'text-emerald-600 bg-emerald-50 border-emerald-200'
                 }`}>
                   {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
-                </span>
-              )}
-              {membership ? (
-                <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-pill border border-emerald-200">
-                  Active Member
-                </span>
-              ) : (
-                <span className="text-xs font-sans text-aubergine/30 bg-aubergine/5 px-3 py-1.5 rounded-pill border border-aubergine/10">
-                  No Membership
                 </span>
               )}
             </div>

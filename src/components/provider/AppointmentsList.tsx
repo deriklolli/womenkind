@@ -159,10 +159,10 @@ export default function AppointmentsList({ providerId }: Props) {
                       key={apt.id}
                       className="bg-white rounded-card border border-transparent hover:border-violet/10 p-4 shadow-sm hover:shadow-md transition-all duration-200"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-start gap-3">
                           {/* Time block */}
-                          <div className="text-center min-w-[56px]">
+                          <div className="text-center min-w-[56px] pt-0.5">
                             <p className="text-sm font-sans font-bold text-aubergine">{formatTime(apt.starts_at)}</p>
                             <p className="text-[10px] font-sans text-aubergine/30">{formatTime(apt.ends_at)}</p>
                           </div>
@@ -178,27 +178,27 @@ export default function AppointmentsList({ providerId }: Props) {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => router.push(`/provider/patient/${apt.patients?.id}`)}
-                                className="text-sm font-sans font-semibold text-aubergine hover:text-violet transition-colors"
+                                className="text-base font-sans font-semibold text-aubergine hover:text-violet transition-colors"
                               >
                                 {patientName}
                               </button>
-                              <span className={`px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill border ${statusStyle.bg} ${statusStyle.color}`}>
-                                {statusStyle.label}
-                              </span>
+                              {apt.status !== 'confirmed' && (
+                                <span className={`px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill border ${statusStyle.bg} ${statusStyle.color}`}>
+                                  {statusStyle.label}
+                                </span>
+                              )}
                               {isMember && (
-                                <span className="px-2 py-0.5 text-[10px] font-sans font-medium rounded-pill border text-emerald-600 bg-emerald-50 border-emerald-200">
-                                  Member
+                                <span className="flex items-center gap-1 flex-shrink-0">
+                                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs font-sans text-aubergine/50 mt-0.5">
+                            <p className="text-sm font-sans text-aubergine/50 mt-0.5">
                               {apt.appointment_types?.name} · {apt.appointment_types?.duration_minutes} min
                             </p>
-                            {apt.patient_notes && (
-                              <p className="text-xs font-sans text-aubergine/40 mt-1 line-clamp-1 italic">
-                                &ldquo;{apt.patient_notes}&rdquo;
-                              </p>
-                            )}
                           </div>
                         </div>
 
@@ -206,22 +206,22 @@ export default function AppointmentsList({ providerId }: Props) {
                         {apt.status === 'confirmed' && (
                           <div className="flex items-center gap-1">
                             {cancelConfirmId === apt.id ? (
-                              <>
-                                <span className="text-xs font-sans text-aubergine/50 mr-1">Cancel appointment?</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-sans text-aubergine/50">Cancel appointment?</span>
                                 <button
                                   onClick={() => handleCancel(apt.id)}
                                   disabled={cancelingId === apt.id}
-                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
+                                  className="px-2 py-1 text-[10px] font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
                                 >
-                                  {cancelingId === apt.id ? 'Canceling…' : 'Confirm'}
+                                  {cancelingId === apt.id ? 'Canceling…' : 'Yes, cancel'}
                                 </button>
                                 <button
                                   onClick={() => setCancelConfirmId(null)}
-                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-aubergine/50 bg-aubergine/5 border border-aubergine/10 rounded-pill hover:bg-aubergine/10 transition-colors"
+                                  className="px-2 py-1 text-[10px] font-sans font-medium text-aubergine/50 hover:text-aubergine transition-colors"
                                 >
                                   Keep
                                 </button>
-                              </>
+                              </div>
                             ) : (
                               <>
                                 <button
@@ -252,9 +252,12 @@ export default function AppointmentsList({ providerId }: Props) {
                                 )}
                                 <button
                                   onClick={() => setCancelConfirmId(apt.id)}
-                                  className="inline-flex items-center px-3 py-1.5 text-xs font-sans font-semibold text-red-400 bg-red-50 border border-red-100 rounded-pill hover:bg-red-100 hover:text-red-500 transition-colors"
+                                  className="w-7 h-7 rounded-full border border-aubergine/15 flex items-center justify-center text-aubergine/30 hover:border-red-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                                  title="Cancel appointment"
                                 >
-                                  Cancel
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
                                 </button>
                               </>
                             )}

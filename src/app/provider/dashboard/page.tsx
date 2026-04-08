@@ -325,7 +325,7 @@ export default function ProviderDashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-sans font-semibold text-lg text-aubergine group-hover:text-violet transition-colors truncate">
+                            <h3 className="font-sans font-semibold text-lg text-aubergine truncate">
                               {name}
                             </h3>
                             {age && (
@@ -353,23 +353,16 @@ export default function ProviderDashboard() {
                             )}
                           </div>
                           {concerns.length > 0 && (
-                            <div className="flex gap-2 mb-2">
-                              {concerns.map((c: string) => (
-                                <span
-                                  key={c}
-                                  className="text-xs font-sans text-aubergine/40 bg-aubergine/5 px-2 py-0.5 rounded-pill"
-                                >
-                                  {c}
-                                </span>
-                              ))}
-                            </div>
+                            <p className="text-sm font-sans text-aubergine/50 mb-2">
+                              <span className="font-medium">Chief concerns:</span> {concerns.join(', ')}
+                            </p>
                           )}
                           <p className="text-xs font-sans text-aubergine/30">
                             Submitted {formatDate(intake.submitted_at)}
                           </p>
                         </div>
                         <div className="flex-shrink-0 ml-4">
-                          <svg className="w-5 h-5 text-aubergine/20 group-hover:text-violet transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <svg className="w-5 h-5 text-aubergine/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
@@ -457,20 +450,18 @@ export default function ProviderDashboard() {
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-sans font-semibold text-lg text-aubergine group-hover:text-violet transition-colors truncate">
+                              <h3 className="font-sans font-semibold text-lg text-aubergine transition-colors truncate">
                                 {name}
                               </h3>
                               {age && (
                                 <span className="text-xs font-sans text-aubergine/40 flex-shrink-0">{age}y</span>
                               )}
-                              {stage && (
-                                <span className="text-xs font-sans text-violet/70 bg-violet/5 px-2 py-0.5 rounded-pill border border-violet/10 flex-shrink-0">
-                                  {stage}
-                                </span>
-                              )}
                               {hasMembership && (
-                                <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-pill border border-emerald-200 flex-shrink-0">
-                                  Member
+                                <span className="flex items-center gap-1 flex-shrink-0">
+                                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
                                 </span>
                               )}
                             </div>
@@ -485,7 +476,7 @@ export default function ProviderDashboard() {
 
                         {/* Arrow */}
                         <div className="flex-shrink-0 ml-4">
-                          <svg className="w-5 h-5 text-aubergine/20 group-hover:text-violet transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <svg className="w-5 h-5 text-aubergine/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
