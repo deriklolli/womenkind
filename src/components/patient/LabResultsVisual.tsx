@@ -273,13 +273,19 @@ function LabAudioButton({ testCode }: { testCode: string }) {
 
     // Create audio element if needed
     if (!audioRef.current) {
-      audioRef.current = new Audio(src)
-      audioRef.current.onended = () => {
+      const audio = new Audio(src)
+      audio.onerror = () => {
+        console.error('[LabAudio] load error — code:', audio.error?.code, '| src:', audio.src)
+      }
+      audio.onended = () => {
         setPlaying(false)
         setProgress(0)
         if (rafRef.current) cancelAnimationFrame(rafRef.current)
       }
+      audioRef.current = audio
     }
+
+    console.log('[LabAudio] attempting play — src:', audioRef.current.src || src)
 
     // Only set playing=true AFTER the browser confirms playback started
     audioRef.current.play()
@@ -288,7 +294,7 @@ function LabAudioButton({ testCode }: { testCode: string }) {
         rafRef.current = requestAnimationFrame(tick)
       })
       .catch((err: unknown) => {
-        console.error('[LabAudio] play() failed:', err)
+        console.error('[LabAudio] play() failed:', err, '| error code:', audioRef.current?.error?.code)
         setPlaying(false)
       })
   }, [playing, src, tick])
