@@ -313,12 +313,12 @@ function LabAudioButton({ testCode }: { testCode: string }) {
         ref={btnRef}
         onClick={handleIconClick}
         title="Listen to explanation"
-        className={`inline-flex items-center justify-center w-4 h-4 transition-colors cursor-pointer ${
-          open || playing ? 'text-aubergine/60' : 'text-aubergine/25 hover:text-aubergine/50'
+        className={`inline-flex items-center justify-center w-5 h-5 transition-colors cursor-pointer ${
+          open ? 'text-aubergine' : 'text-aubergine/25 hover:text-aubergine/50'
         }`}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-          strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         </svg>
@@ -386,72 +386,6 @@ function LabAudioButton({ testCode }: { testCode: string }) {
   )
 }
 
-/* ── Info tooltip (matches WearableTrends pattern) ──────────────────── */
-
-function LabInfoTooltip({ info }: { info: { summary: string; relevance: string } }) {
-  const [show, setShow] = useState(false)
-  const iconRef = useRef<HTMLSpanElement>(null)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-
-  const updatePos = useCallback(() => {
-    if (!iconRef.current) return
-    const rect = iconRef.current.getBoundingClientRect()
-    setPos({ x: rect.left + rect.width / 2, y: rect.top })
-  }, [])
-
-  const handleEnter = useCallback(() => {
-    updatePos()
-    setShow(true)
-  }, [updatePos])
-
-  const handleLeave = useCallback(() => setShow(false), [])
-
-  // Keep position updated while visible (handles scroll)
-  useEffect(() => {
-    if (!show) return
-    const onScroll = () => updatePos()
-    window.addEventListener('scroll', onScroll, true)
-    return () => window.removeEventListener('scroll', onScroll, true)
-  }, [show, updatePos])
-
-  return (
-    <span
-      ref={iconRef}
-      className="inline-flex flex-shrink-0 relative"
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      <svg
-        className="w-4 h-4 text-aubergine/25 hover:text-aubergine/40 transition-colors cursor-help"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
-      </svg>
-      {show && createPortal(
-        <span
-          className="fixed w-72 px-3.5 py-3 rounded-lg bg-aubergine text-white text-sm font-sans leading-relaxed shadow-lg pointer-events-none"
-          style={{
-            left: `${pos.x}px`,
-            top: `${pos.y}px`,
-            transform: 'translate(-50%, -100%) translateY(-8px)',
-            zIndex: 9999,
-          }}
-        >
-          <span className="block mb-1">{info.summary}</span>
-          <span className="block text-white/60">
-            <span className="text-white/80 font-medium">Why it matters: </span>
-            {info.relevance}
-          </span>
-        </span>,
-        document.body
-      )}
-    </span>
-  )
-}
 
 /* ── Single range row ────────────────────────────────────────────────── */
 
@@ -467,17 +401,62 @@ function RangeRow({ result }: { result: LabResultItem }) {
   const isFlagged = flag !== 'normal'
   const info = getTestInfo(result.testCode)
 
+  // Hover tooltip on test name
+  const [showInfo, setShowInfo] = useState(false)
+  const [infoPos, setInfoPos] = useState({ x: 0, y: 0 })
+  const nameRef = useRef<HTMLSpanElement>(null)
+
+  const updateInfoPos = useCallback(() => {
+    if (!nameRef.current) return
+    const r = nameRef.current.getBoundingClientRect()
+    setInfoPos({ x: r.left + r.width / 2, y: r.top })
+  }, [])
+
+  useEffect(() => {
+    if (!showInfo) return
+    const onScroll = () => updateInfoPos()
+    window.addEventListener('scroll', onScroll, true)
+    return () => window.removeEventListener('scroll', onScroll, true)
+  }, [showInfo, updateInfoPos])
+
   // Where the "normal zone" sits on the bar
   const zonePctLeft = normalise(range.low, range.low, range.high)
   const zonePctRight = normalise(range.high, range.low, range.high)
+
+  const fallbackInfo = { summary: result.testName, relevance: 'Your provider included this test as part of your evaluation. Ask about it at your next visit.' }
+  const tooltip = info || fallbackInfo
 
   return (
     <div className={`rounded-brand px-4 py-3 ${isFlagged ? 'bg-aubergine/[0.02]' : ''}`}>
       {/* Top line — test name + value + flag */}
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
         <span className="text-sm font-sans font-medium text-aubergine flex items-center gap-1.5">
-          {result.testName}
-          <LabInfoTooltip info={info || { summary: result.testName, relevance: 'Your provider included this test as part of your evaluation. Ask about it at your next visit.' }} />
+          <span
+            ref={nameRef}
+            className="cursor-default"
+            onMouseEnter={() => { updateInfoPos(); setShowInfo(true) }}
+            onMouseLeave={() => setShowInfo(false)}
+          >
+            {result.testName}
+          </span>
+          {showInfo && createPortal(
+            <span
+              className="fixed w-72 px-3.5 py-3 rounded-lg bg-aubergine text-white text-sm font-sans leading-relaxed shadow-lg pointer-events-none"
+              style={{
+                left: `${infoPos.x}px`,
+                top: `${infoPos.y}px`,
+                transform: 'translate(-50%, -100%) translateY(-8px)',
+                zIndex: 9997,
+              }}
+            >
+              <span className="block mb-1">{tooltip.summary}</span>
+              <span className="block text-white/60">
+                <span className="text-white/80 font-medium">Why it matters: </span>
+                {tooltip.relevance}
+              </span>
+            </span>,
+            document.body
+          )}
           <LabAudioButton testCode={result.testCode} />
         </span>
         <div className="flex items-baseline gap-2 flex-shrink-0">
