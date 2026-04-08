@@ -239,6 +239,7 @@ function LabAudioButton({ testCode }: { testCode: string }) {
   /* open / close */
   const handleIconClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    e.nativeEvent.stopPropagation()
     updatePos()
     setOpen(o => !o)
   }, [updatePos])
@@ -271,6 +272,7 @@ function LabAudioButton({ testCode }: { testCode: string }) {
   /* play / pause */
   const togglePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
+    e.nativeEvent.stopPropagation()
     if (!audioRef.current) {
       audioRef.current = new Audio(src)
       audioRef.current.onended = () => {
@@ -328,7 +330,7 @@ function LabAudioButton({ testCode }: { testCode: string }) {
             transform: 'translate(-50%, -100%) translateY(-10px)',
             zIndex: 9999,
           }}
-          onClick={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); e.nativeEvent.stopPropagation() }}
         >
           {/* Donut progress ring */}
           <svg width="84" height="84" viewBox="0 0 84 84" className="absolute">
