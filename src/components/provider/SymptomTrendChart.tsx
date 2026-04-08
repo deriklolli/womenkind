@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     <div className="bg-white rounded-brand shadow-lg border border-aubergine/10 px-3 py-2">
       <p className="text-xs font-sans text-aubergine/50 mb-1">{label}</p>
       <p className="text-sm font-sans font-semibold" style={{ color: payload[0]?.color }}>
-        {payload[0]?.value}/10
+        {payload[0]?.value}/5
       </p>
     </div>
   )
@@ -58,7 +58,7 @@ export default function SymptomTrendChart({ visits, domain, label, color }: Symp
         <h4 className="text-sm font-sans font-medium text-aubergine mb-3">{label}</h4>
         <div className="flex items-center justify-center h-32 text-xs font-sans text-aubergine/30">
           {data.length === 1
-            ? `Current score: ${data[0].score}/10`
+            ? `Current score: ${data[0].score}/5`
             : 'Needs at least 2 visits to show trend'
           }
         </div>
@@ -77,7 +77,7 @@ export default function SymptomTrendChart({ visits, domain, label, color }: Symp
         <h4 className="text-sm font-sans font-medium text-aubergine">{label}</h4>
         <div className="flex items-center gap-2">
           <span className="text-lg font-sans font-semibold text-aubergine">{lastScore}</span>
-          <span className="text-xs font-sans text-aubergine/40">/10</span>
+          <span className="text-xs font-sans text-aubergine/40">/5</span>
           {change !== 0 && (
             <span className={`text-xs font-sans px-1.5 py-0.5 rounded-pill ${
               improved
@@ -106,8 +106,8 @@ export default function SymptomTrendChart({ visits, domain, label, color }: Symp
               tickLine={false}
             />
             <YAxis
-              domain={[0, 10]}
-              ticks={[0, 2, 4, 6, 8, 10]}
+              domain={[1, 5]}
+              ticks={[1, 2, 3, 4, 5]}
               tick={{ fontSize: 11, fill: '#280f4930', fontFamily: 'Plus Jakarta Sans' }}
               axisLine={false}
               tickLine={false}

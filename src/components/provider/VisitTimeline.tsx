@@ -36,10 +36,11 @@ const VISIT_TYPE_CONFIG: Record<string, { label: string; icon: string; color: st
 }
 
 const SCORE_LABELS: Record<string, string> = {
-  vasomotor: 'Vasomotor',
+  vasomotor: 'Hot Flashes',
   sleep: 'Sleep',
-  mood: 'Mood & Cognition',
-  gsm: 'GSM',
+  energy: 'Energy',
+  mood: 'Mood',
+  gsm: 'Vaginal / Urinary',
   overall: 'Overall',
 }
 
@@ -115,9 +116,9 @@ export default function VisitTimeline({ visits, onViewBrief }: VisitTimelineProp
                       <span
                         key={key}
                         className={`text-xs font-sans px-2 py-0.5 rounded-pill border ${
-                          val >= 7
+                          val >= 4
                             ? 'text-red-600 bg-red-50 border-red-100'
-                            : val >= 4
+                            : val >= 3
                             ? 'text-amber-600 bg-amber-50 border-amber-100'
                             : 'text-emerald-600 bg-emerald-50 border-emerald-100'
                         }`}

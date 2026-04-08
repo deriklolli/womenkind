@@ -91,11 +91,12 @@ interface ProviderNote {
 type ProfileTab = 'overview' | 'intake' | 'timeline' | 'prescriptions' | 'labs' | 'notes' | 'messages' | 'biometrics'
 
 const SYMPTOM_DOMAINS = [
-  { key: 'vasomotor', label: 'Vasomotor (Hot Flashes)', color: '#d85623' },
+  { key: 'vasomotor', label: 'Hot Flashes / Night Sweats', color: '#d85623' },
   { key: 'sleep', label: 'Sleep Quality', color: '#5d9ed5' },
+  { key: 'energy', label: 'Energy & Fatigue', color: '#e8a838' },
   { key: 'mood', label: 'Mood & Cognition', color: '#944fed' },
-  { key: 'gsm', label: 'Genitourinary / GSM', color: '#c2796d' },
-  { key: 'overall', label: 'Overall Symptom Burden', color: '#280f49' },
+  { key: 'gsm', label: 'Vaginal / Urinary Symptoms', color: '#c2796d' },
+  { key: 'overall', label: 'Overall Quality of Life', color: '#280f49' },
 ]
 
 export default function PatientProfilePage() {
@@ -287,14 +288,25 @@ export default function PatientProfilePage() {
   const treatment = getCurrentTreatment()
   const latestIntake = getLatestIntake()
 
+  // Biometrics from intake answers
+  const intakeAnswers = latestIntake?.answers || {}
+  const heightStr: string = intakeAnswers.height || ''
+  const weightStr: string = String(intakeAnswers.weight || '')
+  const hMatch = heightStr.match(/(\d+)'(\d+)"/)
+  const heightInches = hMatch ? parseInt(hMatch[1]) * 12 + parseInt(hMatch[2]) : null
+  const weightLbs = parseFloat(weightStr.replace(/[^\d.]/g, '')) || null
+  const bmi = heightInches && weightLbs
+    ? ((weightLbs / (heightInches * heightInches)) * 703).toFixed(1)
+    : null
+
   const TABS: { key: ProfileTab; label: string; count?: number }[] = [
     { key: 'overview', label: 'Overview & Trends' },
-{ key: 'timeline', label: 'Visit Timeline', count: visits.length },
+    { key: 'biometrics', label: 'Biometrics' },
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
+    { key: 'timeline', label: 'Visit Timeline', count: visits.length },
     { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length },
     { key: 'messages', label: 'Messages', count: messageThreadCount },
-    { key: 'biometrics', label: 'Biometrics' },
   ]
 
   return (
@@ -316,11 +328,10 @@ export default function PatientProfilePage() {
                 <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
                 <div className="flex items-center gap-4 mt-2">
                   {age && <span className="text-sm font-sans text-aubergine/50">{age} years old</span>}
+                  {heightStr && <span className="text-sm font-sans text-aubergine/50">{heightStr}</span>}
+                  {weightLbs && <span className="text-sm font-sans text-aubergine/50">{weightLbs} lbs</span>}
+                  {bmi && <span className="text-sm font-sans text-aubergine/50">BMI {bmi}</span>}
                   {patient.state && <span className="text-sm font-sans text-aubergine/50">{patient.state}</span>}
-                  {patient.phone && <span className="text-sm font-sans text-aubergine/50">{patient.phone}</span>}
-                  {patient.profiles?.email && (
-                    <span className="text-sm font-sans text-aubergine/40">{patient.profiles.email}</span>
-                  )}
                 </div>
                 {latestIntake && (
                   <div className="flex items-center gap-2.5 mt-3">
@@ -423,6 +434,14 @@ export default function PatientProfilePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'biometrics' && (
+          <PatientBiometrics
+            patientId={patientId}
+            visits={visits}
+            prescriptions={prescriptions}
+          />
         )}
 
         {activeTab === 'intake' && (
@@ -544,13 +563,6 @@ export default function PatientProfilePage() {
           />
         )}
 
-        {activeTab === 'biometrics' && (
-          <PatientBiometrics
-            patientId={patientId}
-            visits={visits}
-            prescriptions={prescriptions}
-          />
-        )}
       </div>
     </div>
   )
