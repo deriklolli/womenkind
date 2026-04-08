@@ -351,10 +351,18 @@ function LabAudioButton({ testCode }: { testCode: string }) {
               className="absolute pointer-events-none"
               style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
             >
+              <defs>
+                <linearGradient id={`donut-grad-${code}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#c9a5f7" />
+                  <stop offset="100%" stopColor="#944fed" />
+                </linearGradient>
+              </defs>
+              {/* Track */}
               <circle cx="42" cy="42" r={DONUT_R}
-                fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
+                fill="none" stroke="rgba(201,165,247,0.25)" strokeWidth="8" />
+              {/* Progress arc */}
               <circle cx="42" cy="42" r={DONUT_R}
-                fill="none" stroke="white" strokeWidth="8"
+                fill="none" stroke={`url(#donut-grad-${code})`} strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={DONUT_CIRC}
                 strokeDashoffset={dashOffset}
