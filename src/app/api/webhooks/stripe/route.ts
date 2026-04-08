@@ -380,6 +380,86 @@ async function handleAppointmentPayment(
       } catch (emailErr) {
         console.error('[RESEND] Failed to send booking confirmation:', emailErr)
       }
+
+      // Notify provider
+      const providerEmail = process.env.PROVIDER_EMAIL
+      if (providerEmail && process.env.RESEND_API_KEY) {
+        try {
+          const resend = new Resend(process.env.RESEND_API_KEY!)
+          await resend.emails.send({
+            from: process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>',
+            to: providerEmail,
+            subject: `New appointment booked — ${patientName}`,
+            html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body bgcolor="#f7f3ee" style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee;">
+    <tr>
+      <td align="center" style="padding: 48px 24px 40px 24px;">
+        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <table role="presentation" width="610" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 610px; width: 100%; background-color: #ffffff; border-radius: 20px; overflow: hidden;">
+          <tr>
+            <td style="padding: 40px 36px 32px 36px;">
+              <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: normal; font-family: Georgia, 'Playfair Display', serif; color: #280f49;">
+                New appointment booked
+              </h1>
+              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
+                A patient has scheduled an appointment with you.
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee; border-radius: 12px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">
+                      ${typeName}
+                    </p>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">
+                      ${patientName} &nbsp;&middot;&nbsp; ${durationMinutes} min
+                    </p>
+                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
+                    <p style="margin: 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/provider/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
+                      View Provider Portal
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 32px 24px 48px 24px;">
+        <p style="margin: 0; font-size: 12px; color: #bdb4b1;">
+          Womenkind &mdash; Personalized menopause &amp; midlife care
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+            `,
+          })
+          console.log(`[RESEND] Provider booking notification sent to ${providerEmail} (via webhook)`)
+        } catch (emailErr) {
+          console.error('[RESEND] Failed to send provider booking notification:', emailErr)
+        }
+      }
     }
   }
 }
