@@ -28,7 +28,8 @@ export function middleware(request: NextRequest) {
       pathname.startsWith('/_next') ||
       pathname.startsWith('/favicon') ||
       pathname.startsWith('/api') ||
-      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf)$/)
+      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|mp3|mp4|wav|ogg)$/) ||
+      pathname.startsWith('/audio/')
     ) {
       return NextResponse.next()
     }
