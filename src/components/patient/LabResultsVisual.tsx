@@ -335,22 +335,26 @@ function LabAudioButton({ testCode }: { testCode: string }) {
 
           {/* Player */}
           <div
-            className="fixed flex items-center justify-center rounded-2xl bg-aubergine shadow-xl"
+            className="fixed flex items-center justify-center bg-aubergine shadow-xl overflow-hidden"
             style={{
-              width: 104,
-              height: 104,
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
               left: pos.x,
               top: pos.y,
               transform: 'translate(-50%, -100%) translateY(-10px)',
               zIndex: 9999,
             }}
           >
-            {/* Donut ring */}
-            <svg width="84" height="84" viewBox="0 0 84 84" className="absolute pointer-events-none">
+            {/* Donut ring — 84px SVG centered in 80px circle; 2px overflow clipped each side = 6px gap */}
+            <svg width="84" height="84" viewBox="0 0 84 84"
+              className="absolute pointer-events-none"
+              style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+            >
               <circle cx="42" cy="42" r={DONUT_R}
-                fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5" />
+                fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="8" />
               <circle cx="42" cy="42" r={DONUT_R}
-                fill="none" stroke="white" strokeWidth="5"
+                fill="none" stroke="white" strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray={DONUT_CIRC}
                 strokeDashoffset={dashOffset}
@@ -361,15 +365,15 @@ function LabAudioButton({ testCode }: { testCode: string }) {
             {/* Play / Pause */}
             <button
               onClick={togglePlay}
-              className="relative z-10 flex items-center justify-center w-9 h-9 text-white hover:opacity-75 transition-opacity"
+              className="relative z-10 flex items-center justify-center w-12 h-12 text-white hover:opacity-75 transition-opacity"
             >
               {playing ? (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
                   <rect x="6" y="4" width="4" height="16" rx="1" />
                   <rect x="14" y="4" width="4" height="16" rx="1" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               )}
