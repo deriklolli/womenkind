@@ -203,6 +203,65 @@ function getTestInfo(code: string): { summary: string; relevance: string } | und
   return _INFO[code] || _INFO[code.toUpperCase()] || _INFO[code.trim()]
 }
 
+/* ── Audio aliases (duplicate test codes → shared mp3) ───────────────── */
+
+const AUDIO_ALIASES: Record<string, string> = {
+  tc:   'tchol',
+  tg:   'trig',
+  ferr: 'fer',
+}
+
+/* ── Audio play button ───────────────────────────────────────────────── */
+
+function LabAudioButton({ testCode }: { testCode: string }) {
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const code = AUDIO_ALIASES[testCode.toLowerCase()] ?? testCode.toLowerCase()
+  const src = `/audio/labs/${code}.mp3`
+
+  const toggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!audioRef.current) {
+      audioRef.current = new Audio(src)
+      audioRef.current.onended = () => setPlaying(false)
+    }
+    if (playing) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setPlaying(false)
+    } else {
+      audioRef.current.play().catch(() => setPlaying(false))
+      setPlaying(true)
+    }
+  }, [playing, src])
+
+  useEffect(() => () => { audioRef.current?.pause() }, [])
+
+  return (
+    <button
+      onClick={toggle}
+      title={playing ? 'Pause explanation' : 'Listen to explanation'}
+      className={`inline-flex items-center justify-center w-4 h-4 transition-colors cursor-pointer ${
+        playing ? 'text-aubergine/70' : 'text-aubergine/25 hover:text-aubergine/50'
+      }`}
+    >
+      {playing ? (
+        /* Pause icon */
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+          <rect x="6" y="4" width="4" height="16" rx="1" />
+          <rect x="14" y="4" width="4" height="16" rx="1" />
+        </svg>
+      ) : (
+        /* Speaker icon */
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
 /* ── Info tooltip (matches WearableTrends pattern) ──────────────────── */
 
 function LabInfoTooltip({ info }: { info: { summary: string; relevance: string } }) {
@@ -295,6 +354,7 @@ function RangeRow({ result }: { result: LabResultItem }) {
         <span className="text-sm font-sans font-medium text-aubergine flex items-center gap-1.5">
           {result.testName}
           <LabInfoTooltip info={info || { summary: result.testName, relevance: 'Your provider included this test as part of your evaluation. Ask about it at your next visit.' }} />
+          <LabAudioButton testCode={result.testCode} />
         </span>
         <div className="flex items-baseline gap-2 flex-shrink-0">
           <span
