@@ -832,11 +832,12 @@ export default function PatientDashboardPage() {
             onClick={async () => {
               window.open(`/presentation/${patient.presentationId}`, '_blank')
               setPatient(prev => prev ? { ...prev, presentationStatus: 'viewed' } : prev)
-              // Persist to DB so the dashboard stays in viewed state after navigation
-              await supabase
-                .from('care_presentations')
-                .update({ status: 'viewed', viewed_at: new Date().toISOString() })
-                .eq('id', patient.presentationId)
+              // Persist via API (service role) — patients cannot update care_presentations via RLS
+              await fetch('/api/presentations/viewed', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ presentationId: patient.presentationId }),
+              })
             }}
           >
             <div
