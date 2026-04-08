@@ -325,32 +325,9 @@ async function handleAppointmentPayment(
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
                       ${durationMinutes} min
                     </p>
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding-right: 10px; vertical-align: top;">
-                          <span style="font-size: 16px; color: #944fed;">&#128197;</span>
-                        </td>
-                        <td style="padding-bottom: 8px;">
-                          <p style="margin: 0; font-size: 14px; color: #280f49;">${dateStr}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding-right: 10px; vertical-align: top;">
-                          <span style="font-size: 16px; color: #944fed;">&#128336;</span>
-                        </td>
-                        <td>
-                          <p style="margin: 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
-                        </td>
-                      </tr>
-                      ${videoRoom ? `<tr>
-                        <td style="padding-right: 10px; vertical-align: top;">
-                          <span style="font-size: 16px; color: #944fed;">&#128249;</span>
-                        </td>
-                        <td style="padding-top: 8px;">
-                          <p style="margin: 0; font-size: 14px; color: #280f49;">Virtual visit via video call</p>
-                        </td>
-                      </tr>` : ''}
-                    </table>
+                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
+                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
+                    ${videoRoom ? `<p style="margin: 0; font-size: 14px; color: #280f49;">Virtual visit via video call</p>` : ''}
                   </td>
                 </tr>
               </table>
