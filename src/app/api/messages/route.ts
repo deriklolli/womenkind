@@ -161,12 +161,25 @@ export async function POST(req: NextRequest) {
 
     // Create a notification for the recipient when a provider sends a message
     if (senderType === 'provider') {
+      // Look up the provider's name for a personalised notification title
+      let senderName = 'Dr. Urban'
+      const { data: providerRow } = await supabase
+        .from('providers')
+        .select('profiles ( first_name, last_name )')
+        .eq('id', senderId)
+        .single()
+      if (providerRow) {
+        const prof = (providerRow as any).profiles
+        const fullName = `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim()
+        if (fullName) senderName = `Dr. ${prof?.last_name || fullName}`
+      }
+
       await supabase.from('notifications').insert({
         patient_id: recipientId,
         type: 'new_message',
-        title: 'New message from your care team',
+        title: `New message from ${senderName}`,
         body: body.length > 80 ? body.slice(0, 80) + '…' : body,
-        link_view: 'messages',
+        link_view: 'message',
         is_read: false,
         dismissed: false,
       })
