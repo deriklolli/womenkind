@@ -512,8 +512,8 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
         </div>
       )}
 
-      {/* Full-width stacked charts */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* 2-up chart grid */}
+      <div className="grid grid-cols-2 gap-4">
         {CHART_CONFIG.map(config => (
           <ProviderMetricChart
             key={config.key}
