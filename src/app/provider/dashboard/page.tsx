@@ -314,10 +314,14 @@ export default function ProviderDashboard() {
                     <button
                       key={intake.id}
                       onClick={() => router.push(`/provider/brief/${intake.id}`)}
-                      className="w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md
+                      className="relative overflow-hidden w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md
                                  border border-transparent hover:border-violet/10
                                  transition-all duration-200 text-left group"
                     >
+                      {/* Unread sliver — shown when intake has not been opened yet */}
+                      {intake.status === 'submitted' && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet" />
+                      )}
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
@@ -329,9 +333,14 @@ export default function ProviderDashboard() {
                                 {age}y
                               </span>
                             )}
-                            <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill border flex-shrink-0 ${status.color} ${status.bg}`}>
-                              {status.label}
-                            </span>
+                            {isMember && (
+                              <span className="flex items-center gap-1 flex-shrink-0">
+                                <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                                <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+                              </span>
+                            )}
                             {burden && (
                               <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill flex-shrink-0
                                 ${burden === 'severe' ? 'text-red-600 bg-red-50 border border-red-200' :
@@ -340,11 +349,6 @@ export default function ProviderDashboard() {
                                   'text-emerald-600 bg-emerald-50 border border-emerald-200'}`}
                               >
                                 {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
-                              </span>
-                            )}
-                            {isMember && (
-                              <span className="text-xs font-sans text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-pill border border-emerald-200 flex-shrink-0">
-                                Member
                               </span>
                             )}
                           </div>
