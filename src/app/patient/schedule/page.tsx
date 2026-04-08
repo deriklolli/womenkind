@@ -523,66 +523,70 @@ export default function PatientSchedulePage() {
 
         {/* ── Visit type selector ─────────────────────────────────────────── */}
         {step === 'visit-type' && nearbyClinic && (
-          <div className="max-w-2xl mx-auto">
+          <div>
             <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">
               How would you like to meet?
             </h1>
-            <p className="text-sm font-sans text-aubergine/40 mb-8 text-center">
+            <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">
               A Womenkind clinic is near you. Choose whichever works best.
             </p>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
               {/* Video visit card */}
               <button
                 onClick={() => setStep('select-type')}
-                className="group text-left bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 border border-aubergine/8 hover:border-violet/30 hover:shadow-md hover:shadow-violet/5 transition-all"
+                className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all group border border-aubergine/15"
               >
-                <div className="w-11 h-11 rounded-xl bg-violet/8 flex items-center justify-center mb-4 group-hover:bg-violet/12 transition-colors">
-                  <svg className="w-5 h-5 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
+                <div className="flex items-center justify-end mb-3">
+                  <span className="text-xs font-sans text-aubergine/40 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    Video
+                  </span>
                 </div>
-                <h2 className="font-sans font-semibold text-base text-aubergine mb-1">Video Visit</h2>
-                <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
+                <h3 className="text-base font-sans font-semibold text-aubergine mb-1.5 group-hover:text-violet transition-colors">
+                  Video Visit
+                </h3>
+                <p className="text-xs font-sans text-aubergine/50 mb-4 line-clamp-2">
                   Meet with Dr. Urban from home. Choose your appointment type and book a time that works for you.
                 </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs font-sans font-semibold text-violet">
-                  Book now
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
+                <div className="mt-auto">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-violet/8 border border-violet/15 rounded-pill text-xs font-sans font-medium text-violet">
+                    Book instantly
+                  </span>
                 </div>
               </button>
 
               {/* In-person visit card */}
               <button
                 onClick={() => setStep('inperson-form')}
-                className="group text-left bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 border border-aubergine/8 hover:border-violet/30 hover:shadow-md hover:shadow-violet/5 transition-all"
+                className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all group border border-aubergine/15"
               >
-                <div className="w-11 h-11 rounded-xl bg-violet/8 flex items-center justify-center mb-4 group-hover:bg-violet/12 transition-colors">
-                  <svg className="w-5 h-5 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
-                  </svg>
+                <div className="flex items-center justify-end mb-3">
+                  <span className="text-xs font-sans text-aubergine/40 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                    </svg>
+                    {nearbyClinic.distance_miles < 1
+                      ? '< 1 mile'
+                      : `${Math.round(nearbyClinic.distance_miles)} miles`}
+                  </span>
                 </div>
-                <h2 className="font-sans font-semibold text-base text-aubergine mb-1">In Person Visit</h2>
-                <p className="text-xs font-sans text-aubergine/35 mb-0.5">
-                  {nearbyClinic.name}
+                <h3 className="text-base font-sans font-semibold text-aubergine mb-1.5 group-hover:text-violet transition-colors">
+                  In Person Visit
+                </h3>
+                <p className="text-xs font-sans text-aubergine/50 mb-4 line-clamp-2">
+                  {nearbyClinic.name} &middot; {nearbyClinic.address}, {nearbyClinic.city}. We&apos;ll confirm a time within 24 hours.
                 </p>
-                <p className="text-xs font-sans text-aubergine/35 mb-2">
-                  {nearbyClinic.address}, {nearbyClinic.city} &middot;{' '}
-                  {nearbyClinic.distance_miles < 1
-                    ? 'Less than 1 mile away'
-                    : `${Math.round(nearbyClinic.distance_miles)} miles away`}
-                </p>
-                <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
-                  Request an in-person appointment at our clinic. We'll confirm a time with you within 24 hours.
-                </p>
-                <div className="mt-4 flex items-center gap-1.5 text-xs font-sans font-semibold text-violet">
-                  Request appointment
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
+                <div className="mt-auto">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
+                    Request appointment
+                  </span>
                 </div>
               </button>
+
             </div>
           </div>
         )}
