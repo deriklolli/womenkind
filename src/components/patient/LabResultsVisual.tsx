@@ -211,54 +211,160 @@ const AUDIO_ALIASES: Record<string, string> = {
   ferr: 'fer',
 }
 
-/* ── Audio play button ───────────────────────────────────────────────── */
+/* ── Audio player tooltip with donut progress ────────────────────────── */
+
+const DONUT_R   = 30
+const DONUT_CIRC = 2 * Math.PI * DONUT_R
 
 function LabAudioButton({ testCode }: { testCode: string }) {
-  const [playing, setPlaying] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const code = AUDIO_ALIASES[testCode.toLowerCase()] ?? testCode.toLowerCase()
-  const src = `/audio/labs/${code}.mp3`
+  const [open,     setOpen]     = useState(false)
+  const [playing,  setPlaying]  = useState(false)
+  const [progress, setProgress] = useState(0)          // 0–1
+  const [pos,      setPos]      = useState({ x: 0, y: 0 })
 
-  const toggle = useCallback((e: React.MouseEvent) => {
+  const btnRef   = useRef<HTMLButtonElement>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const rafRef   = useRef<number | null>(null)
+
+  const code = AUDIO_ALIASES[testCode.toLowerCase()] ?? testCode.toLowerCase()
+  const src  = `/audio/labs/${code}.mp3`
+
+  /* position tooltip above the icon */
+  const updatePos = useCallback(() => {
+    if (!btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    setPos({ x: r.left + r.width / 2, y: r.top })
+  }, [])
+
+  /* open / close */
+  const handleIconClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    updatePos()
+    setOpen(o => !o)
+  }, [updatePos])
+
+  /* close + stop on outside click */
+  useEffect(() => {
+    if (!open) return
+    const dismiss = () => {
+      setOpen(false)
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      setPlaying(false)
+      setProgress(0)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+    document.addEventListener('click', dismiss)
+    return () => document.removeEventListener('click', dismiss)
+  }, [open])
+
+  /* RAF-based progress tracking */
+  const tick = useCallback(() => {
+    const a = audioRef.current
+    if (!a || a.paused) return
+    if (a.duration > 0) setProgress(a.currentTime / a.duration)
+    rafRef.current = requestAnimationFrame(tick)
+  }, [])
+
+  /* play / pause */
+  const togglePlay = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     if (!audioRef.current) {
       audioRef.current = new Audio(src)
-      audioRef.current.onended = () => setPlaying(false)
+      audioRef.current.onended = () => {
+        setPlaying(false)
+        setProgress(0)
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      }
     }
     if (playing) {
       audioRef.current.pause()
-      audioRef.current.currentTime = 0
       setPlaying(false)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     } else {
       audioRef.current.play().catch(() => setPlaying(false))
       setPlaying(true)
+      rafRef.current = requestAnimationFrame(tick)
     }
-  }, [playing, src])
+  }, [playing, src, tick])
 
-  useEffect(() => () => { audioRef.current?.pause() }, [])
+  /* cleanup on unmount */
+  useEffect(() => () => {
+    audioRef.current?.pause()
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+  }, [])
+
+  const dashOffset = DONUT_CIRC * (1 - progress)
 
   return (
-    <button
-      onClick={toggle}
-      title={playing ? 'Pause explanation' : 'Listen to explanation'}
-      className={`inline-flex items-center justify-center w-4 h-4 transition-colors cursor-pointer ${
-        playing ? 'text-aubergine/70' : 'text-aubergine/25 hover:text-aubergine/50'
-      }`}
-    >
-      {playing ? (
-        /* Pause icon */
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-          <rect x="6" y="4" width="4" height="16" rx="1" />
-          <rect x="14" y="4" width="4" height="16" rx="1" />
-        </svg>
-      ) : (
-        /* Speaker icon */
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <>
+      {/* Speaker trigger icon */}
+      <button
+        ref={btnRef}
+        onClick={handleIconClick}
+        title="Listen to explanation"
+        className={`inline-flex items-center justify-center w-4 h-4 transition-colors cursor-pointer ${
+          open || playing ? 'text-aubergine/60' : 'text-aubergine/25 hover:text-aubergine/50'
+        }`}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         </svg>
+      </button>
+
+      {/* Floating player tooltip */}
+      {open && createPortal(
+        <div
+          className="fixed flex items-center justify-center rounded-2xl bg-aubergine shadow-xl"
+          style={{
+            width: 104,
+            height: 104,
+            left: pos.x,
+            top: pos.y,
+            transform: 'translate(-50%, -100%) translateY(-10px)',
+            zIndex: 9999,
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Donut progress ring */}
+          <svg width="84" height="84" viewBox="0 0 84 84" className="absolute">
+            {/* track */}
+            <circle cx="42" cy="42" r={DONUT_R}
+              fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5" />
+            {/* progress arc */}
+            <circle cx="42" cy="42" r={DONUT_R}
+              fill="none" stroke="white" strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={DONUT_CIRC}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 42 42)"
+            />
+          </svg>
+
+          {/* Play / Pause button */}
+          <button
+            onClick={togglePlay}
+            className="relative z-10 flex items-center justify-center w-9 h-9 text-white hover:opacity-75 transition-opacity"
+          >
+            {playing ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+        </div>,
+        document.body
       )}
-    </button>
+    </>
   )
 }
 
