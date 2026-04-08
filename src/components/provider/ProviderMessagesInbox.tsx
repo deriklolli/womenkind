@@ -68,8 +68,11 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
   }
 
   const openThread = async (threadId: string) => {
+    if (selectedThread === threadId) return
     setSelectedThread(threadId)
     setThreadLoading(true)
+    setThreadMessages([])
+    setReplyBody('')
     try {
       const res = await fetch(`/api/messages?threadId=${threadId}`)
       const data = await res.json()
@@ -85,7 +88,6 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
       setThreads(prev => prev.map(t =>
         t.thread_id === threadId ? { ...t, unreadCount: 0 } : t
       ))
-      // Update parent count
       const newUnread = threads.reduce((sum, t) =>
         sum + (t.thread_id === threadId ? 0 : (t.unreadCount || 0)), 0
       )
@@ -99,7 +101,6 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
 
   const handleReply = async () => {
     if (!replyBody.trim() || !selectedThread) return
-    // Find the original sender to reply to
     const thread = threads.find(t => t.thread_id === selectedThread)
     const recipientId = thread?.sender_type === 'patient' ? thread.sender_id : thread?.recipient_id
     if (!recipientId) return
@@ -139,159 +140,166 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  if (loading) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin mx-auto" />
-        <p className="text-sm font-sans text-aubergine/40 mt-4">Loading messages...</p>
-      </div>
-    )
-  }
+  const activeThread = threads.find(t => t.thread_id === selectedThread)
 
-  // Thread detail view
-  if (selectedThread) {
-    const thread = threads.find(t => t.thread_id === selectedThread)
-
-    return (
-      <>
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => { setSelectedThread(null); setReplyBody('') }}
-            className="text-sm font-sans text-aubergine/40 hover:text-aubergine transition-colors flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Messages
-          </button>
-        </div>
-
-        <div className="bg-white rounded-card shadow-sm p-6">
-          {thread?.subject && (
-            <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">{thread.subject}</h2>
-          )}
-
-          {threadLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1 mb-4">
-              {threadMessages.map((msg) => {
-                const isProvider = msg.sender_type === 'provider'
-                return (
-                  <div key={msg.id} className={`flex ${isProvider ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] px-4 py-3 rounded-2xl ${
-                      isProvider
-                        ? 'bg-violet/10 text-aubergine'
-                        : 'bg-cream border border-aubergine/5 text-aubergine'
-                    }`}>
-                      <p className="text-[11px] font-sans font-medium mb-1 opacity-50">
-                        {isProvider ? 'You' : (msg.senderName || 'Patient')}
-                      </p>
-                      <p className="text-sm font-sans leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-                      <p className="text-[10px] font-sans opacity-30 mt-1.5 text-right">
-                        {formatTime(msg.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-
-          {/* Reply box */}
-          <div className="flex gap-2 pt-4 border-t border-aubergine/5">
-            <input
-              type="text"
-              placeholder="Type a reply..."
-              value={replyBody}
-              onChange={(e) => setReplyBody(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply() } }}
-              className="flex-1 px-4 py-2.5 rounded-full border border-aubergine/10 bg-cream text-sm font-sans text-aubergine placeholder:text-aubergine/30 focus:outline-none focus:border-violet/30 focus:ring-2 focus:ring-violet/10"
-            />
-            <button
-              onClick={handleReply}
-              disabled={!replyBody.trim() || sending}
-              className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-violet border border-violet/25 hover:bg-violet/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {sending ? 'Sending...' : 'Reply'}
-            </button>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // Thread list view
   return (
     <>
-      <div className="flex items-end justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-6">
         <div>
           <h1 className="font-sans font-semibold text-3xl text-aubergine tracking-tight">Messages</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
-            {threads.length === 0
+            {loading ? '' : threads.length === 0
               ? 'No messages yet'
               : `${threads.length} conversation${threads.length > 1 ? 's' : ''}`}
           </p>
         </div>
       </div>
 
-      {threads.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
+        </div>
+      ) : threads.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-card shadow-sm">
           <p className="text-lg font-sans font-semibold text-aubergine/30">No messages</p>
-          <p className="text-sm font-sans text-aubergine/20 mt-2">
-            Patient messages will appear here
-          </p>
+          <p className="text-sm font-sans text-aubergine/20 mt-2">Patient messages will appear here</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {threads.map((thread) => (
-            <button
-              key={thread.thread_id}
-              onClick={() => openThread(thread.thread_id)}
-              className="w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md
-                         border border-transparent hover:border-violet/10
-                         transition-all duration-200 text-left group"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-violet/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                    </svg>
-                  </div>
+        <div className="flex gap-4 h-[calc(100vh-260px)] min-h-[500px]">
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-sans font-medium text-aubergine group-hover:text-violet transition-colors truncate">
-                        {thread.subject || `Message from ${thread.senderName || 'Patient'}`}
+          {/* Left — thread list */}
+          <div className="w-72 flex-shrink-0 flex flex-col bg-white rounded-card shadow-sm overflow-hidden">
+            <div className="flex-1 overflow-y-auto divide-y divide-aubergine/5">
+              {threads.map((thread) => {
+                const isSelected = thread.thread_id === selectedThread
+                const senderLabel = thread.sender_type === 'patient'
+                  ? (thread.senderName || 'Patient')
+                  : 'You'
+
+                return (
+                  <button
+                    key={thread.thread_id}
+                    onClick={() => openThread(thread.thread_id)}
+                    className={`w-full text-left px-4 py-4 transition-colors ${
+                      isSelected
+                        ? 'bg-violet/5 border-l-2 border-violet'
+                        : 'hover:bg-aubergine/3 border-l-2 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className={`text-sm font-sans font-semibold truncate leading-tight ${
+                        isSelected ? 'text-violet' : 'text-aubergine'
+                      }`}>
+                        {thread.sender_type === 'patient'
+                          ? (thread.senderName || 'Patient')
+                          : 'Dr. Urban'}
                       </p>
-                      {thread.unreadCount > 0 && (
-                        <span className="shrink-0 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-sans font-semibold flex items-center justify-center">
-                          {thread.unreadCount}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {thread.unreadCount > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-sans font-bold flex items-center justify-center">
+                            {thread.unreadCount}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-sans text-aubergine/30">
+                          {formatTime(thread.created_at)}
                         </span>
-                      )}
+                      </div>
                     </div>
-                    <p className="text-xs font-sans text-aubergine/40 truncate">
-                      {thread.sender_type === 'patient' ? `${thread.senderName || 'Patient'}: ` : 'You: '}{thread.body}
+                    {thread.subject && (
+                      <p className="text-xs font-sans font-medium text-aubergine/60 truncate mb-0.5">
+                        {thread.subject}
+                      </p>
+                    )}
+                    <p className="text-xs font-sans text-aubergine/35 truncate">
+                      {senderLabel}: {thread.body}
                     </p>
-                  </div>
-                </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-xs font-sans text-aubergine/30">
-                    {formatTime(thread.created_at)}
-                  </span>
-                  <svg className="w-5 h-5 text-aubergine/20 group-hover:text-violet transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          {/* Right — thread detail */}
+          <div className="flex-1 flex flex-col bg-white rounded-card shadow-sm overflow-hidden">
+            {!selectedThread ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <svg className="w-10 h-10 text-aubergine/15 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                   </svg>
+                  <p className="text-sm font-sans text-aubergine/30">Select a conversation</p>
                 </div>
               </div>
-            </button>
-          ))}
+            ) : (
+              <>
+                {/* Thread header */}
+                <div className="px-6 py-4 border-b border-aubergine/8 flex-shrink-0">
+                  <p className="text-sm font-sans font-semibold text-aubergine">
+                    {activeThread?.sender_type === 'patient'
+                      ? (activeThread?.senderName || 'Patient')
+                      : 'Dr. Urban'}
+                  </p>
+                  {activeThread?.subject && (
+                    <p className="text-xs font-sans text-aubergine/40 mt-0.5">{activeThread.subject}</p>
+                  )}
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                  {threadLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="w-5 h-5 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      {threadMessages.map((msg) => {
+                        const isProvider = msg.sender_type === 'provider'
+                        return (
+                          <div key={msg.id} className={`flex ${isProvider ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+                              isProvider
+                                ? 'bg-violet/10 text-aubergine'
+                                : 'bg-cream border border-aubergine/5 text-aubergine'
+                            }`}>
+                              <p className="text-[11px] font-sans font-medium mb-1 opacity-50">
+                                {isProvider ? 'You' : (msg.senderName || 'Patient')}
+                              </p>
+                              <p className="text-sm font-sans leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                              <p className="text-[10px] font-sans opacity-30 mt-1.5 text-right">
+                                {formatTime(msg.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                      <div ref={messagesEndRef} />
+                    </>
+                  )}
+                </div>
+
+                {/* Reply box */}
+                <div className="px-6 py-4 border-t border-aubergine/8 flex-shrink-0 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type a reply..."
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply() } }}
+                    className="flex-1 px-4 py-2.5 rounded-full border border-aubergine/10 bg-cream text-sm font-sans text-aubergine placeholder:text-aubergine/30 focus:outline-none focus:border-violet/30 focus:ring-2 focus:ring-violet/10"
+                  />
+                  <button
+                    onClick={handleReply}
+                    disabled={!replyBody.trim() || sending}
+                    className="px-5 py-2.5 rounded-full text-xs font-sans font-semibold bg-white text-violet border border-violet/25 hover:bg-violet/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {sending ? 'Sending...' : 'Reply'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
         </div>
       )}
     </>
