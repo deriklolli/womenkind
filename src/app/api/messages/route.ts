@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
     if (providerId) {
       const patientSenderIds = Array.from(new Set(
         threads.filter(t => t.sender_type === 'patient').map(t => t.sender_id)
-      )]
+      ))
       if (patientSenderIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
