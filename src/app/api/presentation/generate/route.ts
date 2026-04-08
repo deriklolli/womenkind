@@ -97,16 +97,16 @@ export async function POST(req: Request) {
     </tr>
     <tr>
       <td align="center" style="padding: 0 24px 48px 24px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(40,15,73,0.06);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; border: 1px solid #f2f1f4;">
           <tr>
             <td style="padding: 48px 44px;">
               <h1 style="font-family: Georgia, 'Playfair Display', serif; font-size: 22px; color: #280f49; margin: 0 0 8px 0; font-weight: normal;">
                 Hi ${patientFirstName},
               </h1>
-              <p style="font-size: 15px; color: #422a1f; line-height: 1.7; margin: 0 0 8px 0; opacity: 0.7;">
+              <p style="font-size: 15px; color: #7b6a62; line-height: 1.7; margin: 0 0 8px 0;">
                 Your provider has prepared a personalized care summary just for you.
               </p>
-              <p style="font-size: 15px; color: #422a1f; line-height: 1.7; margin: 0 0 32px 0; opacity: 0.7;">
+              <p style="font-size: 15px; color: #7b6a62; line-height: 1.7; margin: 0 0 32px 0;">
                 It covers what's happening in your body and the recommended plan to help you feel your best.
               </p>
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
                   </td>
                 </tr>
               </table>
-              <p style="font-size: 13px; color: #422a1f; opacity: 0.4; line-height: 1.5; margin: 28px 0 0 0; text-align: center;">
+              <p style="font-size: 13px; color: #b3aaa5; line-height: 1.5; margin: 28px 0 0 0; text-align: center;">
                 You can also access this anytime from your patient portal.
               </p>
             </td>
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
     </tr>
     <tr>
       <td align="center" style="padding: 0 24px 48px 24px;">
-        <p style="font-size: 12px; color: #280f49; opacity: 0.25; margin: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;">
+        <p style="font-size: 12px; color: #d0cac7; margin: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;">
           Womenkind — Personalized menopause &amp; midlife care
         </p>
       </td>

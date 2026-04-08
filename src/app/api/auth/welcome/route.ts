@@ -48,10 +48,10 @@ export async function POST(req: NextRequest) {
               <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #280f49;">
                 Welcome to Womenkind, ${name}
               </h1>
-              <p style="margin: 0 0 24px 0; font-size: 14px; color: #422a1f; opacity: 0.6; line-height: 1.6;">
+              <p style="margin: 0 0 24px 0; font-size: 14px; color: #8e7f79; line-height: 1.6;">
                 We're glad you're here. Womenkind is personalized menopause and midlife care, designed around you.
               </p>
-              <p style="margin: 0 0 28px 0; font-size: 14px; color: #422a1f; opacity: 0.6; line-height: 1.6;">
+              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.6;">
                 Your next step is to complete your intake survey. It takes about 15-20 minutes and helps your provider understand your health history, symptoms, and goals so they can prepare a personalized care plan before your first consultation.
               </p>
 
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
                 </tr>
               </table>
 
-              <p style="margin: 0; font-size: 13px; color: #422a1f; opacity: 0.35; line-height: 1.5;">
+              <p style="margin: 0; font-size: 13px; color: #bdb4b1; line-height: 1.5;">
                 If you have any questions, simply reply to this email. We're here for you.
               </p>
             </td>
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     </tr>
     <tr>
       <td align="center" style="padding: 32px 24px 48px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #422a1f; opacity: 0.25;">
+        <p style="margin: 0; font-size: 12px; color: #d0cac7;">
           Womenkind -- Personalized menopause and midlife care
         </p>
       </td>

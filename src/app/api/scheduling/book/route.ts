@@ -84,7 +84,7 @@ async function sendBookingConfirmationEmail({
               <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #280f49;">
                 You're all set, ${firstName}!
               </h1>
-              <p style="margin: 0 0 28px 0; font-size: 14px; color: #422a1f; opacity: 0.6; line-height: 1.5;">
+              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
                 Your appointment has been confirmed. We look forward to seeing you.
               </p>
 
@@ -95,7 +95,7 @@ async function sendBookingConfirmationEmail({
                     <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">
                       ${appointmentName}
                     </p>
-                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">
                       ${durationMinutes} min
                     </p>
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
@@ -136,10 +136,10 @@ async function sendBookingConfirmationEmail({
               `}
 
               <!-- Add to Calendar -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; border-top: 1px solid rgba(40,15,73,0.06); padding-top: 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 20px; border-top: 1px solid #f2f1f4; padding-top: 20px;">
                 <tr>
                   <td align="center">
-                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #422a1f; opacity: 0.4;">Add to your calendar</p>
+                    <p style="margin: 0 0 10px 0; font-size: 12px; color: #b3aaa5;">Add to your calendar</p>
                     <a href="${appUrl}/api/scheduling/calendar-export?appointmentId=${appointmentId}" style="font-size: 13px; color: #944fed; text-decoration: none; margin-right: 16px;">Apple / Outlook</a>
                     <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointmentName + ' — Womenkind')}&dates=${new Date(startsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}/${new Date(endsAt).toISOString().replace(/[-:]/g, '').replace(/\\.\\d{3}/, '')}&details=${encodeURIComponent('Womenkind appointment')}&location=${encodeURIComponent('Virtual (video call)')}" target="_blank" style="font-size: 13px; color: #944fed; text-decoration: none;">Google Calendar</a>
                   </td>
@@ -152,7 +152,7 @@ async function sendBookingConfirmationEmail({
     </tr>
     <tr>
       <td align="center" style="padding: 32px 24px 48px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #422a1f; opacity: 0.35;">
+        <p style="margin: 0; font-size: 12px; color: #bdb4b1;">
           Womenkind &mdash; Personalized menopause &amp; midlife care
         </p>
       </td>

@@ -313,7 +313,7 @@ async function handleAppointmentPayment(
               <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #280f49;">
                 You're all set, ${firstName}!
               </h1>
-              <p style="margin: 0 0 28px 0; font-size: 14px; color: #422a1f; opacity: 0.6; line-height: 1.5;">
+              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
                 Your payment has been received and your appointment is confirmed.
               </p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee; border-radius: 12px;">
@@ -322,7 +322,7 @@ async function handleAppointmentPayment(
                     <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">
                       ${typeName}
                     </p>
-                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #422a1f; opacity: 0.5;">
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">
                       ${durationMinutes} min
                     </p>
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
@@ -366,7 +366,7 @@ async function handleAppointmentPayment(
     </tr>
     <tr>
       <td align="center" style="padding: 32px 24px 48px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #422a1f; opacity: 0.35;">
+        <p style="margin: 0; font-size: 12px; color: #bdb4b1;">
           Womenkind &mdash; Personalized menopause &amp; midlife care
         </p>
       </td>
