@@ -7,8 +7,18 @@ import { supabase } from '@/lib/supabase-browser'
 import AppointmentTypeSelector from '@/components/patient/AppointmentTypeSelector'
 import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
 import BookingConfirmation from '@/components/patient/BookingConfirmation'
+import InPersonRequestForm from '@/components/patient/InPersonRequestForm'
+import type { NearbyClinic } from '@/app/api/clinics/nearby/route'
 
-type BookingStep = 'select-type' | 'pick-time' | 'confirm' | 'success'
+type BookingStep =
+  | 'enter-zip'        // no location on file — prompt for zip
+  | 'visit-type'       // nearby clinic found — choose video vs in-person
+  | 'select-type'      // video flow: pick appointment type
+  | 'pick-time'        // video flow: pick time slot
+  | 'confirm'          // video flow: review & book
+  | 'success'          // video flow: booked
+  | 'inperson-form'    // in-person flow: request form
+  | 'inperson-success' // in-person flow: submitted
 
 const DEMO_PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 const DEMO_PATIENT_ID = 'c0000000-0000-0000-0000-000000000001'
@@ -39,7 +49,7 @@ interface BookedAppointment {
 export default function PatientSchedulePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [step, setStep] = useState<BookingStep>('select-type')
+  const [step, setStep] = useState<BookingStep>('select-type') // overwritten in checkAuth
   const [loading, setLoading] = useState(true)
   const [isMember, setIsMember] = useState(false)
   const [patientId, setPatientId] = useState(DEMO_PATIENT_ID)
@@ -57,6 +67,12 @@ export default function PatientSchedulePage() {
   const [bookedAppointment, setBookedAppointment] = useState<BookedAppointment | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [canceling, setCanceling] = useState(false)
+
+  // In-person / proximity state
+  const [nearbyClinic, setNearbyClinic] = useState<NearbyClinic | null>(null)
+  const [zipInput, setZipInput] = useState('')
+  const [geocoding, setGeocoding] = useState(false)
+  const [zipError, setZipError] = useState<string | null>(null)
 
   // Check if we're returning from a successful payment
   const bookedId = searchParams.get('booked')
@@ -98,6 +114,8 @@ export default function PatientSchedulePage() {
         setPatientName('Sarah Mitchell')
         setPatientEmail('dlolli@gmail.com')
         setIsMember(true) // Demo patient Sarah is a member
+        // Demo mode skips proximity check — go straight to video booking
+        setStep('select-type')
         setLoading(false)
         return
       }
@@ -137,8 +155,65 @@ export default function PatientSchedulePage() {
         .maybeSingle()
 
       setIsMember(!!membership)
+
+      // Proximity check — determine whether to offer in-person option
+      await checkNearbyClinic(patient.id)
+    } else {
+      setStep('select-type')
     }
     setLoading(false)
+  }
+
+  const checkNearbyClinic = async (pid: string) => {
+    try {
+      const res = await fetch(`/api/clinics/nearby?patientId=${pid}`)
+      const data = await res.json()
+
+      if (!data.hasLocation) {
+        // Patient has no stored coordinates yet — ask for their zip first
+        setStep('enter-zip')
+        return
+      }
+
+      if (data.clinics && data.clinics.length > 0) {
+        setNearbyClinic(data.clinics[0]) // closest clinic
+        setStep('visit-type')
+      } else {
+        // No clinics nearby — go straight to video booking
+        setStep('select-type')
+      }
+    } catch {
+      // On error, silently fall through to video booking
+      setStep('select-type')
+    }
+  }
+
+  const handleGeocode = async () => {
+    const zip = zipInput.trim()
+    if (!/^\d{5}$/.test(zip)) {
+      setZipError('Please enter a valid 5-digit zip code.')
+      return
+    }
+    setZipError(null)
+    setGeocoding(true)
+    try {
+      const res = await fetch('/api/clinics/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, zip }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        setZipError(data.error || 'Could not find that zip code. Please try again.')
+        return
+      }
+      // Coordinates stored — now re-run the proximity check
+      await checkNearbyClinic(patientId)
+    } catch {
+      setZipError('Something went wrong. Please try again.')
+    } finally {
+      setGeocoding(false)
+    }
   }
 
   const fetchBookedAppointment = async (id: string) => {
@@ -351,8 +426,8 @@ export default function PatientSchedulePage() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Progress bar */}
-        {step !== 'success' && (
+        {/* Progress bar — only shown for the video booking flow */}
+        {(['select-type', 'pick-time', 'confirm'] as BookingStep[]).includes(step) && (
           <div className="flex items-center justify-center gap-2 mb-8">
             {(['select-type', 'pick-time', 'confirm'] as const).map((s, i) => {
               const steps: BookingStep[] = ['select-type', 'pick-time', 'confirm']
@@ -398,6 +473,155 @@ export default function PatientSchedulePage() {
           </div>
         )}
 
+        {/* ── Enter zip ──────────────────────────────────────────────────── */}
+        {step === 'enter-zip' && (
+          <div className="max-w-sm mx-auto text-center">
+            <div className="w-14 h-14 rounded-2xl bg-violet/8 flex items-center justify-center mx-auto mb-5">
+              <svg className="w-7 h-7 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+              </svg>
+            </div>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
+              Check for in-person visits
+            </h1>
+            <p className="text-sm font-sans text-aubergine/40 mb-8 leading-relaxed">
+              Enter your zip code and we'll check if an in-person visit at a Womenkind clinic is available near you.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                value={zipInput}
+                onChange={e => { setZipInput(e.target.value.replace(/\D/g, '')); setZipError(null) }}
+                onKeyDown={e => e.key === 'Enter' && handleGeocode()}
+                placeholder="Zip code"
+                className="flex-1 px-4 py-3 text-sm font-sans text-aubergine bg-white border border-aubergine/15 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-2 focus:ring-violet/10 placeholder:text-aubergine/25 transition text-center tracking-widest"
+              />
+              <button
+                onClick={handleGeocode}
+                disabled={geocoding || zipInput.length !== 5}
+                className="px-5 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-brand hover:bg-violet/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {geocoding ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : 'Check'}
+              </button>
+            </div>
+            {zipError && (
+              <p className="text-xs font-sans text-red-500 mt-2">{zipError}</p>
+            )}
+            <button
+              onClick={() => setStep('select-type')}
+              className="mt-5 text-xs font-sans text-aubergine/35 hover:text-aubergine/60 transition-colors underline underline-offset-2"
+            >
+              Skip — I only want a video visit
+            </button>
+          </div>
+        )}
+
+        {/* ── Visit type selector ─────────────────────────────────────────── */}
+        {step === 'visit-type' && nearbyClinic && (
+          <div className="max-w-2xl mx-auto">
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">
+              How would you like to meet?
+            </h1>
+            <p className="text-sm font-sans text-aubergine/40 mb-8 text-center">
+              A Womenkind clinic is near you. Choose whichever works best.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Video visit card */}
+              <button
+                onClick={() => setStep('select-type')}
+                className="group text-left bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 border border-aubergine/8 hover:border-violet/30 hover:shadow-md hover:shadow-violet/5 transition-all"
+              >
+                <div className="w-11 h-11 rounded-xl bg-violet/8 flex items-center justify-center mb-4 group-hover:bg-violet/12 transition-colors">
+                  <svg className="w-5 h-5 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                </div>
+                <h2 className="font-sans font-semibold text-base text-aubergine mb-1">Video Visit</h2>
+                <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
+                  Meet with Dr. Urban from home. Choose your appointment type and book a time that works for you.
+                </p>
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-sans font-semibold text-violet">
+                  Book now
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* In-person visit card */}
+              <button
+                onClick={() => setStep('inperson-form')}
+                className="group text-left bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 border border-aubergine/8 hover:border-violet/30 hover:shadow-md hover:shadow-violet/5 transition-all"
+              >
+                <div className="w-11 h-11 rounded-xl bg-violet/8 flex items-center justify-center mb-4 group-hover:bg-violet/12 transition-colors">
+                  <svg className="w-5 h-5 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+                  </svg>
+                </div>
+                <h2 className="font-sans font-semibold text-base text-aubergine mb-1">In Person Visit</h2>
+                <p className="text-xs font-sans text-aubergine/35 mb-0.5">
+                  {nearbyClinic.name}
+                </p>
+                <p className="text-xs font-sans text-aubergine/35 mb-2">
+                  {nearbyClinic.address}, {nearbyClinic.city} &middot;{' '}
+                  {nearbyClinic.distance_miles < 1
+                    ? 'Less than 1 mile away'
+                    : `${Math.round(nearbyClinic.distance_miles)} miles away`}
+                </p>
+                <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
+                  Request an in-person appointment at our clinic. We'll confirm a time with you within 24 hours.
+                </p>
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-sans font-semibold text-violet">
+                  Request appointment
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── In-person request form ──────────────────────────────────────── */}
+        {step === 'inperson-form' && nearbyClinic && (
+          <InPersonRequestForm
+            patientId={patientId}
+            clinic={nearbyClinic}
+            onSuccess={() => setStep('inperson-success')}
+            onBack={() => setStep('visit-type')}
+          />
+        )}
+
+        {/* ── In-person success ───────────────────────────────────────────── */}
+        {step === 'inperson-success' && (
+          <div className="text-center py-12 max-w-sm mx-auto">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-5">
+              <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
+              Request received
+            </h1>
+            <p className="text-sm font-sans text-aubergine/50 leading-relaxed mb-8">
+              We'll reach out within 24 hours to confirm your in-person appointment at{' '}
+              {nearbyClinic?.name || 'the clinic'}.
+            </p>
+            <button
+              onClick={() => router.push('/patient/dashboard')}
+              className="px-6 py-2.5 text-sm font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        )}
+
+        {/* ── Video booking flow ──────────────────────────────────────────── */}
         {/* Step content */}
         {step === 'select-type' && (
           <div>
