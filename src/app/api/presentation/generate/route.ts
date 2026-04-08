@@ -88,8 +88,8 @@ export async function POST(req: Request) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-<body style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7f3ee;">
+<body bgcolor="#f7f3ee" style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee;">
     <tr>
       <td align="center" style="padding: 48px 24px 40px 24px;">
         <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     </tr>
     <tr>
       <td align="center" style="padding: 0 24px 48px 24px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(40,15,73,0.06);">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; border: 1px solid rgba(40,15,73,0.06);">
           <tr>
             <td style="padding: 48px 44px;">
               <h1 style="font-family: Georgia, 'Playfair Display', serif; font-size: 22px; color: #280f49; margin: 0 0 8px 0; font-weight: normal;">
