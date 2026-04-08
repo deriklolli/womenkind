@@ -301,20 +301,13 @@ export default function LabOrdersPanel({
                           </svg>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-1 mb-1.5">
-                        {order.tests.map((t: any) => (
-                          <span key={t.code} className="text-xs font-sans text-aubergine/40 bg-aubergine/5 px-2 py-0.5 rounded-pill">
-                            {t.code}
-                          </span>
-                        ))}
-                      </div>
                       <div className="flex items-center gap-4 text-xs font-sans text-aubergine/30">
-                        {order.clinical_indication && <span>{order.clinical_indication}</span>}
                         {order.ordered_at && (
                           <span>
-                            Ordered {new Date(order.ordered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date(order.ordered_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                           </span>
                         )}
+                        {order.clinical_indication && <span>{order.clinical_indication}</span>}
                       </div>
                     </div>
                   </div>
