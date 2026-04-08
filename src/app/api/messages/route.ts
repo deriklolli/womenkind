@@ -159,6 +159,19 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
+    // Create a notification for the recipient when a provider sends a message
+    if (senderType === 'provider') {
+      await supabase.from('notifications').insert({
+        patient_id: recipientId,
+        type: 'new_message',
+        title: 'New message from your care team',
+        body: body.length > 80 ? body.slice(0, 80) + '…' : body,
+        link_view: 'messages',
+        is_read: false,
+        dismissed: false,
+      })
+    }
+
     return NextResponse.json({ message: data, threadId: actualThreadId })
   } catch (err: any) {
     console.error('Failed to send message:', err)
