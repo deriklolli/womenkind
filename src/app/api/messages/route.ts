@@ -63,13 +63,19 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     // Group by thread_id and take the latest message per thread
+    // Also track the original patient sender per thread (independent of who sent last)
     const threadMap = new Map<string, any>()
     const unreadCounts = new Map<string, number>()
+    const threadPatientSenderId = new Map<string, string>()
 
     for (const msg of data || []) {
       if (!threadMap.has(msg.thread_id)) {
         threadMap.set(msg.thread_id, msg)
         unreadCounts.set(msg.thread_id, 0)
+      }
+      // Track the patient who started (or participates in) this thread
+      if (msg.sender_type === 'patient' && !threadPatientSenderId.has(msg.thread_id)) {
+        threadPatientSenderId.set(msg.thread_id, msg.sender_id)
       }
       // Count unread messages for the requesting user
       const isRecipient = (patientId && msg.recipient_id === patientId) ||
@@ -82,25 +88,27 @@ export async function GET(req: NextRequest) {
     const threads = Array.from(threadMap.values()).map(msg => ({
       ...msg,
       unreadCount: unreadCounts.get(msg.thread_id) || 0,
+      patientSenderId: threadPatientSenderId.get(msg.thread_id) || null,
     }))
 
-    // For provider inbox: look up patient names for all patient-originated threads
+    // For provider inbox: look up patient names using the original patient sender
+    // (not the latest message sender — doctor replies would otherwise lose the name)
     if (providerId) {
-      const patientSenderIds = Array.from(new Set(
-        threads.filter(t => t.sender_type === 'patient').map(t => t.sender_id)
+      const allPatientIds = Array.from(new Set(
+        threads.map(t => t.patientSenderId).filter(Boolean)
       ))
-      if (patientSenderIds.length > 0) {
+      if (allPatientIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, first_name, last_name')
-          .in('id', patientSenderIds)
+          .in('id', allPatientIds)
         const nameMap = new Map<string, string>()
         for (const p of profiles || []) {
           nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim())
         }
         threads.forEach(t => {
-          if (t.sender_type === 'patient') {
-            t.senderName = nameMap.get(t.sender_id) || 'Patient'
+          if (t.patientSenderId) {
+            t.senderName = nameMap.get(t.patientSenderId) || 'Patient'
           }
         })
       }

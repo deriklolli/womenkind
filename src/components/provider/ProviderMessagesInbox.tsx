@@ -27,12 +27,15 @@ interface Thread {
   created_at: string
   unreadCount: number
   senderName?: string
+  patientSenderId?: string | null
 }
 
 interface Props {
   providerId: string
   onCountChange?: (count: number) => void
 }
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
 
 export default function ProviderMessagesInbox({ providerId, onCountChange }: Props) {
   const [threads, setThreads] = useState<Thread[]>([])
@@ -56,9 +59,16 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
     try {
       const res = await fetch(`/api/messages?providerId=${providerId}`)
       const data = await res.json()
-      const threadList = data.threads || []
-      setThreads(threadList)
-      const unread = threadList.reduce((sum: number, t: Thread) => sum + (t.unreadCount || 0), 0)
+      const allThreads: Thread[] = data.threads || []
+
+      // Filter out threads with no activity in the last 30 days
+      const cutoff = Date.now() - THIRTY_DAYS_MS
+      const activeThreads = allThreads.filter(
+        t => new Date(t.created_at).getTime() > cutoff
+      )
+
+      setThreads(activeThreads)
+      const unread = activeThreads.reduce((sum, t) => sum + (t.unreadCount || 0), 0)
       onCountChange?.(unread)
     } catch (err) {
       console.error('Failed to fetch threads:', err)
@@ -102,7 +112,9 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
   const handleReply = async () => {
     if (!replyBody.trim() || !selectedThread) return
     const thread = threads.find(t => t.thread_id === selectedThread)
-    const recipientId = thread?.sender_type === 'patient' ? thread.sender_id : thread?.recipient_id
+    const recipientId = thread?.patientSenderId || (
+      thread?.sender_type === 'patient' ? thread.sender_id : thread?.recipient_id
+    )
     if (!recipientId) return
 
     setSending(true)
@@ -141,6 +153,8 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
   }
 
   const activeThread = threads.find(t => t.thread_id === selectedThread)
+  // Patient name is always resolved from the original patient sender
+  const activePatientName = activeThread?.senderName || 'Patient'
 
   return (
     <>
@@ -150,7 +164,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
           <h1 className="font-sans font-semibold text-3xl text-aubergine tracking-tight">Messages</h1>
           <p className="text-sm font-sans text-aubergine/50 mt-1">
             {loading ? '' : threads.length === 0
-              ? 'No messages yet'
+              ? 'No messages'
               : `${threads.length} conversation${threads.length > 1 ? 's' : ''}`}
           </p>
         </div>
@@ -168,14 +182,16 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
       ) : (
         <div className="flex gap-4 h-[calc(100vh-260px)] min-h-[500px]">
 
-          {/* Left — thread list */}
+          {/* Left — thread list, sorted by most recent activity */}
           <div className="w-72 flex-shrink-0 flex flex-col bg-white rounded-card shadow-sm overflow-hidden">
             <div className="flex-1 overflow-y-auto divide-y divide-aubergine/5">
               {threads.map((thread) => {
                 const isSelected = thread.thread_id === selectedThread
-                const senderLabel = thread.sender_type === 'patient'
-                  ? (thread.senderName || 'Patient')
-                  : 'You'
+                const isUnread = thread.unreadCount > 0
+                // Patient name is always from the original patient sender
+                const patientName = thread.senderName || 'Patient'
+                // Preview attribution: who sent the latest message?
+                const previewPrefix = thread.sender_type === 'provider' ? 'You' : patientName
 
                 return (
                   <button
@@ -187,32 +203,28 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
                         : 'hover:bg-aubergine/3 border-l-2 border-transparent'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      {/* Always show the patient's name */}
                       <p className={`text-sm font-sans font-semibold truncate leading-tight ${
-                        isSelected ? 'text-violet' : 'text-aubergine'
+                        isSelected ? 'text-violet' : isUnread ? 'text-aubergine' : 'text-aubergine/70'
                       }`}>
-                        {thread.sender_type === 'patient'
-                          ? (thread.senderName || 'Patient')
-                          : 'Dr. Urban'}
+                        {patientName}
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {thread.unreadCount > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-sans font-bold flex items-center justify-center">
-                            {thread.unreadCount}
-                          </span>
+                        {/* Unread indicator — solid dot, clears on open */}
+                        {isUnread && (
+                          <span className="w-2 h-2 rounded-full bg-violet flex-shrink-0" />
                         )}
                         <span className="text-[10px] font-sans text-aubergine/30">
                           {formatTime(thread.created_at)}
                         </span>
                       </div>
                     </div>
-                    {thread.subject && (
-                      <p className="text-xs font-sans font-medium text-aubergine/60 truncate mb-0.5">
-                        {thread.subject}
-                      </p>
-                    )}
-                    <p className="text-xs font-sans text-aubergine/35 truncate">
-                      {senderLabel}: {thread.body}
+                    {/* Latest message preview with attribution */}
+                    <p className={`text-xs font-sans truncate ${
+                      isUnread ? 'text-aubergine/60 font-medium' : 'text-aubergine/35'
+                    }`}>
+                      {previewPrefix}: {thread.body}
                     </p>
                   </button>
                 )
@@ -233,13 +245,9 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
               </div>
             ) : (
               <>
-                {/* Thread header */}
+                {/* Thread header — always shows patient name */}
                 <div className="px-6 py-4 border-b border-aubergine/8 flex-shrink-0">
-                  <p className="text-sm font-sans font-semibold text-aubergine">
-                    {activeThread?.sender_type === 'patient'
-                      ? (activeThread?.senderName || 'Patient')
-                      : 'Dr. Urban'}
-                  </p>
+                  <p className="text-sm font-sans font-semibold text-aubergine">{activePatientName}</p>
                   {activeThread?.subject && (
                     <p className="text-xs font-sans text-aubergine/40 mt-0.5">{activeThread.subject}</p>
                   )}
@@ -263,7 +271,7 @@ export default function ProviderMessagesInbox({ providerId, onCountChange }: Pro
                                 : 'bg-cream border border-aubergine/5 text-aubergine'
                             }`}>
                               <p className="text-[11px] font-sans font-medium mb-1 opacity-50">
-                                {isProvider ? 'You' : (msg.senderName || 'Patient')}
+                                {isProvider ? 'You' : (msg.senderName || activePatientName)}
                               </p>
                               <p className="text-sm font-sans leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                               <p className="text-[10px] font-sans opacity-30 mt-1.5 text-right">
