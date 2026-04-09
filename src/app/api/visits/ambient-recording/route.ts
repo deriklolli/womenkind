@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const maxDuration = 60 // seconds — allows for large audio file transfers
 
 function getSupabase() {
   return createClient(
@@ -55,41 +54,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ noteId: note.id })
     }
 
-    // ── Step 1: Download audio from Supabase Storage via service role ──────
-    console.log(`[ambient-recording] Downloading audio from Supabase: ${recordingStoragePath}`)
-    const { data: audioData, error: downloadErr } = await supabase.storage
+    // ── Step 1: Generate signed URL server-side using service role ────────
+    // Service role bypasses RLS — produces a valid URL AssemblyAI can fetch
+    const { data: signedData, error: signedErr } = await supabase.storage
       .from('recordings')
-      .download(recordingStoragePath)
+      .createSignedUrl(recordingStoragePath, 3600)
 
-    if (downloadErr || !audioData) {
-      console.error('[ambient-recording] Failed to download audio:', downloadErr)
+    if (signedErr || !signedData?.signedUrl) {
+      console.error('[ambient-recording] Failed to create signed URL:', signedErr)
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
-      return NextResponse.json({ error: 'Audio download failed' }, { status: 500 })
+      return NextResponse.json({ error: 'Could not generate audio URL' }, { status: 500 })
     }
 
-    // ── Step 2: Upload audio to AssemblyAI ─────────────────────────────────
-    console.log(`[ambient-recording] Uploading audio to AssemblyAI (${audioData.size} bytes)`)
-    const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
-      method: 'POST',
-      headers: {
-        Authorization: assemblyKey,
-        'Content-Type': audioData.type || 'audio/webm',
-        'Transfer-Encoding': 'chunked',
-      },
-      body: audioData,
-    })
+    console.log('[ambient-recording] Signed URL created via service role')
 
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text()
-      console.error(`[ambient-recording] AssemblyAI upload failed (HTTP ${uploadRes.status}):`, errText)
-      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
-      return NextResponse.json({ error: 'Audio upload failed' }, { status: 502 })
-    }
-
-    const { upload_url } = await uploadRes.json()
-    console.log(`[ambient-recording] Audio uploaded to AssemblyAI: ${upload_url}`)
-
-    // ── Step 3: Submit transcript job ───────────────────────────────────────
+    // ── Step 2: Submit transcript job directly with signed URL ─────────────
     const appUrl = (
       process.env.NEXT_PUBLIC_APP_URL ||
       'https://www.womenkindhealth.com'
@@ -103,7 +82,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        audio_url: upload_url,
+        audio_url: signedData.signedUrl,
         speech_model: 'universal-2',
         speaker_labels: true,
         speakers_expected: 2,
