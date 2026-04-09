@@ -118,6 +118,7 @@ export default function PatientProfilePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
   const [providerId, setProviderId] = useState<string>('')
+  const [headerExpanded, setHeaderExpanded] = useState(true)
 
   const { setPageContext } = useChatContext()
   const { state: recordingState, startRecording, stopRecording } = useRecording()
@@ -335,28 +336,21 @@ export default function PatientProfilePage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Patient header card */}
         <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5 mb-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
-                {membership && (
-                  <span className="flex items-center gap-1 flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                    <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
-                {age && <span>{age} years old</span>}
-                {heightStr && <span>{heightStr}</span>}
-                {weightLbs && <span>{weightLbs} lbs</span>}
-                {bmi && <span>BMI {bmi}</span>}
-                {patient.state && <span>{patient.state}</span>}
-              </div>
+          {/* Always-visible row: name + collapse toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+              {membership && (
+                <span className="flex items-center gap-1 flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+                </span>
+              )}
+              {/* Pills always visible so they don't disappear on collapse */}
               {latestIntake?.ai_brief?.metadata && (
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2">
                   {burden && (
                     <span className={`text-xs font-sans px-2.5 py-1 rounded-pill border ${
                       burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
@@ -380,7 +374,7 @@ export default function PatientProfilePage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
                 className="text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
@@ -401,26 +395,62 @@ export default function PatientProfilePage() {
                   View Clinical Brief
                 </button>
               )}
+              <button
+                onClick={() => setHeaderExpanded(e => !e)}
+                className="p-2 rounded-brand text-aubergine/30 hover:text-aubergine/60 hover:bg-aubergine/5 transition-all"
+                aria-label={headerExpanded ? 'Collapse patient details' : 'Expand patient details'}
+              >
+                <svg className={`w-4 h-4 transition-transform duration-200 ${headerExpanded ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
             </div>
           </div>
 
-          {/* Current overview — updates as new visits and notes are added.
-              Priority: latest signed encounter note → latest visit notes → intake overview */}
-          {(() => {
-            const encounterOverview = latestEncounterNote?.assessment
-              ? `${latestEncounterNote.assessment}${latestEncounterNote.plan ? ` ${latestEncounterNote.plan}` : ''}`
-              : null
-            const visitOverview = visits.find(v => v.treatment_updates || v.provider_notes)
-            const visitText = visitOverview?.treatment_updates || visitOverview?.provider_notes || null
-            const intakeOverview = latestIntake?.ai_brief?.symptom_summary?.overview || null
-            const overview = encounterOverview || visitText || intakeOverview
-            if (!overview) return null
-            return (
-              <div className="mt-4 pt-4 border-t border-aubergine/5">
-                <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{overview}</p>
+          {/* Collapsible details */}
+          {headerExpanded && (
+            <>
+              <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50 mt-3">
+                {age && <span>{age} years old</span>}
+                {heightStr && <span>{heightStr}</span>}
+                {weightLbs && <span>{weightLbs} lbs</span>}
+                {bmi && <span>BMI {bmi}</span>}
+                {patient.state && <span>{patient.state}</span>}
               </div>
-            )
-          })()}
+
+              {/* Current overview — priority: signed encounter note → visit notes → intake overview */}
+              {(() => {
+                const fromEncounter = !!(latestEncounterNote?.assessment)
+                const visitOverview = visits.find(v => v.treatment_updates || v.provider_notes)
+                const visitText = visitOverview?.treatment_updates || visitOverview?.provider_notes || null
+                const intakeOverview = latestIntake?.ai_brief?.symptom_summary?.overview || null
+                const hasContent = fromEncounter || visitText || intakeOverview
+                if (!hasContent) return null
+                return (
+                  <div className="mt-4 pt-4 border-t border-aubergine/5 space-y-3">
+                    {fromEncounter ? (
+                      <>
+                        {latestEncounterNote!.assessment && (
+                          <div>
+                            <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Assessment</p>
+                            <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{latestEncounterNote!.assessment}</p>
+                          </div>
+                        )}
+                        {latestEncounterNote!.plan && (
+                          <div>
+                            <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Plan</p>
+                            <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{latestEncounterNote!.plan}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{visitText || intakeOverview}</p>
+                    )}
+                  </div>
+                )
+              })()}
+            </>
+          )}
         </div>
 
         {/* Tab navigation */}
