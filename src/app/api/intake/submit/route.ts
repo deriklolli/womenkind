@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 // Lazy-init: don't create at module scope (breaks Vercel build when env vars missing)
 function getSupabase() {
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    logPhiAccess({ providerId, patientId, recordType: 'intake', recordId: intakeId, action: 'create', route: '/api/intake/submit', req })
     return NextResponse.json({
       success: true,
       briefGenerated: !!aiBrief,

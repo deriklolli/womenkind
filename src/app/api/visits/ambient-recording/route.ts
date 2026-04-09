@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 
 function getSupabase() {
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
       .update({ assemblyai_transcript_id: transcriptData.id })
       .eq('id', note.id)
 
+    logPhiAccess({ providerId, patientId, recordType: 'encounter_note', recordId: note.id, action: 'create', route: '/api/visits/ambient-recording', req })
     console.log(`[ambient-recording] Transcription submitted. Note: ${note.id}, Transcript: ${transcriptData.id}`)
     return NextResponse.json({ noteId: note.id })
   } catch (err: any) {

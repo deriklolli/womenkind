@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 /**
  * GET /api/messages?patientId=xxx  — patient's threads
@@ -184,6 +185,10 @@ export async function POST(req: NextRequest) {
         dismissed: false,
       })
     }
+
+    const senderId_ = senderType === 'provider' ? senderId : null
+    const patientId_ = senderType === 'patient' ? senderId : recipientId
+    logPhiAccess({ providerId: senderId_, patientId: patientId_, recordType: 'message', recordId: data.id, action: 'create', route: '/api/messages', req })
 
     return NextResponse.json({ message: data, threadId: actualThreadId })
   } catch (err: any) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 /**
  * POST /api/checkin
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
       visit = data
     }
 
+    logPhiAccess({ providerId: appointment.provider_id, patientId: appointment.patient_id, recordType: 'appointment', recordId: appointmentId, action: 'create', route: '/api/checkin', req })
     return NextResponse.json({ visit }, { status: 200 })
   } catch (err: any) {
     console.error('Check-in error:', err)

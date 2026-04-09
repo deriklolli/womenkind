@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 function getSupabase() {
   return createClient(
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', note.id)
 
+    logPhiAccess({ providerId: note.provider_id, patientId: note.patient_id, recordType: 'encounter_note', recordId: note.id, action: 'transcribe', route: '/api/visits/webhook/transcription' })
     console.log(`[transcription-webhook] SOAP note draft saved for note ${note.id}`)
 
     // Notify the provider

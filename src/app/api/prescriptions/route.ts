@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { logPhiAccess } from '@/lib/phi-audit'
 
 /**
  * GET /api/prescriptions?patientId=xxx
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    logPhiAccess({ patientId, recordType: 'prescription', action: 'read', route: '/api/prescriptions', req })
     return NextResponse.json({ prescriptions })
   } catch (err: any) {
     console.error('Failed to fetch prescriptions:', err)
