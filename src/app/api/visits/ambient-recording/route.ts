@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         audio_url: signedData.signedUrl,
-        speech_model: 'universal-2',
+        speech_models: ['universal-2'],
         speaker_labels: true,
         speakers_expected: 2,
         webhook_url: webhookUrl,
