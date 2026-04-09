@@ -22,6 +22,7 @@ export async function GET() {
     },
     body: JSON.stringify({
       audio_url: 'https://assembly.ai/sports_injuries.mp3',
+      speech_model: 'universal-2',
       speaker_labels: true,
       speakers_expected: 2,
     }),

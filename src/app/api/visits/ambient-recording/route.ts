@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
 
     const assemblyPayload = {
       audio_url: recordingUrl,
+      speech_model: 'universal-2',
       speaker_labels: true,
       speakers_expected: 2,
       webhook_url: webhookUrl,

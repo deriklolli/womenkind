@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         audio_url: s3_url,
+        speech_model: 'universal-2',
         speaker_labels: true,
         speakers_expected: 2,
         // Callback when transcription is complete
