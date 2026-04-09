@@ -71,19 +71,13 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
 
       if (uploadErr) throw uploadErr
 
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from('recordings')
-        .createSignedUrl(filename, 86400)
-
-      if (signedErr || !signedData?.signedUrl) throw signedErr || new Error('No signed URL')
-
+      // API route downloads via service role and uploads to AssemblyAI directly
       const res = await fetch('/api/visits/ambient-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: pid,
           providerId: providerIdRef.current,
-          recordingUrl: signedData.signedUrl,
           recordingStoragePath: filename,
         }),
       })

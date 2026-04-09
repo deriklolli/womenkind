@@ -11,17 +11,18 @@ function getSupabase() {
 /**
  * POST /api/visits/ambient-recording
  *
- * Called by AmbientRecorder after uploading audio to Supabase Storage.
- * Creates an encounter_note record and submits the audio to AssemblyAI
- * for transcription — same pipeline as the telehealth recording webhook.
+ * 1. Creates encounter_note record
+ * 2. Downloads audio from Supabase Storage via service role
+ * 3. Uploads audio to AssemblyAI (so they host it — no signed URL issues)
+ * 4. Submits transcript job pointing at AssemblyAI-hosted URL
  *
- * Body: { patientId, providerId, recordingUrl, recordingStoragePath }
+ * Body: { patientId, providerId, recordingStoragePath }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { patientId, providerId, recordingUrl, recordingStoragePath } = await req.json()
+    const { patientId, providerId, recordingStoragePath } = await req.json()
 
-    if (!patientId || !providerId || !recordingUrl) {
+    if (!patientId || !providerId || !recordingStoragePath) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -34,8 +35,7 @@ export async function POST(req: NextRequest) {
         patient_id: patientId,
         provider_id: providerId,
         source: 'in_office',
-        recording_url: recordingUrl,
-        recording_storage_path: recordingStoragePath || null,
+        recording_storage_path: recordingStoragePath,
         status: 'transcribing',
       })
       .select('id')
@@ -48,33 +48,51 @@ export async function POST(req: NextRequest) {
 
     const assemblyKey = process.env.ASSEMBLYAI_API_KEY
     if (!assemblyKey) {
-      console.warn('[ambient-recording] ASSEMBLYAI_API_KEY not set — saving without transcription')
+      console.warn('[ambient-recording] ASSEMBLYAI_API_KEY not set')
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
       return NextResponse.json({ noteId: note.id })
     }
 
-    // Build webhook URL — fall back to production domain if env var not set
+    // ── Step 1: Download audio from Supabase Storage via service role ──────
+    console.log(`[ambient-recording] Downloading audio from Supabase: ${recordingStoragePath}`)
+    const { data: audioData, error: downloadErr } = await supabase.storage
+      .from('recordings')
+      .download(recordingStoragePath)
+
+    if (downloadErr || !audioData) {
+      console.error('[ambient-recording] Failed to download audio:', downloadErr)
+      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      return NextResponse.json({ error: 'Audio download failed' }, { status: 500 })
+    }
+
+    // ── Step 2: Upload audio to AssemblyAI ─────────────────────────────────
+    console.log(`[ambient-recording] Uploading audio to AssemblyAI (${audioData.size} bytes)`)
+    const uploadRes = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: assemblyKey,
+        'Content-Type': audioData.type || 'audio/webm',
+        'Transfer-Encoding': 'chunked',
+      },
+      body: audioData,
+    })
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text()
+      console.error(`[ambient-recording] AssemblyAI upload failed (HTTP ${uploadRes.status}):`, errText)
+      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      return NextResponse.json({ error: 'Audio upload failed' }, { status: 502 })
+    }
+
+    const { upload_url } = await uploadRes.json()
+    console.log(`[ambient-recording] Audio uploaded to AssemblyAI: ${upload_url}`)
+
+    // ── Step 3: Submit transcript job ───────────────────────────────────────
     const appUrl = (
       process.env.NEXT_PUBLIC_APP_URL ||
       'https://www.womenkindhealth.com'
     ).replace(/\/+$/, '')
     const webhookUrl = `${appUrl}/api/visits/webhook/transcription`
-
-    const assemblyPayload = {
-      audio_url: recordingUrl,
-      speech_model: 'universal-2',
-      speaker_labels: true,
-      speakers_expected: 2,
-      webhook_url: webhookUrl,
-      ...(process.env.WEBHOOK_SECRET
-        ? {
-            webhook_auth_header_name: 'x-webhook-secret',
-            webhook_auth_header_value: process.env.WEBHOOK_SECRET,
-          }
-        : {}),
-    }
-
-    console.log(`[ambient-recording] Submitting to AssemblyAI, webhook: ${webhookUrl}`)
 
     const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
@@ -82,28 +100,38 @@ export async function POST(req: NextRequest) {
         Authorization: assemblyKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(assemblyPayload),
+      body: JSON.stringify({
+        audio_url: upload_url,
+        speech_model: 'universal-2',
+        speaker_labels: true,
+        speakers_expected: 2,
+        webhook_url: webhookUrl,
+        ...(process.env.WEBHOOK_SECRET
+          ? {
+              webhook_auth_header_name: 'x-webhook-secret',
+              webhook_auth_header_value: process.env.WEBHOOK_SECRET,
+            }
+          : {}),
+      }),
     })
 
     if (!transcriptRes.ok) {
       const errText = await transcriptRes.text()
-      console.error(`[ambient-recording] AssemblyAI submit failed (HTTP ${transcriptRes.status}):`, errText)
+      console.error(`[ambient-recording] AssemblyAI transcript submit failed (HTTP ${transcriptRes.status}):`, errText)
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
       return NextResponse.json({ error: 'Transcription submit failed', detail: errText }, { status: 502 })
     }
 
     const transcriptData = await transcriptRes.json()
-
-    // Store the AssemblyAI transcript ID for webhook matching
     await supabase
       .from('encounter_notes')
       .update({ assemblyai_transcript_id: transcriptData.id })
       .eq('id', note.id)
 
-    console.log(`[ambient-recording] Transcription submitted for note ${note.id}, transcript ${transcriptData.id}`)
+    console.log(`[ambient-recording] Transcription submitted. Note: ${note.id}, Transcript: ${transcriptData.id}`)
     return NextResponse.json({ noteId: note.id })
   } catch (err: any) {
-    console.error('[ambient-recording] Error:', err)
+    console.error('[ambient-recording] Unexpected error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
