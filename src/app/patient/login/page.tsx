@@ -63,6 +63,13 @@ export default function PatientLoginPage() {
         throw new Error('This account is not a patient account. Please use the provider login.')
       }
 
+      // Ensure patient record exists (idempotent — safe to call on every login)
+      await fetch('/api/auth/create-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: data.user.id }),
+      })
+
       localStorage.removeItem('womenkind_demo_patient')
       router.push('/patient/dashboard')
     } catch (err: any) {
@@ -93,10 +100,17 @@ export default function PatientLoginPage() {
       if (signUpError) throw signUpError
 
       // If email confirmation is required
-      if (!data.session) {
+      if (!data.session || !data.user) {
         setMessage('Check your email for a confirmation link.')
         return
       }
+
+      // Ensure patient record exists
+      await fetch('/api/auth/create-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: data.user.id }),
+      })
 
       localStorage.removeItem('womenkind_demo_patient')
       router.push('/patient/dashboard')
