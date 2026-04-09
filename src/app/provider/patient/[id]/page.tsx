@@ -113,6 +113,7 @@ export default function PatientProfilePage() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([])
   const [providerNotes, setProviderNotes] = useState<ProviderNote[]>([])
   const [messageThreadCount, setMessageThreadCount] = useState(0)
+  const [encounterNotesCount, setEncounterNotesCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
   const [providerId, setProviderId] = useState<string>('')
@@ -136,7 +137,7 @@ export default function PatientProfilePage() {
   const loadPatientData = async () => {
     setLoading(true)
     try {
-      const [patientRes, intakesRes, visitsRes, subsRes, rxRes, labRes, notesRes] = await Promise.all([
+      const [patientRes, intakesRes, visitsRes, subsRes, rxRes, labRes, notesRes, encounterRes] = await Promise.all([
         supabase
           .from('patients')
           .select('id, profile_id, date_of_birth, phone, state, profiles ( first_name, last_name, email )')
@@ -171,6 +172,11 @@ export default function PatientProfilePage() {
           .select('id, visit_id, title, content, note_type, created_at, updated_at')
           .eq('patient_id', patientId)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('encounter_notes')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId)
+          .neq('status', 'failed'),
       ])
 
       if (patientRes.error) throw patientRes.error
@@ -182,6 +188,7 @@ export default function PatientProfilePage() {
       setPrescriptions((rxRes.data || []) as Prescription[])
       setLabOrders((labRes.data || []) as LabOrder[])
       setProviderNotes((notesRes.data || []) as ProviderNote[])
+      setEncounterNotesCount(encounterRes.count ?? 0)
 
       // Fetch message thread count
       try {
@@ -307,7 +314,7 @@ export default function PatientProfilePage() {
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
     { key: 'timeline', label: 'Visit Timeline', count: visits.length },
-    { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length },
+    { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length + encounterNotesCount },
     { key: 'messages', label: 'Messages', count: messageThreadCount },
   ]
 
