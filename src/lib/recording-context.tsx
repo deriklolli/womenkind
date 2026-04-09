@@ -54,12 +54,7 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const upload = useCallback(async (pid: string, pName: string, mime: string) => {
     setState('uploading')
     try {
-      // Dynamic import to avoid pulling supabase into the context bundle unnecessarily
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
+      const { supabase } = await import('@/lib/supabase-browser')
 
       const ext = mime.includes('ogg') ? 'ogg' : 'webm'
       const blob = new Blob(chunksRef.current, { type: mime })
