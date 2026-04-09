@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import { ChatContextProvider, useChatContext } from '@/lib/chat-context'
+import { RecordingProvider } from '@/lib/recording-context'
 import ChatWidget from '@/components/provider/ChatWidget'
+import RecordingBar from '@/components/provider/RecordingBar'
 
 function ChatWidgetWithContext() {
   const { pageContext } = useChatContext()
@@ -80,8 +82,11 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
 
   return (
     <ChatContextProvider>
-      {children}
-      <ChatWidgetWithContext />
+      <RecordingProvider>
+        {children}
+        <RecordingBar />
+        <ChatWidgetWithContext />
+      </RecordingProvider>
     </ChatContextProvider>
   )
 }

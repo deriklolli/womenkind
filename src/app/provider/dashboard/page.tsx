@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase-browser'
 import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav'
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
-import AmbientRecorder from '@/components/provider/AmbientRecorder'
 import { useChatContext } from '@/lib/chat-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 
@@ -386,7 +385,6 @@ export default function ProviderDashboard() {
                   {patients.length} active {patients.length === 1 ? 'patient' : 'patients'}
                 </p>
               </div>
-              {providerId && <AmbientRecorder providerId={providerId} />}
             </div>
 
             {/* Search bar */}

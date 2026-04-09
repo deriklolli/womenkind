@@ -13,6 +13,7 @@ import EncounterNotesPanel from '@/components/provider/EncounterNotesPanel'
 import PatientMessagesPanel from '@/components/provider/PatientMessagesPanel'
 import PatientBiometrics from '@/components/provider/PatientBiometrics'
 import { useChatContext } from '@/lib/chat-context'
+import { useRecording } from '@/lib/recording-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 
 interface PatientProfile {
@@ -118,6 +119,7 @@ export default function PatientProfilePage() {
   const [providerId, setProviderId] = useState<string>('')
 
   const { setPageContext } = useChatContext()
+  const { state: recordingState, startRecording, stopRecording } = useRecording()
 
   useEffect(() => {
     resolveProviderId()
@@ -374,6 +376,26 @@ export default function PatientProfilePage() {
                 }`}>
                   {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
                 </span>
+              )}
+              {recordingState === 'idle' && providerId && (
+                <button
+                  onClick={() => startRecording({ id: patientId, name }, providerId)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill border border-aubergine/15 text-xs font-sans font-semibold text-aubergine/60 hover:text-aubergine hover:border-aubergine/30 transition-all"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Record visit
+                </button>
+              )}
+              {recordingState === 'recording' && (
+                <button
+                  onClick={stopRecording}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-pill border border-red-200 bg-red-50 text-xs font-sans font-semibold text-red-600 hover:bg-red-100 transition-all"
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  Stop recording
+                </button>
               )}
             </div>
           </div>
