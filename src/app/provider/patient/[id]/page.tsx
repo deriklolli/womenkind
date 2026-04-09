@@ -114,6 +114,7 @@ export default function PatientProfilePage() {
   const [providerNotes, setProviderNotes] = useState<ProviderNote[]>([])
   const [messageThreadCount, setMessageThreadCount] = useState(0)
   const [encounterNotesCount, setEncounterNotesCount] = useState(0)
+  const [latestEncounterNote, setLatestEncounterNote] = useState<{ assessment: string | null; plan: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
   const [providerId, setProviderId] = useState<string>('')
@@ -137,7 +138,7 @@ export default function PatientProfilePage() {
   const loadPatientData = async () => {
     setLoading(true)
     try {
-      const [patientRes, intakesRes, visitsRes, subsRes, rxRes, labRes, notesRes, encounterRes] = await Promise.all([
+      const [patientRes, intakesRes, visitsRes, subsRes, rxRes, labRes, notesRes, encounterRes, latestEncounterRes] = await Promise.all([
         supabase
           .from('patients')
           .select('id, profile_id, date_of_birth, phone, state, profiles ( first_name, last_name, email )')
@@ -177,6 +178,14 @@ export default function PatientProfilePage() {
           .select('id', { count: 'exact', head: true })
           .eq('patient_id', patientId)
           .neq('status', 'failed'),
+        supabase
+          .from('encounter_notes')
+          .select('assessment, plan')
+          .eq('patient_id', patientId)
+          .eq('status', 'signed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ])
 
       if (patientRes.error) throw patientRes.error
@@ -189,6 +198,7 @@ export default function PatientProfilePage() {
       setLabOrders((labRes.data || []) as LabOrder[])
       setProviderNotes((notesRes.data || []) as ProviderNote[])
       setEncounterNotesCount(encounterRes.count ?? 0)
+      setLatestEncounterNote(latestEncounterRes.data ?? null)
 
       // Fetch message thread count
       try {
@@ -370,7 +380,16 @@ export default function PatientProfilePage() {
                 </div>
               )}
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <button
+                onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
+                className="text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Care Presentation
+              </button>
               {latestIntake && (
                 <button
                   onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
@@ -385,14 +404,23 @@ export default function PatientProfilePage() {
             </div>
           </div>
 
-          {/* Overview — matches brief page */}
-          {latestIntake?.ai_brief?.symptom_summary?.overview && (
-            <div className="mt-4 pt-4 border-t border-aubergine/5">
-              <p className="text-sm font-sans text-aubergine/70 leading-relaxed">
-                {latestIntake.ai_brief.symptom_summary.overview}
-              </p>
-            </div>
-          )}
+          {/* Current overview — updates as new visits and notes are added.
+              Priority: latest signed encounter note → latest visit notes → intake overview */}
+          {(() => {
+            const encounterOverview = latestEncounterNote?.assessment
+              ? `${latestEncounterNote.assessment}${latestEncounterNote.plan ? ` ${latestEncounterNote.plan}` : ''}`
+              : null
+            const visitOverview = visits.find(v => v.treatment_updates || v.provider_notes)
+            const visitText = visitOverview?.treatment_updates || visitOverview?.provider_notes || null
+            const intakeOverview = latestIntake?.ai_brief?.symptom_summary?.overview || null
+            const overview = encounterOverview || visitText || intakeOverview
+            if (!overview) return null
+            return (
+              <div className="mt-4 pt-4 border-t border-aubergine/5">
+                <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{overview}</p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Tab navigation */}
