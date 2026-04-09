@@ -118,6 +118,7 @@ export default function PatientProfilePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview')
   const [providerId, setProviderId] = useState<string>('')
+  const [notesRefreshing, setNotesRefreshing] = useState(false)
 
   const { setPageContext } = useChatContext()
   const { state: recordingState, startRecording, stopRecording } = useRecording()
@@ -125,6 +126,24 @@ export default function PatientProfilePage() {
   useEffect(() => {
     resolveProviderId()
   }, [])
+
+  // When a recording finishes uploading, re-fetch the encounter notes count
+  useEffect(() => {
+    if (recordingState === 'uploading') {
+      setNotesRefreshing(true)
+    }
+    if (recordingState === 'done') {
+      supabase
+        .from('encounter_notes')
+        .select('id', { count: 'exact', head: true })
+        .eq('patient_id', patientId)
+        .neq('status', 'failed')
+        .then(({ count }) => {
+          setEncounterNotesCount(count ?? 0)
+          setNotesRefreshing(false)
+        })
+    }
+  }, [recordingState, patientId])
 
   useEffect(() => {
     loadPatientData()
