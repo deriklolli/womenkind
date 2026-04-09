@@ -13,9 +13,18 @@ export async function GET() {
     return NextResponse.json({ error: 'ASSEMBLYAI_API_KEY not set in environment' }, { status: 500 })
   }
 
-  // Ping AssemblyAI account endpoint to confirm key validity
-  const res = await fetch('https://api.assemblyai.com/v2/account', {
-    headers: { Authorization: key },
+  // Submit a real transcript job using AssemblyAI's own sample audio
+  const res = await fetch('https://api.assemblyai.com/v2/transcript', {
+    method: 'POST',
+    headers: {
+      Authorization: key,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      audio_url: 'https://assembly.ai/sports_injuries.mp3',
+      speaker_labels: true,
+      speakers_expected: 2,
+    }),
   })
 
   const body = await res.json()
