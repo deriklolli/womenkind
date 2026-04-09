@@ -577,8 +577,11 @@ export default function PatientSchedulePage() {
                 <h3 className="text-base font-sans font-semibold text-aubergine mb-1.5 group-hover:text-violet transition-colors">
                   In Person Visit
                 </h3>
-                <p className="text-xs font-sans text-aubergine/50 mb-4 line-clamp-2">
-                  {nearbyClinic.name} &middot; {nearbyClinic.address}, {nearbyClinic.city}. We&apos;ll confirm a time within 24 hours.
+                <p className="text-xs font-sans text-aubergine/50 mb-1">
+                  We&apos;ll confirm a time within 24 hours.
+                </p>
+                <p className="text-xs font-sans text-aubergine/35 mb-4">
+                  Address: {nearbyClinic.name}, {nearbyClinic.address}, {nearbyClinic.city}, {nearbyClinic.state} {nearbyClinic.zip}
                 </p>
                 <div className="mt-auto">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
