@@ -399,10 +399,10 @@ export default function PatientProfilePage() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <div className="inline-grid gap-2 flex-shrink-0">
               <button
                 onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
-                className="w-56 text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
+                className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -412,7 +412,7 @@ export default function PatientProfilePage() {
               {latestIntake && (
                 <button
                   onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
-                  className="w-56 text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
+                  className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
