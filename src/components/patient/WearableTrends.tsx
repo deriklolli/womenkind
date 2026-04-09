@@ -409,7 +409,7 @@ export default function WearableTrends({ patientId, dateRange = 30, onGoToSettin
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="bg-white rounded-card p-5 shadow-sm border border-aubergine/5 animate-pulse">
               <div className="h-4 bg-aubergine/5 rounded w-32 mb-2" />
@@ -451,7 +451,7 @@ export default function WearableTrends({ patientId, dateRange = 30, onGoToSettin
       {/* Date pills + chart grid wrapper — negative top margin pulls charts up to align with sidebar */}
       <div className="-mt-[34px]">
         {/* Date range selector — right-aligned, compact row above charts */}
-        <div className="flex justify-end gap-1 mb-1.5 -mt-2">
+        <div className="flex justify-end gap-1 mb-1.5 -mt-[15px]">
           {[7, 30, 90].map(d => (
             <button
               key={d}
