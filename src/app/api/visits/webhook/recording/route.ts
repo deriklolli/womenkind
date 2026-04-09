@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.womenkindhealth.com').replace(/\/+$/, '')
     const webhookUrl = `${appUrl}/api/visits/webhook/transcription`
 
     const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {

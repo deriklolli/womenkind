@@ -53,8 +53,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ noteId: note.id })
     }
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
+    // Build webhook URL — fall back to production domain if env var not set
+    const appUrl = (
+      process.env.NEXT_PUBLIC_APP_URL ||
+      'https://www.womenkindhealth.com'
+    ).replace(/\/+$/, '')
     const webhookUrl = `${appUrl}/api/visits/webhook/transcription`
+
+    const assemblyPayload = {
+      audio_url: recordingUrl,
+      speaker_labels: true,
+      speakers_expected: 2,
+      webhook_url: webhookUrl,
+      ...(process.env.WEBHOOK_SECRET
+        ? {
+            webhook_auth_header_name: 'x-webhook-secret',
+            webhook_auth_header_value: process.env.WEBHOOK_SECRET,
+          }
+        : {}),
+    }
+
+    console.log(`[ambient-recording] Submitting to AssemblyAI, webhook: ${webhookUrl}`)
 
     const transcriptRes = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
@@ -62,21 +81,14 @@ export async function POST(req: NextRequest) {
         Authorization: assemblyKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        audio_url: recordingUrl,
-        speaker_labels: true,
-        speakers_expected: 2,
-        webhook_url: webhookUrl,
-        webhook_auth_header_name: 'x-webhook-secret',
-        webhook_auth_header_value: process.env.WEBHOOK_SECRET || '',
-      }),
+      body: JSON.stringify(assemblyPayload),
     })
 
     if (!transcriptRes.ok) {
-      const err = await transcriptRes.text()
-      console.error('[ambient-recording] AssemblyAI submit failed:', err)
+      const errText = await transcriptRes.text()
+      console.error(`[ambient-recording] AssemblyAI submit failed (HTTP ${transcriptRes.status}):`, errText)
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
-      return NextResponse.json({ error: 'Transcription submit failed' }, { status: 502 })
+      return NextResponse.json({ error: 'Transcription submit failed', detail: errText }, { status: 502 })
     }
 
     const transcriptData = await transcriptRes.json()
