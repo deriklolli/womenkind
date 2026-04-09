@@ -326,60 +326,57 @@ export default function PatientProfilePage() {
         {/* Patient header card */}
         <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5 mb-8">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 rounded-full bg-violet/10 flex items-center justify-center">
-                <span className="text-xl font-sans font-semibold text-violet">
-                  {(patient.profiles?.first_name?.[0] || '?').toUpperCase()}
-                  {(patient.profiles?.last_name?.[0] || '').toUpperCase()}
-                </span>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+                {membership && (
+                  <span className="flex items-center gap-1 flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+                  </span>
+                )}
               </div>
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
-                  {membership && (
-                    <span className="flex items-center gap-1 flex-shrink-0">
-                      <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                      <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+              <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
+                {age && <span>{age} years old</span>}
+                {heightStr && <span>{heightStr}</span>}
+                {weightLbs && <span>{weightLbs} lbs</span>}
+                {bmi && <span>BMI {bmi}</span>}
+                {patient.state && <span>{patient.state}</span>}
+              </div>
+              {latestIntake?.ai_brief?.metadata && (
+                <div className="flex items-center gap-2 mt-3">
+                  {burden && (
+                    <span className={`text-xs font-sans px-2.5 py-1 rounded-pill border ${
+                      burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
+                      burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
+                      burden === 'moderate' ? 'text-amber-600 bg-amber-50 border-amber-200' :
+                      'text-emerald-600 bg-emerald-50 border-emerald-200'
+                    }`}>
+                      {burden.charAt(0).toUpperCase() + burden.slice(1)} Burden
+                    </span>
+                  )}
+                  {stage && (
+                    <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-violet bg-violet/5 border-violet/20">
+                      {stage.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </span>
+                  )}
+                  {latestIntake.ai_brief.metadata.complexity && (
+                    <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-aubergine/50 bg-aubergine/5 border-aubergine/10">
+                      {latestIntake.ai_brief.metadata.complexity.charAt(0).toUpperCase() + latestIntake.ai_brief.metadata.complexity.slice(1)} Complexity
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4 mt-2">
-                  {age && <span className="text-sm font-sans text-aubergine/50">{age} years old</span>}
-                  {heightStr && <span className="text-sm font-sans text-aubergine/50">{heightStr}</span>}
-                  {weightLbs && <span className="text-sm font-sans text-aubergine/50">{weightLbs} lbs</span>}
-                  {bmi && <span className="text-sm font-sans text-aubergine/50">BMI {bmi}</span>}
-                  {patient.state && <span className="text-sm font-sans text-aubergine/50">{patient.state}</span>}
-                </div>
-                {(stage || burden) && (
-                  <div className="flex items-center gap-2 mt-3">
-                    {stage && (
-                      <span className="text-xs font-sans text-violet bg-violet/5 px-2.5 py-0.5 rounded-pill border border-violet/15">
-                        {stage}
-                      </span>
-                    )}
-                    {burden && (
-                      <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill border ${
-                        burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
-                        burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
-                        burden === 'moderate' ? 'text-amber-600 bg-amber-50 border-amber-200' :
-                        'text-emerald-600 bg-emerald-50 border-emerald-200'
-                      }`}>
-                        {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex-shrink-0">
               {latestIntake && (
                 <button
                   onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
-                  className="text-xs font-sans text-violet hover:text-violet-dark transition-colors flex items-center gap-1.5"
+                  className="text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   View Clinical Brief
@@ -387,6 +384,15 @@ export default function PatientProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Overview — matches brief page */}
+          {latestIntake?.ai_brief?.symptom_summary?.overview && (
+            <div className="mt-4 pt-4 border-t border-aubergine/5">
+              <p className="text-sm font-sans text-aubergine/70 leading-relaxed">
+                {latestIntake.ai_brief.symptom_summary.overview}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Tab navigation */}
