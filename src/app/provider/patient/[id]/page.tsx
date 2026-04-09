@@ -407,7 +407,7 @@ export default function PatientProfilePage() {
           {recordingState === 'idle' && providerId && (
             <button
               onClick={() => startRecording({ id: patientId, name }, providerId)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-brand bg-white border border-aubergine/15 text-sm font-sans font-semibold text-aubergine/70 hover:text-aubergine hover:border-aubergine/30 shadow-sm transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-pill bg-white border border-violet/40 text-sm font-sans font-semibold text-violet hover:bg-violet/5 hover:border-violet/60 shadow-sm transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -418,7 +418,7 @@ export default function PatientProfilePage() {
           {recordingState === 'recording' && (
             <button
               onClick={stopRecording}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-brand border border-red-200 bg-red-50 text-sm font-sans font-semibold text-red-600 hover:bg-red-100 shadow-sm transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-pill bg-white border border-red-300 text-sm font-sans font-semibold text-red-500 hover:bg-red-50 hover:border-red-400 shadow-sm transition-all"
             >
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               Stop recording
