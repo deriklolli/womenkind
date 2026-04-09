@@ -58,6 +58,11 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
 
       const ext = mime.includes('ogg') ? 'ogg' : 'webm'
       const blob = new Blob(chunksRef.current, { type: mime })
+
+      if (blob.size === 0) {
+        throw new Error('No audio was captured. Please check your microphone and try again.')
+      }
+
       const filename = `ambient/${Date.now()}_${pid}.${ext}`
 
       const { error: uploadErr } = await supabase.storage
