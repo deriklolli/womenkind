@@ -477,7 +477,8 @@ export default function PatientDashboardPage() {
           .from('intakes')
           .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
           .eq('patient_id', patientRecord.id)
-          .order('started_at', { ascending: false })
+          .neq('status', 'draft')
+          .order('submitted_at', { ascending: false })
           .limit(1)
           .maybeSingle()
         intakeData = intake
