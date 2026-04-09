@@ -9,6 +9,7 @@ import VisitTimeline from '@/components/provider/VisitTimeline'
 import PrescriptionsPanel from '@/components/provider/PrescriptionsPanel'
 import LabOrdersPanel from '@/components/provider/LabOrdersPanel'
 import NotesPanel from '@/components/provider/NotesPanel'
+import EncounterNotesPanel from '@/components/provider/EncounterNotesPanel'
 import PatientMessagesPanel from '@/components/provider/PatientMessagesPanel'
 import PatientBiometrics from '@/components/provider/PatientBiometrics'
 import { useChatContext } from '@/lib/chat-context'
@@ -547,13 +548,19 @@ export default function PatientProfilePage() {
         )}
 
         {activeTab === 'notes' && (
-          <NotesPanel
-            patientId={patientId}
-            providerId={providerId}
-            visits={visits}
-            providerNotes={providerNotes}
-            onNoteAdded={reloadProviderNotes}
-          />
+          <div className="space-y-8">
+            <EncounterNotesPanel
+              patientId={patientId}
+              providerId={providerId}
+            />
+            <NotesPanel
+              patientId={patientId}
+              providerId={providerId}
+              visits={visits}
+              providerNotes={providerNotes}
+              onNoteAdded={reloadProviderNotes}
+            />
+          </div>
         )}
 
         {activeTab === 'messages' && (

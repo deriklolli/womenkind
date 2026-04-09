@@ -61,6 +61,7 @@ export async function createVideoRoom({
           max_participants: 4,
           start_video_off: false,
           start_audio_off: false,
+          enable_recording: 'cloud',
         },
       }),
     })
@@ -81,6 +82,42 @@ export async function createVideoRoom({
   } catch (err) {
     console.error('[DAILY] Error creating video room:', err)
     return null
+  }
+}
+
+/**
+ * Start cloud recording for a Daily room.
+ * Call this server-side right after creating the room.
+ * Recording automatically stops when all participants leave.
+ */
+export async function startCloudRecording(roomName: string): Promise<boolean> {
+  const apiKey = process.env.DAILY_API_KEY
+  if (!apiKey) {
+    console.warn('[DAILY] DAILY_API_KEY not set, skipping recording start')
+    return false
+  }
+
+  try {
+    const res = await fetch(`${DAILY_API_URL}/rooms/${roomName}/recordings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ layout: { preset: 'default' } }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('[DAILY] Failed to start cloud recording:', res.status, text)
+      return false
+    }
+
+    console.log(`[DAILY] Cloud recording started for room: ${roomName}`)
+    return true
+  } catch (err) {
+    console.error('[DAILY] Error starting cloud recording:', err)
+    return false
   }
 }
 
