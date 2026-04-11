@@ -1,49 +1,70 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Hostnames that should serve the coming soon page
-const COMING_SOON_HOSTS = [
-  'womenkindhealth.com',
-  'www.womenkindhealth.com',
-]
+export async function middleware(request: NextRequest) {
+  // We need to forward cookies through the response so Supabase can refresh
+  // the session token if it has expired. This is the required pattern for
+  // @supabase/ssr in Next.js middleware.
+  let supabaseResponse = NextResponse.next({ request })
 
-export function middleware(request: NextRequest) {
-  const host = request.headers.get('host') || ''
-  const { pathname } = request.nextUrl
-
-  // If the request is from the public-facing domain, serve the coming soon page
-  if (COMING_SOON_HOSTS.includes(host)) {
-    // Allow the coming soon page itself to load normally (avoids redirect loop)
-    if (pathname.startsWith('/coming-soon')) {
-      return NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
+          // Write cookies onto the request first (needed for downstream reads)
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Rebuild the response with updated cookies
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+          )
+        },
+      },
     }
+  )
 
-    // Allow all authenticated app routes through
-    if (pathname.startsWith('/patient') || pathname.startsWith('/provider') || pathname.startsWith('/intake') || pathname.startsWith('/signup') || pathname.startsWith('/auth') || pathname.startsWith('/presentation')) {
-      return NextResponse.next()
-    }
+  // IMPORTANT: Always call getUser() — this refreshes the session if needed.
+  // Never use getSession() in middleware as it doesn't validate the JWT server-side.
+  const { data: { user } } = await supabase.auth.getUser()
 
-    // Allow Next.js internals and static assets through
-    if (
-      pathname.startsWith('/_next') ||
-      pathname.startsWith('/favicon') ||
-      pathname.startsWith('/api') ||
-      pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|mp3|mp4|wav|ogg)$/) ||
-      pathname.startsWith('/audio/')
-    ) {
-      return NextResponse.next()
-    }
+  const path = request.nextUrl.pathname
 
-    // Rewrite all other paths to /coming-soon (preserves URL in browser)
-    const url = request.nextUrl.clone()
-    url.pathname = '/coming-soon'
-    return NextResponse.rewrite(url)
+  // Protected patient pages — anything under /patient except the login page
+  const isPatientProtected =
+    path.startsWith('/patient') && !path.startsWith('/patient/login')
+
+  // Protected provider pages — anything under /provider except the login page
+  const isProviderProtected =
+    path.startsWith('/provider') && !path.startsWith('/provider/login')
+
+  if ((isPatientProtected || isProviderProtected) && !user) {
+    const loginPath = isProviderProtected ? '/provider/login' : '/patient/login'
+    const loginUrl = new URL(loginPath, request.url)
+    // Preserve the original destination so we can redirect back after login
+    loginUrl.searchParams.set('next', path)
+    return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  // Return the supabaseResponse (not a plain NextResponse.next()) so that
+  // any session cookie refreshes are forwarded to the browser.
+  return supabaseResponse
 }
 
 export const config = {
-  // Run on all routes except Next.js internals
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  matcher: [
+    /*
+     * Match all paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, sitemap.xml, robots.txt
+     * - public folder files (images, logos, audio)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|wav)$).*)',
+  ],
 }
