@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 import { Resend } from 'resend'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -15,6 +9,12 @@ function getResend() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
+    }
+
     const {
       patientId,
       providerId,
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = getSupabaseAdmin()
+    const supabase = getServiceSupabase()
 
     // Get the latest intake for this patient (optional link)
     const { data: latestIntake } = await supabase

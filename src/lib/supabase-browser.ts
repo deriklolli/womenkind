@@ -1,7 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Client-side Supabase instance (for use in components)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Client-side Supabase instance (for use in components).
+// Uses createBrowserClient so sessions are stored in cookies,
+// allowing server-side API routes to verify the session via getServerSession().
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)

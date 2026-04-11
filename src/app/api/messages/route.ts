@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 
 /**
@@ -9,6 +10,9 @@ import { logPhiAccess } from '@/lib/phi-audit'
  */
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getServiceSupabase()
     const patientId = req.nextUrl.searchParams.get('patientId')
     const providerId = req.nextUrl.searchParams.get('providerId')
@@ -133,12 +137,21 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
-    const { senderId, senderType, recipientId, subject, body, threadId } = await req.json()
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'patient' && session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
-    if (!senderId || !senderType || !recipientId || !body) {
+    const supabase = getServiceSupabase()
+    const { recipientId, subject, body, threadId } = await req.json()
+
+    const senderId = session.role === 'provider' ? session.providerId! : session.patientId!
+    const senderType = session.role === 'provider' ? 'provider' : 'patient'
+
+    if (!recipientId || !body) {
       return NextResponse.json(
-        { error: 'senderId, senderType, recipientId, and body are required' },
+        { error: 'recipientId and body are required' },
         { status: 400 }
       )
     }
@@ -204,6 +217,9 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getServiceSupabase()
     const { threadId, readerId } = await req.json()
 

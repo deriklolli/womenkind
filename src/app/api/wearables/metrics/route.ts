@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/wearables/metrics?patientId=xxx&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&metricType=sleep_score
@@ -15,6 +9,9 @@ function getSupabase() {
  */
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const patientId = req.nextUrl.searchParams.get('patientId')
     const startDate = req.nextUrl.searchParams.get('startDate')
     const endDate = req.nextUrl.searchParams.get('endDate')
@@ -24,7 +21,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'patientId required' }, { status: 400 })
     }
 
-    const supabase = getSupabase()
+    if (session.role !== 'provider' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const supabase = getServiceSupabase()
     let query = supabase
       .from('wearable_metrics')
       .select('metric_date, metric_type, value, synced_at')

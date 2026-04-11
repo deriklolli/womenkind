@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 
 interface ChatContext {
   page: string
@@ -23,14 +17,14 @@ interface ChatMessage {
 
 async function getPatientContext(patientId: string) {
   // Fetch patient profile
-  const { data: patient } = await getSupabaseAdmin()
+  const { data: patient } = await getServiceSupabase()
     .from('patients')
     .select('*, profiles ( first_name, last_name, email )')
     .eq('id', patientId)
     .single()
 
   // Fetch intake
-  const { data: intake } = await getSupabaseAdmin()
+  const { data: intake } = await getServiceSupabase()
     .from('intakes')
     .select('*')
     .eq('patient_id', patientId)
@@ -39,7 +33,7 @@ async function getPatientContext(patientId: string) {
     .single()
 
   // Fetch visits
-  const { data: visits } = await getSupabaseAdmin()
+  const { data: visits } = await getServiceSupabase()
     .from('visits')
     .select('*')
     .eq('patient_id', patientId)
@@ -47,21 +41,21 @@ async function getPatientContext(patientId: string) {
     .limit(5)
 
   // Fetch prescriptions
-  const { data: prescriptions } = await getSupabaseAdmin()
+  const { data: prescriptions } = await getServiceSupabase()
     .from('prescriptions')
     .select('*')
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false })
 
   // Fetch lab orders
-  const { data: labOrders } = await getSupabaseAdmin()
+  const { data: labOrders } = await getServiceSupabase()
     .from('lab_orders')
     .select('*')
     .eq('patient_id', patientId)
     .order('created_at', { ascending: false })
 
   // Fetch provider notes
-  const { data: providerNotes } = await getSupabaseAdmin()
+  const { data: providerNotes } = await getServiceSupabase()
     .from('provider_notes')
     .select('*')
     .eq('patient_id', patientId)
@@ -83,7 +77,7 @@ async function executeAction(action: string, params: Record<string, any>) {
       case 'add_risk_flag': {
         const { intakeId, flagType, flag } = params
         // flagType: 'urgent' | 'contraindications' | 'considerations'
-        const { data: intake } = await getSupabaseAdmin()
+        const { data: intake } = await getServiceSupabase()
           .from('intakes')
           .select('ai_brief')
           .eq('id', intakeId)
@@ -96,7 +90,7 @@ async function executeAction(action: string, params: Record<string, any>) {
         if (!brief.risk_flags[flagType]) brief.risk_flags[flagType] = []
         brief.risk_flags[flagType].push(flag)
 
-        const { error } = await getSupabaseAdmin()
+        const { error } = await getServiceSupabase()
           .from('intakes')
           .update({ ai_brief: brief })
           .eq('id', intakeId)
@@ -106,7 +100,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'remove_risk_flag': {
         const { intakeId: iId, flagType: fType, flag: fText } = params
-        const { data: intakeData } = await getSupabaseAdmin()
+        const { data: intakeData } = await getServiceSupabase()
           .from('intakes')
           .select('ai_brief')
           .eq('id', iId)
@@ -119,7 +113,7 @@ async function executeAction(action: string, params: Record<string, any>) {
           b.risk_flags[fType] = b.risk_flags[fType].filter((f: string) => !f.toLowerCase().includes(fText.toLowerCase()))
         }
 
-        const { error: err } = await getSupabaseAdmin()
+        const { error: err } = await getServiceSupabase()
           .from('intakes')
           .update({ ai_brief: b })
           .eq('id', iId)
@@ -129,7 +123,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'add_provider_note': {
         const { patientId, providerId, noteType, title, content } = params
-        const { error } = await getSupabaseAdmin()
+        const { error } = await getServiceSupabase()
           .from('provider_notes')
           .insert({
             patient_id: patientId,
@@ -144,7 +138,7 @@ async function executeAction(action: string, params: Record<string, any>) {
 
       case 'update_symptom_severity': {
         const { intakeId: sIntakeId, domain, severity } = params
-        const { data: sIntake } = await getSupabaseAdmin()
+        const { data: sIntake } = await getServiceSupabase()
           .from('intakes')
           .select('ai_brief')
           .eq('id', sIntakeId)
@@ -160,7 +154,7 @@ async function executeAction(action: string, params: Record<string, any>) {
           domainEntry.severity = severity
         }
 
-        const { error: sErr } = await getSupabaseAdmin()
+        const { error: sErr } = await getServiceSupabase()
           .from('intakes')
           .update({ ai_brief: sb })
           .eq('id', sIntakeId)
@@ -178,6 +172,9 @@ async function executeAction(action: string, params: Record<string, any>) {
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { messages, context }: { messages: ChatMessage[]; context?: ChatContext } = await req.json()
 
     const apiKey = process.env.ANTHROPIC_API_KEY

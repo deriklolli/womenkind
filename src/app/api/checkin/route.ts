@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 
 /**
@@ -23,6 +24,9 @@ import { logPhiAccess } from '@/lib/phi-audit'
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getServiceSupabase()
     const { appointmentId, scores } = await req.json()
 
@@ -54,6 +58,11 @@ export async function POST(req: NextRequest) {
 
     if (aptError || !appointment) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+    }
+
+    // Verify the patient checking in owns this appointment
+    if (session.role === 'patient' && session.patientId !== appointment.patient_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (appointment.status === 'canceled') {
@@ -118,6 +127,9 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const supabase = getServiceSupabase()
     const appointmentId = req.nextUrl.searchParams.get('appointmentId')
 

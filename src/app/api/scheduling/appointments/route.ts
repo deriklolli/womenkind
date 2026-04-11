@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/scheduling/appointments?providerId=xxx&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
@@ -15,6 +16,16 @@ export async function GET(req: NextRequest) {
     const startDate = req.nextUrl.searchParams.get('startDate')
     const endDate = req.nextUrl.searchParams.get('endDate')
     const status = req.nextUrl.searchParams.get('status')
+
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Patients can only query their own appointments; providers can query any
+    if (patientId && session.role !== 'provider' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (providerId && session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     let query = supabase
       .from('appointments')
@@ -71,6 +82,12 @@ export async function GET(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
+    }
+
     const supabase = getServiceSupabase()
     const { appointmentId, status, providerNotes } = await req.json()
 

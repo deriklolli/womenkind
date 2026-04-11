@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/refill-requests?patientId=xxx  — patient's own requests
@@ -12,6 +13,15 @@ export async function GET(req: NextRequest) {
     const patientId = req.nextUrl.searchParams.get('patientId')
     const providerId = req.nextUrl.searchParams.get('providerId')
     const status = req.nextUrl.searchParams.get('status')
+
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (patientId && session.role !== 'provider' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (providerId && session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     let query = supabase
       .from('refill_requests')
@@ -46,12 +56,19 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
-    const { prescriptionId, patientId, providerId, patientNote } = await req.json()
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'patient') {
+      return NextResponse.json({ error: 'Forbidden — patients only' }, { status: 403 })
+    }
+    const patientId = session.patientId!
 
-    if (!prescriptionId || !patientId || !providerId) {
+    const supabase = getServiceSupabase()
+    const { prescriptionId, providerId, patientNote } = await req.json()
+
+    if (!prescriptionId || !providerId) {
       return NextResponse.json(
-        { error: 'prescriptionId, patientId, and providerId are required' },
+        { error: 'prescriptionId and providerId are required' },
         { status: 400 }
       )
     }
@@ -99,6 +116,12 @@ export async function POST(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
+    }
+
     const supabase = getServiceSupabase()
     const { requestId, status, providerNote } = await req.json()
 

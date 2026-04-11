@@ -498,6 +498,10 @@ const PERSONAS = [
 ]
 
 export async function POST(req: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   // Simple auth check — require a secret or just check for dev/preview
   const { secret } = await req.json().catch(() => ({ secret: '' }))
   if (secret !== 'womenkind-seed-2026') {

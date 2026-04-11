@@ -16,6 +16,10 @@ const DEMO_PATIENT_ID = 'c0000000-0000-0000-0000-000000000001'
  * estradiol low, progesterone low, testosterone borderline.
  */
 export async function POST() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   // Check for existing seeded lab order to avoid duplicates
   const { data: existing } = await supabase
     .from('lab_orders')

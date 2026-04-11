@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 import { getComponent } from '@/lib/presentation-components'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
+    }
+
     const { patientId, componentKey } = await req.json()
 
     if (!patientId || !componentKey) {
@@ -25,25 +25,25 @@ export async function POST(req: Request) {
     // Load patient data, latest intake, visits, and wearable metrics for context
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
     const [patientRes, intakeRes, visitsRes, wearableRes] = await Promise.all([
-      getSupabaseAdmin()
+      getServiceSupabase()
         .from('patients')
         .select('id, date_of_birth, state, profiles ( first_name, last_name )')
         .eq('id', patientId)
         .single(),
-      getSupabaseAdmin()
+      getServiceSupabase()
         .from('intakes')
         .select('answers, ai_brief')
         .eq('patient_id', patientId)
         .order('submitted_at', { ascending: false })
         .limit(1)
         .single(),
-      getSupabaseAdmin()
+      getServiceSupabase()
         .from('visits')
         .select('visit_type, visit_date, symptom_scores, provider_notes, treatment_updates')
         .eq('patient_id', patientId)
         .order('visit_date', { ascending: false })
         .limit(5),
-      getSupabaseAdmin()
+      getServiceSupabase()
         .from('wearable_metrics')
         .select('metric_type, value, metric_date')
         .eq('patient_id', patientId)
