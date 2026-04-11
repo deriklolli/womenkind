@@ -81,12 +81,15 @@ jest.mock('resend', () => ({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Build a fake Stripe event and POST it as raw text (no signature) */
+/** Build a fake Stripe event and POST it with a test signature header */
 function makeWebhookRequest(event: object) {
   const body = JSON.stringify(event)
   return new Request('http://localhost:3000/api/webhooks/stripe', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'stripe-signature': 'test_sig',
+    },
     body,
   }) as unknown as NextRequest
 }
@@ -112,8 +115,16 @@ function checkoutEvent(metadata: Record<string, string>, extra: object = {}) {
 describe('POST /api/webhooks/stripe', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Signature verification is now mandatory — set the secret and have
+    // constructEvent return the parsed event so all tests pass through.
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret'
+    mockConstructEvent.mockImplementation((body: string) => JSON.parse(body))
     // Default: all DB calls return empty data
     mockFrom.mockReturnValue(makeChain({ data: null, error: null }))
+  })
+
+  afterEach(() => {
+    delete process.env.STRIPE_WEBHOOK_SECRET
   })
 
   // ── Signature verification ────────────────────────────────────────────────

@@ -44,6 +44,20 @@ jest.mock('@/lib/phi-audit', () => ({
   logPhiAccess: (...args: unknown[]) => mockLogPhiAccess(...args),
 }))
 
+// ── Session mock ──────────────────────────────────────────────────────────────
+
+// Default: authenticated patient session. Override per-test for provider flows.
+let mockSessionData: object | null = {
+  userId: 'user-uuid-001',
+  patientId: 'patient-uuid-123',
+  providerId: null,
+  role: 'patient',
+}
+
+jest.mock('@/lib/getServerSession', () => ({
+  getServerSession: jest.fn().mockImplementation(() => Promise.resolve(mockSessionData)),
+}))
+
 // ── Chain factory ─────────────────────────────────────────────────────────────
 
 function makeChain(resolveWith: unknown = { data: null, error: null }) {
@@ -114,32 +128,19 @@ const PROVIDER_MESSAGE = {
 describe('/api/messages', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Reset to default patient session before each test
+    mockSessionData = {
+      userId: 'user-uuid-001',
+      patientId: 'patient-uuid-123',
+      providerId: null,
+      role: 'patient',
+    }
     mockFrom.mockReturnValue(makeChain({ data: SAVED_MESSAGE, error: null }))
   })
 
   // ── POST: validation ────────────────────────────────────────────────────────
 
   describe('POST - validation', () => {
-    it('returns 400 when senderId is missing', async () => {
-      const { POST } = await import('../route')
-      const res = await POST(makePostRequest({
-        senderType: 'patient',
-        recipientId: 'provider-uuid-456',
-        body: 'Hello',
-      }))
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 400 when senderType is missing', async () => {
-      const { POST } = await import('../route')
-      const res = await POST(makePostRequest({
-        senderId: 'patient-uuid-123',
-        recipientId: 'provider-uuid-456',
-        body: 'Hello',
-      }))
-      expect(res.status).toBe(400)
-    })
-
     it('returns 400 when recipientId is missing', async () => {
       const { POST } = await import('../route')
       const res = await POST(makePostRequest({
@@ -249,6 +250,14 @@ describe('/api/messages', () => {
 
   describe('POST - provider notifications', () => {
     it('creates a notification in the DB when a provider sends a message', async () => {
+      // Switch to provider session for this test
+      mockSessionData = {
+        userId: 'user-uuid-002',
+        patientId: null,
+        providerId: 'provider-uuid-456',
+        role: 'provider',
+      }
+
       let notificationInserted = false
       let insertCallCount = 0
 
