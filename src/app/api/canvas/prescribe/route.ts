@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/getServerSession'
 import { sendPrescription } from '@/lib/canvas-client'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') {
+      return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
+    }
+
     const body = await request.json()
     const {
       patientId,
-      providerId,
       medicationName,
       dosage,
       frequency,
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
     // Send via Canvas (mocked)
     const result = await sendPrescription({
       patientId,
-      providerId,
+      providerId: session.providerId!,
       medicationName,
       dosage,
       frequency,
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
       .from('prescriptions')
       .insert({
         patient_id: patientId,
-        provider_id: providerId || null,
+        provider_id: session.providerId || null,
         visit_id: visitId || null,
         canvas_prescription_id: result.canvasPrescriptionId,
         medication_name: medicationName,

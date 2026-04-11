@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server"
 import {
   exchangeCodeForTokens,
   getGoogleEmail,
   saveCalendarConnection,
-} from '@/lib/google-calendar'
+} from "@/lib/google-calendar"
+import { decodeState } from "@/lib/oauth-state"
 
 /**
  * GET /api/auth/google/callback
@@ -12,33 +13,35 @@ import {
  */
 export async function GET(req: NextRequest) {
   try {
-    const code = req.nextUrl.searchParams.get('code')
-    const state = req.nextUrl.searchParams.get('state')
-    const error = req.nextUrl.searchParams.get('error')
+    const code = req.nextUrl.searchParams.get("code")
+    const rawState = req.nextUrl.searchParams.get("state")
+    const error = req.nextUrl.searchParams.get("error")
 
     // Handle user denial
     if (error) {
       return NextResponse.redirect(
-        new URL('/provider/settings?calendar=denied', req.url)
+        new URL("/provider/settings?calendar=denied", req.url)
       )
     }
 
-    if (!code || !state) {
+    if (!code || !rawState) {
       return NextResponse.redirect(
-        new URL('/provider/settings?calendar=error&reason=missing_params', req.url)
+        new URL("/provider/settings?calendar=error&reason=missing_params", req.url)
       )
     }
 
-    // Decode state to get providerId
-    let providerId: string
-    try {
-      const statePayload = JSON.parse(
-        Buffer.from(state, 'base64url').toString('utf8')
-      )
-      providerId = statePayload.providerId
-    } catch {
+    // Decode and verify state
+    const oauthState = decodeState(rawState)
+    if (!oauthState) {
       return NextResponse.redirect(
-        new URL('/provider/settings?calendar=error&reason=invalid_state', req.url)
+        new URL("/provider/settings?calendar=error&reason=invalid_state", req.url)
+      )
+    }
+
+    const providerId = oauthState.providerId
+    if (!providerId) {
+      return NextResponse.redirect(
+        new URL("/provider/settings?calendar=error&reason=missing_provider_id", req.url)
       )
     }
 
@@ -47,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokens.refresh_token) {
       return NextResponse.redirect(
-        new URL('/provider/settings?calendar=error&reason=no_refresh_token', req.url)
+        new URL("/provider/settings?calendar=error&reason=no_refresh_token", req.url)
       )
     }
 
@@ -62,7 +65,7 @@ export async function GET(req: NextRequest) {
       new URL(`/provider/settings?calendar=connected&email=${encodeURIComponent(googleEmail)}`, req.url)
     )
   } catch (err: any) {
-    console.error('OAuth callback error:', err)
+    console.error("OAuth callback error:", err)
     return NextResponse.redirect(
       new URL(`/provider/settings?calendar=error&reason=${encodeURIComponent(err.message)}`, req.url)
     )

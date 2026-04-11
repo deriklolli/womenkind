@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import crypto from 'crypto'
-import { buildOuraOAuthUrl } from '@/lib/oura'
+import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+import { randomUUID } from "crypto"
+import { buildOuraOAuthUrl } from "@/lib/oura"
+import { encodeState } from "@/lib/oauth-state"
 
 function getSupabase() {
   return createClient(
@@ -19,33 +20,33 @@ export async function POST(req: NextRequest) {
   try {
     const { patientId } = await req.json()
     if (!patientId) {
-      return NextResponse.json({ error: 'patientId required' }, { status: 400 })
+      return NextResponse.json({ error: "patientId required" }, { status: 400 })
     }
 
     // Verify this is a real patient
     const supabase = getSupabase()
     const { data: patient } = await supabase
-      .from('patients')
-      .select('id')
-      .eq('id', patientId)
+      .from("patients")
+      .select("id")
+      .eq("id", patientId)
       .single()
 
     if (!patient) {
-      return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+      return NextResponse.json({ error: "Patient not found" }, { status: 404 })
     }
 
-    // Generate CSRF state token that encodes the patient ID
-    const statePayload = JSON.stringify({
+    // Generate CSRF state token with HMAC signature
+    const state = encodeState({
       patientId,
-      nonce: crypto.randomBytes(16).toString('hex'),
+      nonce: randomUUID(),
+      ts: Date.now(),
     })
-    const state = Buffer.from(statePayload).toString('base64url')
 
     const url = buildOuraOAuthUrl(state)
 
     return NextResponse.json({ url })
   } catch (err: any) {
-    console.error('Oura OAuth initiate error:', err)
+    console.error("Oura OAuth initiate error:", err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

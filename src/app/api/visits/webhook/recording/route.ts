@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
 function getSupabase() {
@@ -33,6 +34,23 @@ function getSupabase() {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Verify webhook secret
+    const authHeader = req.headers.get('authorization')
+    const secret = authHeader?.replace(/^Bearer\s+/i, '')
+    const expected = process.env.WEBHOOK_SECRET
+    if (!expected || !secret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    try {
+      const secretBuf = Buffer.from(secret)
+      const expectedBuf = Buffer.from(expected)
+      if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
 
     // Only handle recording-ready events

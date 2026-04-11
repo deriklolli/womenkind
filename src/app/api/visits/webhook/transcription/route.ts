@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
@@ -24,7 +25,17 @@ export async function POST(req: NextRequest) {
   try {
     // Verify webhook secret
     const secret = req.headers.get('x-webhook-secret')
-    if (process.env.WEBHOOK_SECRET && secret !== process.env.WEBHOOK_SECRET) {
+    const expected = process.env.WEBHOOK_SECRET
+    if (!expected || !secret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    try {
+      const secretBuf = Buffer.from(secret)
+      const expectedBuf = Buffer.from(expected)
+      if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

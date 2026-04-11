@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import crypto from 'crypto'
-import { buildOAuthUrl } from '@/lib/google-calendar'
+import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+import { randomUUID } from "crypto"
+import { buildOAuthUrl } from "@/lib/google-calendar"
+import { encodeState } from "@/lib/oauth-state"
 
 function getSupabase() {
   return createClient(
@@ -19,33 +20,33 @@ export async function POST(req: NextRequest) {
   try {
     const { providerId } = await req.json()
     if (!providerId) {
-      return NextResponse.json({ error: 'providerId required' }, { status: 400 })
+      return NextResponse.json({ error: "providerId required" }, { status: 400 })
     }
 
     // Verify this is a real provider
     const supabase = getSupabase()
     const { data: provider } = await supabase
-      .from('providers')
-      .select('id')
-      .eq('id', providerId)
+      .from("providers")
+      .select("id")
+      .eq("id", providerId)
       .single()
 
     if (!provider) {
-      return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
+      return NextResponse.json({ error: "Provider not found" }, { status: 404 })
     }
 
-    // Generate CSRF state token that encodes the provider ID
-    const statePayload = JSON.stringify({
+    // Generate CSRF state token with HMAC signature
+    const state = encodeState({
       providerId,
-      nonce: crypto.randomBytes(16).toString('hex'),
+      nonce: randomUUID(),
+      ts: Date.now(),
     })
-    const state = Buffer.from(statePayload).toString('base64url')
 
     const url = buildOAuthUrl(state)
 
     return NextResponse.json({ url })
   } catch (err: any) {
-    console.error('OAuth initiate error:', err)
+    console.error("OAuth initiate error:", err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
