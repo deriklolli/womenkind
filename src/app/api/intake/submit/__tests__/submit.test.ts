@@ -35,6 +35,16 @@ jest.mock('@/lib/phi-audit', () => ({
   logPhiAccess: (...args: unknown[]) => mockLogPhiAccess(...args),
 }))
 
+// ── getServerSession mock ─────────────────────────────────────────────────────
+// Default: authenticated provider — bypasses the patientId ownership guard so
+// existing tests continue to exercise submission logic rather than the auth layer.
+
+const mockGetServerSession = jest.fn()
+
+jest.mock('@/lib/getServerSession', () => ({
+  getServerSession: (...args: unknown[]) => mockGetServerSession(...args),
+}))
+
 // ── Resend mock ───────────────────────────────────────────────────────────────
 
 const mockEmailSend = jest.fn().mockResolvedValue({ id: 'email_123' })
@@ -149,6 +159,13 @@ describe('POST /api/intake/submit', () => {
     // No Anthropic key by default — AI brief generation is skipped
     delete process.env.ANTHROPIC_API_KEY
     delete process.env.RESEND_API_KEY
+    // Authenticated provider session by default
+    mockGetServerSession.mockResolvedValue({
+      userId: 'user-uuid-provider',
+      patientId: null,
+      providerId: 'provider-uuid-789',
+      role: 'provider',
+    })
   })
 
   afterEach(() => {
