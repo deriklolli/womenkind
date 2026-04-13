@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
+import { getServerSession } from '@/lib/getServerSession'
 
 // Lazy-init: don't create at module scope (breaks Vercel build when env vars missing)
 function getSupabase() {
@@ -16,9 +17,18 @@ function getSupabase() {
  * Finalizes an intake: marks as submitted, triggers AI brief generation
  */
 export async function POST(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const supabase = getSupabase()
     const { intakeId, patientId, answers } = await req.json()
+
+    // If a patientId is supplied, verify it belongs to the authenticated user.
+    // Providers submitting on a patient's behalf are also allowed.
+    if (patientId && session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // 1. Resolve provider — look up the first active provider as the intake recipient
     //    (single-provider MVP; extend this to match by location/specialty in multi-provider phase)

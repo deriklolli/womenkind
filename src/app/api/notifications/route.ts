@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getServerSession } from '@/lib/getServerSession'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,9 +9,17 @@ const supabase = createClient(
 
 // GET /api/notifications?patientId=...
 export async function GET(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const patientId = req.nextUrl.searchParams.get('patientId')
   if (!patientId) {
     return NextResponse.json({ error: 'patientId required' }, { status: 400 })
+  }
+
+  // Patients can only read their own notifications; providers can read any
+  if (session.role === 'patient' && session.patientId !== patientId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { data, error } = await supabase
@@ -30,10 +39,17 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/notifications  — body: { id, is_read?, dismissed? } or { patientId, markAllRead: true }
 export async function PATCH(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await req.json()
 
   // Bulk mark all read
   if (body.patientId && body.markAllRead) {
+    // Patients can only update their own notifications
+    if (session.role === 'patient' && session.patientId !== body.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })

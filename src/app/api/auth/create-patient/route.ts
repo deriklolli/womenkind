@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/getServerSession'
 
 function getSupabase() {
   return createClient(
@@ -15,12 +16,20 @@ function getSupabase() {
  * Body: { userId: string }
  */
 export async function POST(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const supabase = getSupabase()
     const { userId } = await req.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    }
+
+    // A user can only create a patient record for themselves
+    if (userId !== session.userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check if patient record already exists

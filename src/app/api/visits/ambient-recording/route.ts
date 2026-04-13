@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logPhiAccess } from '@/lib/phi-audit'
+import { getServerSession } from '@/lib/getServerSession'
 
 
 function getSupabase() {
@@ -21,11 +22,20 @@ function getSupabase() {
  * Body: { patientId, providerId, recordingStoragePath }
  */
 export async function POST(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   try {
     const { patientId, providerId, recordingStoragePath } = await req.json()
 
     if (!patientId || !providerId || !recordingStoragePath) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Verify the request is acting on behalf of the authenticated provider
+    if (providerId !== session.providerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const supabase = getSupabase()

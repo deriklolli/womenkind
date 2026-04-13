@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/getServerSession'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,10 @@ function getSupabase() {
  * generates an AI narrative pre-visit brief for the provider.
  */
 export async function GET(req: NextRequest) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const appointmentId = req.nextUrl.searchParams.get('appointmentId')
   if (!appointmentId) {
     return NextResponse.json({ error: 'appointmentId required' }, { status: 400 })
