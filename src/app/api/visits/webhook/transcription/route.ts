@@ -125,6 +125,16 @@ export async function POST(req: NextRequest) {
     logPhiAccess({ providerId: note.provider_id, patientId: note.patient_id, recordType: 'encounter_note', recordId: note.id, action: 'transcribe', route: '/api/visits/webhook/transcription' })
     console.log(`[transcription-webhook] SOAP note draft saved for note ${note.id}`)
 
+    // HIPAA: Delete the transcript from AssemblyAI's servers now that we have
+    // the data archived in our own DB. Fire-and-forget — deletion failure should
+    // not block the response or alert the patient/provider.
+    fetch(`https://api.assemblyai.com/v2/transcript/${transcript_id}`, {
+      method: 'DELETE',
+      headers: { Authorization: assemblyKey },
+    }).catch((e) =>
+      console.error('[transcription-webhook] AssemblyAI transcript deletion failed:', e)
+    )
+
     // Notify the provider
     await notifyProvider(supabase, note.provider_id, note.patient_id, note.id)
 

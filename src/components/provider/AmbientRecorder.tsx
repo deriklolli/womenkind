@@ -154,21 +154,15 @@ export default function AmbientRecorder({ providerId }: Props) {
 
       if (uploadErr) throw uploadErr
 
-      // Get a signed URL valid for 24h so AssemblyAI can fetch it
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from('recordings')
-        .createSignedUrl(filename, 86400)
-
-      if (signedErr || !signedData?.signedUrl) throw signedErr || new Error('No signed URL')
-
-      // Create encounter note + trigger transcription via API
+      // Create encounter note + trigger transcription via API.
+      // The server generates its own short-lived signed URL using the service role —
+      // no need to create one client-side.
       const res = await fetch('/api/visits/ambient-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: selectedPatient.id,
           providerId,
-          recordingUrl: signedData.signedUrl,
           recordingStoragePath: filename,
         }),
       })
