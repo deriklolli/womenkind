@@ -34,6 +34,20 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
+  const hostname = request.headers.get('host') ?? ''
+
+  // --- Coming-soon gate for public domain ---
+  // Unauthenticated visitors hitting the root of womenkindhealth.com see the
+  // coming-soon page. Authenticated users are always let through so that
+  // logging in on the public domain doesn't trap them in a redirect loop.
+  const isPublicDomain =
+    hostname === 'womenkindhealth.com' || hostname === 'www.womenkindhealth.com'
+
+  if (isPublicDomain && path === '/' && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/coming-soon'
+    return NextResponse.rewrite(url)
+  }
 
   // Protected patient pages — anything under /patient except the login page
   const isPatientProtected =
