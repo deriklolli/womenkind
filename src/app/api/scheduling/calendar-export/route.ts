@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/scheduling/calendar-export?appointmentId=xxx
@@ -8,35 +11,39 @@ import { getServiceSupabase } from '@/lib/supabase-server'
  */
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const appointmentId = req.nextUrl.searchParams.get('appointmentId')
 
     if (!appointmentId) {
       return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
     }
 
-    const { data: appointment, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        appointment_types(name, duration_minutes)
-      `)
-      .eq('id', appointmentId)
-      .single()
+    const appointment = await db.query.appointments.findFirst({
+      where: eq(appointments.id, appointmentId),
+      with: {
+        appointment_types: true,
+      },
+    })
 
-    if (error || !appointment) {
+    if (!appointment) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
-    const typeName = (appointment as any).appointment_types?.name || 'Appointment'
+    if (session.role === 'patient' && appointment.patient_id !== session.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const typeName = appointment.appointment_types?.name || 'Appointment'
     const videoUrl = appointment.video_room_url
 
     // Format dates for iCal (YYYYMMDDTHHMMSSZ)
     const formatICalDate = (iso: string) =>
       new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 
-    const dtStart = formatICalDate(appointment.starts_at)
-    const dtEnd = formatICalDate(appointment.ends_at)
+    const dtStart = formatICalDate(appointment.starts_at.toISOString())
+    const dtEnd = formatICalDate(appointment.ends_at.toISOString())
     const now = formatICalDate(new Date().toISOString())
 
     const description = [

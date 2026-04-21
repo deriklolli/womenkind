@@ -1,16 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
 import { getDownloadUrl } from '@/lib/s3'
+import { db } from '@/lib/db'
+import { encounter_notes } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 /**
  * POST /api/visits/ambient-recording
@@ -38,30 +33,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const supabase = getSupabase()
-
     // Create encounter note in 'transcribing' state
-    const { data: note, error: noteErr } = await supabase
-      .from('encounter_notes')
-      .insert({
-        patient_id: patientId,
-        provider_id: providerId,
-        source: 'in_office',
-        recording_storage_path: recordingStoragePath,
-        status: 'transcribing',
-      })
-      .select('id')
-      .single()
+    const [note] = await db.insert(encounter_notes).values({
+      patient_id: patientId,
+      provider_id: providerId,
+      source: 'in_office',
+      recording_storage_path: recordingStoragePath,
+      status: 'transcribing',
+    }).returning({ id: encounter_notes.id })
 
-    if (noteErr || !note) {
-      console.error('[ambient-recording] Failed to create encounter note:', noteErr)
+    if (!note) {
+      console.error('[ambient-recording] Failed to create encounter note')
       return NextResponse.json({ error: 'DB error' }, { status: 500 })
     }
 
     const assemblyKey = process.env.ASSEMBLYAI_API_KEY
     if (!assemblyKey) {
       console.warn('[ambient-recording] ASSEMBLYAI_API_KEY not set')
-      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ noteId: note.id })
     }
 
@@ -71,7 +60,7 @@ export async function POST(req: NextRequest) {
       audioUrl = await getDownloadUrl(recordingStoragePath)
     } catch (err) {
       console.error('[ambient-recording] Failed to create S3 signed URL:', err)
-      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ error: 'Could not generate audio URL' }, { status: 500 })
     }
 
@@ -108,15 +97,14 @@ export async function POST(req: NextRequest) {
     if (!transcriptRes.ok) {
       const errText = await transcriptRes.text()
       console.error(`[ambient-recording] AssemblyAI transcript submit failed (HTTP ${transcriptRes.status}):`, errText)
-      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ error: 'Transcription submit failed', detail: errText }, { status: 502 })
     }
 
     const transcriptData = await transcriptRes.json()
-    await supabase
-      .from('encounter_notes')
-      .update({ assemblyai_transcript_id: transcriptData.id })
-      .eq('id', note.id)
+    await db.update(encounter_notes)
+      .set({ assemblyai_transcript_id: transcriptData.id })
+      .where(eq(encounter_notes.id, note.id))
 
     logPhiAccess({ providerId, patientId, recordType: 'encounter_note', recordId: note.id, action: 'create', route: '/api/visits/ambient-recording', req })
     console.log(`[ambient-recording] Transcription submitted. Note: ${note.id}, Transcript: ${transcriptData.id}`)

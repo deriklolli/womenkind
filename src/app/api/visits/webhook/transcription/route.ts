@@ -1,16 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { invokeModel } from '@/lib/bedrock'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { encounter_notes, patients, profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/visits/webhook/transcription
@@ -47,14 +42,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing transcript_id' }, { status: 400 })
     }
 
-    const supabase = getSupabase()
-
     // Find the encounter note by AssemblyAI transcript ID
-    const { data: note } = await supabase
-      .from('encounter_notes')
-      .select('id, patient_id, provider_id')
-      .eq('assemblyai_transcript_id', transcript_id)
-      .maybeSingle()
+    const note = await db.query.encounter_notes.findFirst({
+      where: eq(encounter_notes.assemblyai_transcript_id, transcript_id),
+      columns: { id: true, patient_id: true, provider_id: true },
+    })
 
     if (!note) {
       console.error(`[transcription-webhook] No note found for transcript: ${transcript_id}`)
@@ -63,10 +55,7 @@ export async function POST(req: NextRequest) {
 
     // Handle failed transcription
     if (status === 'error') {
-      await supabase
-        .from('encounter_notes')
-        .update({ status: 'failed' })
-        .eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       console.error(`[transcription-webhook] Transcription failed for ${transcript_id}`)
       return NextResponse.json({ ok: true })
     }
@@ -90,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     if (!transcriptRes.ok) {
       console.error('[transcription-webhook] Failed to fetch transcript from AssemblyAI')
-      await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ ok: true })
     }
 
@@ -100,27 +89,21 @@ export async function POST(req: NextRequest) {
     const fullTranscript = buildLabeledTranscript(transcriptData)
 
     // Save raw transcript
-    await supabase
-      .from('encounter_notes')
-      .update({ transcript: fullTranscript })
-      .eq('id', note.id)
+    await db.update(encounter_notes).set({ transcript: fullTranscript }).where(eq(encounter_notes.id, note.id))
 
     // Generate SOAP note with Bedrock
     const soapNote = await generateSoapNote(fullTranscript)
 
     // Save the structured SOAP note as a draft
-    await supabase
-      .from('encounter_notes')
-      .update({
-        chief_complaint: soapNote.chief_complaint,
-        hpi: soapNote.hpi,
-        ros: soapNote.ros,
-        assessment: soapNote.assessment,
-        plan: soapNote.plan,
-        status: 'draft',
-        recording_url: null,
-      })
-      .eq('id', note.id)
+    await db.update(encounter_notes).set({
+      chief_complaint: soapNote.chief_complaint,
+      hpi: soapNote.hpi,
+      ros: soapNote.ros,
+      assessment: soapNote.assessment,
+      plan: soapNote.plan,
+      status: 'draft',
+      recording_url: null,
+    }).where(eq(encounter_notes.id, note.id))
 
     logPhiAccess({ providerId: note.provider_id, patientId: note.patient_id, recordType: 'encounter_note', recordId: note.id, action: 'transcribe', route: '/api/visits/webhook/transcription' })
     console.log(`[transcription-webhook] SOAP note draft saved for note ${note.id}`)
@@ -136,7 +119,7 @@ export async function POST(req: NextRequest) {
     )
 
     // Notify the provider
-    await notifyProvider(supabase, note.provider_id, note.patient_id, note.id)
+    await notifyProvider(note.provider_id, note.patient_id, note.id)
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {
@@ -219,7 +202,6 @@ Return this exact JSON structure:
 }
 
 async function notifyProvider(
-  supabase: ReturnType<typeof getSupabase>,
   providerId: string,
   patientId: string,
   noteId: string
@@ -229,12 +211,11 @@ async function notifyProvider(
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
 
-  // Get patient name
-  const { data: patient } = await supabase
-    .from('patients')
-    .select('profiles(first_name, last_name)')
-    .eq('id', patientId)
-    .single()
+  // Get patient name via Drizzle
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    with: { profiles: true },
+  })
 
   const profile = (patient as any)?.profiles
   const patientName = profile

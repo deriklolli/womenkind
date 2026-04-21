@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointment_types } from '@/lib/db/schema'
+import { eq, asc, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/scheduling/appointment-types?providerId=xxx
@@ -10,21 +13,16 @@ import { getServiceSupabase } from '@/lib/supabase-server'
  */
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
     const providerId = req.nextUrl.searchParams.get('providerId')
 
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from('appointment_types')
-      .select('*')
-      .eq('provider_id', providerId)
-      .eq('is_active', true)
-      .order('sort_order')
-
-    if (error) throw error
+    const data = await db.query.appointment_types.findMany({
+      where: eq(appointment_types.provider_id, providerId),
+      orderBy: [asc(appointment_types.created_at)],
+    })
 
     return NextResponse.json({ appointmentTypes: data })
   } catch (err: any) {
@@ -35,9 +33,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const body = await req.json()
-    const { id, providerId, name, description, durationMinutes, priceCents, color, sortOrder } = body
+    const { id, providerId, name, durationMinutes, priceCents, color } = body
 
     if (!providerId || !name || !durationMinutes) {
       return NextResponse.json({ error: 'providerId, name, and durationMinutes are required' }, { status: 400 })
@@ -45,40 +46,34 @@ export async function POST(req: NextRequest) {
 
     if (id) {
       // Update existing
-      const { data, error } = await supabase
-        .from('appointment_types')
-        .update({
+      const [data] = await db
+        .update(appointment_types)
+        .set({
           name,
-          description,
           duration_minutes: durationMinutes,
           price_cents: priceCents ?? 0,
           color: color ?? '#944fed',
-          sort_order: sortOrder ?? 0,
-          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
-        .select()
-        .single()
+        .where(and(eq(appointment_types.id, id), eq(appointment_types.provider_id, providerId)))
+        .returning()
 
-      if (error) throw error
+      if (!data) {
+        return NextResponse.json({ error: 'Appointment type not found' }, { status: 404 })
+      }
       return NextResponse.json({ appointmentType: data })
     } else {
       // Create new
-      const { data, error } = await supabase
-        .from('appointment_types')
-        .insert({
+      const [data] = await db
+        .insert(appointment_types)
+        .values({
           provider_id: providerId,
           name,
-          description,
           duration_minutes: durationMinutes,
           price_cents: priceCents ?? 0,
           color: color ?? '#944fed',
-          sort_order: sortOrder ?? 0,
         })
-        .select()
-        .single()
+        .returning()
 
-      if (error) throw error
       return NextResponse.json({ appointmentType: data })
     }
   } catch (err: any) {

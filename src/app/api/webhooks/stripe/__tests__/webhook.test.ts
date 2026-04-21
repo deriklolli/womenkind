@@ -1,13 +1,8 @@
 /**
  * Tests for POST /api/webhooks/stripe
  *
- * This webhook is the most critical path in the app — it's what actually
- * marks intakes as paid, activates memberships, and confirms appointments
- * after Stripe processes a payment.
- *
- * Strategy: no STRIPE_WEBHOOK_SECRET in tests, so the route parses the body
- * directly (its built-in dev/test fallback). We mock @/lib/supabase-server,
- * @/lib/stripe, @/lib/daily-video, @/lib/google-calendar, and resend.
+ * Strategy: mock @/lib/db, @/lib/stripe, @/lib/daily-video,
+ * @/lib/google-calendar, and resend.
  *
  * Event types covered:
  * - checkout.session.completed → intake, appointment, membership, intake_and_membership
@@ -20,31 +15,44 @@
 
 import type { NextRequest } from 'next/server'
 
-// ── Per-table Supabase mock ───────────────────────────────────────────────────
+// ── Drizzle DB mock ───────────────────────────────────────────────────────────
 
-const mockInsert = jest.fn()
 const mockUpdate = jest.fn()
-const mockSelectSingle = jest.fn()
+const mockSet = jest.fn()
+const mockWhere = jest.fn()
+const mockInsertValues = jest.fn()
+const mockInsertInto = jest.fn()
+const mockFindFirst = jest.fn()
+const mockFindMany = jest.fn()
 
-/**
- * Returns a chainable Supabase query builder mock.
- * `resolveWith` is what .single() / .maybeSingle() returns.
- */
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const chain: Record<string, jest.Mock> = {}
-  const methods = ['select', 'eq', 'neq', 'not', 'gte', 'lte', 'limit']
-  methods.forEach(m => { chain[m] = jest.fn().mockReturnValue(chain) })
-  chain.single = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  chain.insert = mockInsert.mockReturnValue(chain)
-  chain.update = mockUpdate.mockReturnValue(chain)
-  return chain
-}
+// Chainable update mock: db.update(table).set({}).where(condition)
+mockUpdate.mockReturnValue({ set: mockSet })
+mockSet.mockReturnValue({ where: mockWhere })
+mockWhere.mockResolvedValue([])
 
-const mockFrom = jest.fn()
+// Chainable insert mock: db.insert(table).values({}).returning()
+const mockReturning = jest.fn().mockResolvedValue([])
+mockInsertValues.mockReturnValue({ returning: mockReturning })
+mockInsertInto.mockReturnValue({ values: mockInsertValues })
 
-jest.mock('@/lib/supabase-server', () => ({
-  getServiceSupabase: jest.fn(() => ({ from: mockFrom })),
+jest.mock('@/lib/db', () => ({
+  db: {
+    update: mockUpdate,
+    insert: mockInsertInto,
+    query: {
+      intakes: { findFirst: mockFindFirst },
+      appointments: { findFirst: mockFindFirst },
+      subscriptions: { findFirst: mockFindFirst },
+    },
+  },
+}))
+
+jest.mock('@/lib/db/schema', () => ({
+  intakes: {},
+  subscriptions: {},
+  appointments: {},
+  patients: {},
+  profiles: {},
 }))
 
 // ── Stripe mock ───────────────────────────────────────────────────────────────
@@ -119,8 +127,16 @@ describe('POST /api/webhooks/stripe', () => {
     // constructEvent return the parsed event so all tests pass through.
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret'
     mockConstructEvent.mockImplementation((body: string) => JSON.parse(body))
-    // Default: all DB calls return empty data
-    mockFrom.mockReturnValue(makeChain({ data: null, error: null }))
+
+    // Reset mocks to default behavior
+    mockUpdate.mockReturnValue({ set: mockSet })
+    mockSet.mockReturnValue({ where: mockWhere })
+    mockWhere.mockResolvedValue([])
+    const mockReturning = jest.fn().mockResolvedValue([])
+    mockInsertValues.mockReturnValue({ returning: mockReturning })
+    mockInsertInto.mockReturnValue({ values: mockInsertValues })
+    mockFindFirst.mockResolvedValue(null)
+    mockFindMany.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -170,9 +186,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('checkout.session.completed (type: intake)', () => {
     it('updates intake status to submitted and marks paid', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest(checkoutEvent({
         type: 'intake',
@@ -181,16 +194,13 @@ describe('POST /api/webhooks/stripe', () => {
       })))
 
       expect(res.status).toBe(200)
-      expect(mockFrom).toHaveBeenCalledWith('intakes')
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockUpdate).toHaveBeenCalled()
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'submitted', paid: true })
       )
     })
 
     it('inserts a subscription record with plan_type: intake', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       await POST(makeWebhookRequest(checkoutEvent({
         type: 'intake',
@@ -198,8 +208,8 @@ describe('POST /api/webhooks/stripe', () => {
         patientId: 'patient-uuid-456',
       })))
 
-      expect(mockFrom).toHaveBeenCalledWith('subscriptions')
-      expect(mockInsert).toHaveBeenCalledWith(
+      expect(mockInsertInto).toHaveBeenCalled()
+      expect(mockInsertValues).toHaveBeenCalledWith(
         expect.objectContaining({ plan_type: 'intake', status: 'active' })
       )
     })
@@ -210,17 +220,18 @@ describe('POST /api/webhooks/stripe', () => {
   describe('checkout.session.completed (type: appointment)', () => {
     const appointmentData = {
       id: 'appt-uuid-789',
-      starts_at: '2026-04-21T15:00:00.000Z',
-      ends_at: '2026-04-21T16:00:00.000Z',
+      starts_at: new Date('2026-04-21T15:00:00.000Z'),
+      ends_at: new Date('2026-04-21T16:00:00.000Z'),
       patient_notes: 'First visit',
       appointment_types: { name: 'Intake Consultation', duration_minutes: 60 },
       patients: { profiles: { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' } },
     }
 
-    it('confirms appointment and marks is_paid: true', async () => {
-      const chain = makeChain({ data: appointmentData, error: null })
-      mockFrom.mockReturnValue(chain)
+    beforeEach(() => {
+      mockFindFirst.mockResolvedValue(appointmentData)
+    })
 
+    it('confirms appointment and marks is_paid: true', async () => {
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest(checkoutEvent({
         type: 'appointment',
@@ -230,15 +241,13 @@ describe('POST /api/webhooks/stripe', () => {
       })))
 
       expect(res.status).toBe(200)
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'confirmed', is_paid: true })
       )
     })
 
     it('creates a video room for the appointment', async () => {
       const { createVideoRoom } = await import('@/lib/daily-video')
-      const chain = makeChain({ data: appointmentData, error: null })
-      mockFrom.mockReturnValue(chain)
 
       const { POST } = await import('../route')
       await POST(makeWebhookRequest(checkoutEvent({
@@ -255,8 +264,6 @@ describe('POST /api/webhooks/stripe', () => {
 
     it('creates a Google Calendar event', async () => {
       const { createCalendarEvent } = await import('@/lib/google-calendar')
-      const chain = makeChain({ data: appointmentData, error: null })
-      mockFrom.mockReturnValue(chain)
 
       const { POST } = await import('../route')
       await POST(makeWebhookRequest(checkoutEvent({
@@ -276,9 +283,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('checkout.session.completed (type: membership)', () => {
     it('inserts a membership subscription record with status: active', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest(checkoutEvent(
         {
@@ -289,8 +293,8 @@ describe('POST /api/webhooks/stripe', () => {
       )))
 
       expect(res.status).toBe(200)
-      expect(mockFrom).toHaveBeenCalledWith('subscriptions')
-      expect(mockInsert).toHaveBeenCalledWith(
+      expect(mockInsertInto).toHaveBeenCalled()
+      expect(mockInsertValues).toHaveBeenCalledWith(
         expect.objectContaining({
           plan_type: 'membership',
           status: 'active',
@@ -304,9 +308,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('checkout.session.completed (type: intake_and_membership)', () => {
     it('handles both intake payment and membership start', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest(checkoutEvent(
         {
@@ -319,10 +320,10 @@ describe('POST /api/webhooks/stripe', () => {
 
       expect(res.status).toBe(200)
       // Both an update (intake) and inserts (intake record + membership record) should fire
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'submitted', paid: true })
       )
-      expect(mockInsert).toHaveBeenCalledTimes(2)
+      expect(mockInsertValues).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -330,9 +331,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('invoice.payment_succeeded', () => {
     it('updates subscription status to active', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest({
         type: 'invoice.payment_succeeded',
@@ -347,8 +345,8 @@ describe('POST /api/webhooks/stripe', () => {
       }))
 
       expect(res.status).toBe(200)
-      expect(mockFrom).toHaveBeenCalledWith('subscriptions')
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockUpdate).toHaveBeenCalled()
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'active' })
       )
     })
@@ -358,9 +356,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('customer.subscription.deleted', () => {
     it('marks the subscription as canceled', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest({
         type: 'customer.subscription.deleted',
@@ -370,7 +365,7 @@ describe('POST /api/webhooks/stripe', () => {
       }))
 
       expect(res.status).toBe(200)
-      expect(mockUpdate).toHaveBeenCalledWith({ status: 'canceled' })
+      expect(mockSet).toHaveBeenCalledWith({ status: 'canceled' })
     })
   })
 
@@ -378,9 +373,6 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('customer.subscription.updated', () => {
     it('updates subscription status to past_due', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest({
         type: 'customer.subscription.updated',
@@ -394,15 +386,12 @@ describe('POST /api/webhooks/stripe', () => {
       }))
 
       expect(res.status).toBe(200)
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'past_due' })
       )
     })
 
     it('updates subscription status to active', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
-
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest({
         type: 'customer.subscription.updated',
@@ -416,7 +405,7 @@ describe('POST /api/webhooks/stripe', () => {
       }))
 
       expect(res.status).toBe(200)
-      expect(mockUpdate).toHaveBeenCalledWith(
+      expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'active' })
       )
     })

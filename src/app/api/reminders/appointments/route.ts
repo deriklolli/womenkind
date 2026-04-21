@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointments } from '@/lib/db/schema'
+import { eq, isNull, gte, lte, and } from 'drizzle-orm'
 import { Resend } from 'resend'
 
 /**
@@ -20,7 +22,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'RESEND_API_KEY not set' }, { status: 500 })
   }
 
-  const supabase = getServiceSupabase()
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
 
   // Window: 23.5 to 24.5 hours from now
@@ -28,28 +29,22 @@ export async function POST(req: NextRequest) {
   const windowStart = new Date(now.getTime() + 23.5 * 60 * 60 * 1000)
   const windowEnd = new Date(now.getTime() + 24.5 * 60 * 60 * 1000)
 
-  const { data: appointments, error } = await supabase
-    .from('appointments')
-    .select(`
-      id,
-      starts_at,
-      ends_at,
-      video_room_url,
-      reminder_sent_at,
-      appointment_types(name, duration_minutes),
-      patients(id, profiles(first_name, last_name, email))
-    `)
-    .eq('status', 'confirmed')
-    .is('reminder_sent_at', null)
-    .gte('starts_at', windowStart.toISOString())
-    .lte('starts_at', windowEnd.toISOString())
+  const appts = await db.query.appointments.findMany({
+    where: and(
+      eq(appointments.status, 'confirmed'),
+      isNull(appointments.reminder_sent_at),
+      gte(appointments.starts_at, windowStart),
+      lte(appointments.starts_at, windowEnd)
+    ),
+    with: {
+      appointment_types: true,
+      patients: {
+        with: { profiles: true },
+      },
+    },
+  })
 
-  if (error) {
-    console.error('[REMINDERS] Failed to fetch appointments:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  if (!appointments?.length) {
+  if (!appts.length) {
     return NextResponse.json({ sent: 0 })
   }
 
@@ -57,18 +52,18 @@ export async function POST(req: NextRequest) {
   const from = process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>'
   let sent = 0
 
-  for (const appointment of appointments) {
-    const profile = (appointment as any).patients?.profiles
+  for (const appointment of appts) {
+    const profile = appointment.patients?.profiles
     const patientEmail = profile?.email
     if (!patientEmail) continue
 
     const firstName = profile.first_name || 'there'
-    const typeName = (appointment as any).appointment_types?.name || 'Appointment'
-    const durationMinutes = (appointment as any).appointment_types?.duration_minutes || 0
+    const typeName = appointment.appointment_types?.name || 'Appointment'
+    const durationMinutes = appointment.appointment_types?.duration_minutes || 0
     const videoRoomUrl = appointment.video_room_url
 
-    const start = new Date(appointment.starts_at)
-    const end = new Date(appointment.ends_at)
+    const start = appointment.starts_at
+    const end = appointment.ends_at
 
     const dateStr = start.toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Denver',
@@ -172,10 +167,10 @@ export async function POST(req: NextRequest) {
       })
 
       // Mark reminder sent so we don't send it again
-      await supabase
-        .from('appointments')
-        .update({ reminder_sent_at: new Date().toISOString() })
-        .eq('id', appointment.id)
+      await db
+        .update(appointments)
+        .set({ reminder_sent_at: new Date() })
+        .where(eq(appointments.id, appointment.id))
 
       sent++
       console.log(`[REMINDERS] Sent reminder to ${patientEmail} for appointment ${appointment.id}`)

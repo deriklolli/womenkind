@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { cancelCalendarEvent } from '@/lib/google-calendar'
 import { Resend } from 'resend'
+import { getServerSession } from '@/lib/getServerSession'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -142,7 +145,6 @@ async function sendCancellationEmail({
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
     const { appointmentId, reason, canceledBy } = await req.json()
 
     if (!appointmentId) {
@@ -150,19 +152,28 @@ export async function POST(req: NextRequest) {
     }
 
     // Get the appointment with patient and provider info
-    const { data: appointment, error: fetchError } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        appointment_types(name, duration_minutes),
-        patients(id, profiles(first_name, last_name, email)),
-        providers(credentials, profiles(first_name, last_name))
-      `)
-      .eq('id', appointmentId)
-      .single()
+    const appointment = await db.query.appointments.findFirst({
+      where: eq(appointments.id, appointmentId),
+      with: {
+        appointment_types: true,
+        patients: {
+          with: { profiles: true },
+        },
+        providers: {
+          with: { profiles: true },
+        },
+      },
+    })
 
-    if (fetchError || !appointment) {
+    if (!appointment) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+    }
+
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Allow patient who owns the appointment, or any provider
+    if (session.role === 'patient' && session.patientId !== appointment.patient_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     if (appointment.status === 'canceled') {
@@ -170,21 +181,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Cancel the appointment
-    const { data: updated, error: updateError } = await supabase
-      .from('appointments')
-      .update({
+    const [updated] = await db
+      .update(appointments)
+      .set({
         status: 'canceled',
-        canceled_at: new Date().toISOString(),
+        canceled_at: new Date(),
         provider_notes: reason
           ? `${appointment.provider_notes ? appointment.provider_notes + '\n' : ''}Cancellation reason: ${reason}`
           : appointment.provider_notes,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date(),
       })
-      .eq('id', appointmentId)
-      .select()
-      .single()
+      .where(eq(appointments.id, appointmentId))
+      .returning()
 
-    if (updateError) throw updateError
+    if (!updated) throw new Error('Failed to update appointment')
 
     // Cancel Google Calendar event if one exists
     if (appointment.google_calendar_event_id) {
@@ -192,20 +202,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Send cancellation email to the other party
-    const patientProfile = (appointment as any).patients?.profiles
+    const patientProfile = appointment.patients?.profiles
     const patientName = patientProfile
       ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
       : 'Patient'
     const patientEmail = patientProfile?.email
 
-    const appointmentTypeName = (appointment as any).appointment_types?.name || 'Appointment'
-    const durationMinutes = (appointment as any).appointment_types?.duration_minutes || 30
+    const appointmentTypeName = appointment.appointment_types?.name || 'Appointment'
+    const durationMinutes = appointment.appointment_types?.duration_minutes || 30
 
     // Build provider display name dynamically
-    const providerProfile = (appointment as any).providers?.profiles
-    const providerCredentials = (appointment as any).providers?.credentials || ''
+    const providerProfile = appointment.providers?.profiles
     const providerDisplayName = providerProfile
-      ? `${providerCredentials ? providerCredentials + ' ' : ''}${providerProfile.first_name || ''} ${providerProfile.last_name || ''}`.trim()
+      ? `${providerProfile.first_name || ''} ${providerProfile.last_name || ''}`.trim()
       : 'Your provider'
 
     if (canceledBy === 'provider') {
@@ -217,8 +226,8 @@ export async function POST(req: NextRequest) {
           canceledByName: providerDisplayName,
           appointmentName: appointmentTypeName,
           durationMinutes,
-          startsAt: appointment.starts_at,
-          endsAt: appointment.ends_at,
+          startsAt: appointment.starts_at.toISOString(),
+          endsAt: appointment.ends_at.toISOString(),
         })
       }
     } else {
@@ -227,12 +236,12 @@ export async function POST(req: NextRequest) {
       if (providerEmail) {
         await sendCancellationEmail({
           toEmail: providerEmail,
-          toName: 'Dr. Urban',
+          toName: providerDisplayName,
           canceledByName: patientName,
           appointmentName: appointmentTypeName,
           durationMinutes,
-          startsAt: appointment.starts_at,
-          endsAt: appointment.ends_at,
+          startsAt: appointment.starts_at.toISOString(),
+          endsAt: appointment.ends_at.toISOString(),
         })
       }
     }

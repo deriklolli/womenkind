@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
+import { useIdleTimeout } from '@/hooks/useIdleTimeout'
+import { signOutPatient } from '@/lib/signOut'
+
+// HIPAA §164.312(a)(2)(iii) automatic logoff — 20 min of inactivity.
+const IDLE_TIMEOUT_MS = 20 * 60 * 1000
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -27,13 +32,9 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_patient')
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
+        const role = session.user.user_metadata?.role
 
-        if (profile?.role === 'patient') {
+        if (role === 'patient') {
           setAuthorized(true)
           setChecking(false)
           return
@@ -58,6 +59,12 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
     checkAccess()
   }, [pathname, router])
+
+  useIdleTimeout({
+    timeoutMs: IDLE_TIMEOUT_MS,
+    onTimeout: () => signOutPatient('idle'),
+    enabled: authorized && pathname !== '/patient/login',
+  })
 
   if (checking && pathname !== '/patient/login') {
     return (

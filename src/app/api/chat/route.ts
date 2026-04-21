@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles, appointments } from '@/lib/db/schema'
+import { eq, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
 
@@ -17,137 +19,158 @@ interface ChatMessage {
 }
 
 async function getPatientContext(patientId: string) {
-  // Fetch patient profile
-  const { data: patient } = await getServiceSupabase()
-    .from('patients')
-    .select('*, profiles ( first_name, last_name, email )')
-    .eq('id', patientId)
-    .single()
-
-  // Fetch intake
-  const { data: intake } = await getServiceSupabase()
-    .from('intakes')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('started_at', { ascending: false })
+  // Fetch patient with profile
+  const patientRows = await db
+    .select({
+      id: patients.id,
+      profile_id: patients.profile_id,
+      first_name: profiles.first_name,
+      last_name: profiles.last_name,
+      email: profiles.email,
+    })
+    .from(patients)
+    .leftJoin(profiles, eq(patients.profile_id, profiles.id))
+    .where(eq(patients.id, patientId))
     .limit(1)
-    .single()
 
-  // Fetch visits
-  const { data: visits } = await getServiceSupabase()
-    .from('visits')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('visit_date', { ascending: false })
+  const patientRow = patientRows[0] || null
+  const patient = patientRow
+    ? {
+        ...patientRow,
+        profiles: {
+          first_name: patientRow.first_name,
+          last_name: patientRow.last_name,
+          email: patientRow.email,
+        },
+      }
+    : null
+
+  // Fetch most recent intake
+  const intakeRows = await db
+    .select()
+    .from(intakes)
+    .where(eq(intakes.patient_id, patientId))
+    .orderBy(desc(intakes.started_at))
+    .limit(1)
+  const intake = intakeRows[0] || null
+
+  // Fetch recent visits
+  const visitRows = await db
+    .select()
+    .from(visits)
+    .where(eq(visits.patient_id, patientId))
+    .orderBy(desc(visits.visit_date))
     .limit(5)
 
   // Fetch prescriptions
-  const { data: prescriptions } = await getServiceSupabase()
-    .from('prescriptions')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('created_at', { ascending: false })
+  const prescriptionRows = await db
+    .select()
+    .from(prescriptions)
+    .where(eq(prescriptions.patient_id, patientId))
+    .orderBy(desc(prescriptions.created_at))
 
   // Fetch lab orders
-  const { data: labOrders } = await getServiceSupabase()
-    .from('lab_orders')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('created_at', { ascending: false })
+  const labOrderRows = await db
+    .select()
+    .from(lab_orders)
+    .where(eq(lab_orders.patient_id, patientId))
+    .orderBy(desc(lab_orders.created_at))
 
   // Fetch provider notes
-  const { data: providerNotes } = await getServiceSupabase()
-    .from('provider_notes')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('created_at', { ascending: false })
+  const providerNoteRows = await db
+    .select()
+    .from(provider_notes)
+    .where(eq(provider_notes.patient_id, patientId))
+    .orderBy(desc(provider_notes.created_at))
 
   return {
     patient,
     intake,
-    visits: visits || [],
-    prescriptions: prescriptions || [],
-    labOrders: labOrders || [],
-    providerNotes: providerNotes || [],
+    visits: visitRows,
+    prescriptions: prescriptionRows,
+    labOrders: labOrderRows,
+    providerNotes: providerNoteRows,
   }
 }
 
-async function executeAction(action: string, params: Record<string, any>) {
+async function executeAction(action: string, params: Record<string, any>, context: ChatContext | undefined, sessionProviderId: string | null) {
   try {
     switch (action) {
       case 'add_risk_flag': {
         const { intakeId, flagType, flag } = params
-        // flagType: 'urgent' | 'contraindications' | 'considerations'
-        const { data: intake } = await getServiceSupabase()
-          .from('intakes')
-          .select('ai_brief')
-          .eq('id', intakeId)
-          .single()
 
+        const intakeRows = await db
+          .select({ ai_brief: intakes.ai_brief })
+          .from(intakes)
+          .where(eq(intakes.id, intakeId))
+          .limit(1)
+
+        const intake = intakeRows[0]
         if (!intake?.ai_brief) return { success: false, error: 'No AI brief found' }
 
-        const brief = typeof intake.ai_brief === 'string' ? JSON.parse(intake.ai_brief) : intake.ai_brief
+        const brief = typeof intake.ai_brief === 'string' ? JSON.parse(intake.ai_brief) : intake.ai_brief as any
         if (!brief.risk_flags) brief.risk_flags = { urgent: [], contraindications: [], considerations: [] }
         if (!brief.risk_flags[flagType]) brief.risk_flags[flagType] = []
         brief.risk_flags[flagType].push(flag)
 
-        const { error } = await getServiceSupabase()
-          .from('intakes')
-          .update({ ai_brief: brief })
-          .eq('id', intakeId)
+        await db.update(intakes).set({ ai_brief: brief }).where(eq(intakes.id, intakeId))
 
-        return error ? { success: false, error: error.message } : { success: true, message: `Added "${flag}" to ${flagType} risk flags` }
+        return { success: true, message: `Added "${flag}" to ${flagType} risk flags` }
       }
 
       case 'remove_risk_flag': {
         const { intakeId: iId, flagType: fType, flag: fText } = params
-        const { data: intakeData } = await getServiceSupabase()
-          .from('intakes')
-          .select('ai_brief')
-          .eq('id', iId)
-          .single()
 
+        const intakeRows = await db
+          .select({ ai_brief: intakes.ai_brief })
+          .from(intakes)
+          .where(eq(intakes.id, iId))
+          .limit(1)
+
+        const intakeData = intakeRows[0]
         if (!intakeData?.ai_brief) return { success: false, error: 'No AI brief found' }
 
-        const b = typeof intakeData.ai_brief === 'string' ? JSON.parse(intakeData.ai_brief) : intakeData.ai_brief
+        const b = typeof intakeData.ai_brief === 'string' ? JSON.parse(intakeData.ai_brief) : intakeData.ai_brief as any
         if (b.risk_flags?.[fType]) {
           b.risk_flags[fType] = b.risk_flags[fType].filter((f: string) => !f.toLowerCase().includes(fText.toLowerCase()))
         }
 
-        const { error: err } = await getServiceSupabase()
-          .from('intakes')
-          .update({ ai_brief: b })
-          .eq('id', iId)
+        await db.update(intakes).set({ ai_brief: b }).where(eq(intakes.id, iId))
 
-        return err ? { success: false, error: err.message } : { success: true, message: `Removed matching flag from ${fType}` }
+        return { success: true, message: `Removed matching flag from ${fType}` }
       }
 
       case 'add_provider_note': {
-        const { patientId, providerId, noteType, title, content } = params
-        const { error } = await getServiceSupabase()
-          .from('provider_notes')
-          .insert({
-            patient_id: patientId,
-            provider_id: providerId || 'b0000000-0000-0000-0000-000000000001',
-            note_type: noteType || 'general',
-            title: title || null,
-            content,
-          })
+        const { patientId, noteType, content } = params
 
-        return error ? { success: false, error: error.message } : { success: true, message: 'Provider note added successfully' }
+        if (patientId !== context?.patientId) {
+          console.warn('add_provider_note: params.patientId does not match context.patientId — skipping action')
+          return { success: false, error: 'Patient ID mismatch' }
+        }
+
+        await db.insert(provider_notes).values({
+          patient_id: patientId,
+          provider_id: sessionProviderId!,
+          note_type: noteType || 'general',
+          content,
+        })
+
+        return { success: true, message: 'Provider note added successfully' }
       }
 
       case 'update_symptom_severity': {
         const { intakeId: sIntakeId, domain, severity } = params
-        const { data: sIntake } = await getServiceSupabase()
-          .from('intakes')
-          .select('ai_brief')
-          .eq('id', sIntakeId)
-          .single()
 
+        const intakeRows = await db
+          .select({ ai_brief: intakes.ai_brief })
+          .from(intakes)
+          .where(eq(intakes.id, sIntakeId))
+          .limit(1)
+
+        const sIntake = intakeRows[0]
         if (!sIntake?.ai_brief) return { success: false, error: 'No AI brief found' }
 
-        const sb = typeof sIntake.ai_brief === 'string' ? JSON.parse(sIntake.ai_brief) : sIntake.ai_brief
+        const sb = typeof sIntake.ai_brief === 'string' ? JSON.parse(sIntake.ai_brief) : sIntake.ai_brief as any
         const domainEntry = sb.symptom_summary?.domains?.find((d: any) =>
           d.domain.toLowerCase().includes(domain.toLowerCase())
         )
@@ -155,12 +178,9 @@ async function executeAction(action: string, params: Record<string, any>) {
           domainEntry.severity = severity
         }
 
-        const { error: sErr } = await getServiceSupabase()
-          .from('intakes')
-          .update({ ai_brief: sb })
-          .eq('id', sIntakeId)
+        await db.update(intakes).set({ ai_brief: sb }).where(eq(intakes.id, sIntakeId))
 
-        return sErr ? { success: false, error: sErr.message } : { success: true, message: `Updated ${domain} severity to ${severity}` }
+        return { success: true, message: `Updated ${domain} severity to ${severity}` }
       }
 
       default:
@@ -175,12 +195,28 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { messages, context }: { messages: ChatMessage[]; context?: ChatContext } = await req.json()
 
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
+      if (session.providerId) {
+        const relationship = await db
+          .select({ id: appointments.id })
+          .from(appointments)
+          .where(
+            and(
+              eq(appointments.provider_id, session.providerId),
+              eq(appointments.patient_id, context.patientId)
+            )
+          )
+          .limit(1)
+        if (relationship.length === 0) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+      }
       const data = await getPatientContext(context.patientId)
       patientContext = `
 CURRENT PATIENT CONTEXT:
@@ -268,7 +304,7 @@ RULES:
     if (actionMatch) {
       try {
         const actionData = JSON.parse(actionMatch[1])
-        const result = await executeAction(actionData.action, actionData.params)
+        const result = await executeAction(actionData.action, actionData.params, context, session.providerId ?? null)
 
         // Remove the action block from the displayed response
         responseText = responseText.replace(/```action\n[\s\S]*?\n```/, '').trim()

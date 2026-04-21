@@ -5,8 +5,7 @@
  * optionally generates an AI clinical brief via Claude, and fires confirmation
  * emails to both patient and provider.
  *
- * Strategy: mock @supabase/supabase-js (the route uses createClient directly),
- * global.fetch (for the Anthropic API call), resend, and @/lib/phi-audit.
+ * Strategy: mock @/lib/db (Drizzle), @/lib/bedrock, resend, and @/lib/phi-audit.
  *
  * What we verify:
  * - Happy path (no AI key) → { success: true, briefGenerated: false }
@@ -27,12 +26,27 @@ jest.mock('@/lib/bedrock', () => ({
   invokeModel: (...args: unknown[]) => mockInvokeModel(...args),
 }))
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
+// ── Drizzle db mock ───────────────────────────────────────────────────────────
 
-const mockFrom = jest.fn()
+const mockUpdate = jest.fn()
+const mockSet = jest.fn()
+const mockWhere = jest.fn()
+const mockQueryProvidersFindFirst = jest.fn()
+const mockQueryPatientsFindFirst = jest.fn()
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({ from: mockFrom })),
+// Drizzle update chain: db.update(...).set(...).where(...)
+mockWhere.mockResolvedValue(undefined)
+mockSet.mockReturnValue({ where: mockWhere })
+mockUpdate.mockReturnValue({ set: mockSet })
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    update: (...args: unknown[]) => mockUpdate(...args),
+    query: {
+      providers: { findFirst: (...args: unknown[]) => mockQueryProvidersFindFirst(...args) },
+      patients: { findFirst: (...args: unknown[]) => mockQueryPatientsFindFirst(...args) },
+    },
+  },
 }))
 
 // ── PHI audit mock ────────────────────────────────────────────────────────────
@@ -62,22 +76,6 @@ jest.mock('resend', () => ({
     emails: { send: mockEmailSend },
   })),
 }))
-
-// ── Chain factory ─────────────────────────────────────────────────────────────
-
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const resolved = Promise.resolve(resolveWith)
-  const chain: any = {
-    then: resolved.then.bind(resolved),
-    catch: resolved.catch.bind(resolved),
-  }
-  ;['select', 'eq', 'neq', 'limit', 'update', 'insert'].forEach(
-    m => { chain[m] = jest.fn().mockReturnValue(chain) }
-  )
-  chain.single = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  return chain
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,22 +119,6 @@ const MOCK_AI_BRIEF = {
   },
 }
 
-/** Setup mockFrom to route tables to appropriate responses */
-function setupTables(overrides: Record<string, unknown> = {}) {
-  const defaults: Record<string, unknown> = {
-    providers: { data: { id: 'provider-uuid-789' }, error: null },
-    intakes: { data: null, error: null },
-    patients: {
-      data: {
-        profiles: { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' },
-      },
-      error: null,
-    },
-    ...overrides,
-  }
-  mockFrom.mockImplementation((table: string) => makeChain(defaults[table] ?? { data: null, error: null }))
-}
-
 /** Mock a successful Bedrock invokeModel response */
 function mockBedrockSuccess(brief = MOCK_AI_BRIEF) {
   mockInvokeModel.mockResolvedValue(JSON.stringify(brief))
@@ -152,7 +134,6 @@ function mockBedrockFailure() {
 describe('POST /api/intake/submit', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    setupTables()
     delete process.env.RESEND_API_KEY
     // Bedrock fails by default — AI brief generation is skipped
     mockBedrockFailure()
@@ -163,6 +144,17 @@ describe('POST /api/intake/submit', () => {
       providerId: 'provider-uuid-789',
       role: 'provider',
     })
+    // Default: active provider found
+    mockQueryProvidersFindFirst.mockResolvedValue({ id: 'provider-uuid-789' })
+    // Default: patient with profile found (for emails)
+    mockQueryPatientsFindFirst.mockResolvedValue({
+      id: 'patient-uuid-456',
+      profiles: { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' },
+    })
+    // Default: update chain resolves
+    mockWhere.mockResolvedValue(undefined)
+    mockSet.mockReturnValue({ where: mockWhere })
+    mockUpdate.mockReturnValue({ set: mockSet })
   })
 
   // ── Happy path (no AI brief) ──────────────────────────────────────────────
@@ -177,15 +169,9 @@ describe('POST /api/intake/submit', () => {
 
   it('updates the intake status to submitted with answers and timestamp', async () => {
     let capturedUpdateArgs: unknown = null
-    mockFrom.mockImplementation((table: string) => {
-      const chain = makeChain({ data: null, error: null })
-      if (table === 'intakes') {
-        chain.update = jest.fn().mockImplementation((args: unknown) => {
-          capturedUpdateArgs = args
-          return chain
-        })
-      }
-      return chain
+    mockSet.mockImplementation((args: unknown) => {
+      capturedUpdateArgs = args
+      return { where: mockWhere }
     })
 
     const { POST } = await import('../route')
@@ -200,15 +186,14 @@ describe('POST /api/intake/submit', () => {
   it('resolves the active provider and links it to the intake', async () => {
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
-    // providers table must be queried
-    expect(mockFrom).toHaveBeenCalledWith('providers')
+    // providers query must be called
+    expect(mockQueryProvidersFindFirst).toHaveBeenCalled()
   })
 
   // ── Happy path (with AI brief) ────────────────────────────────────────────
 
   it('returns { success: true, briefGenerated: true } when Bedrock responds successfully', async () => {
     mockBedrockSuccess()
-    setupTables()
 
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_BODY))
@@ -219,7 +204,6 @@ describe('POST /api/intake/submit', () => {
 
   it('calls invokeModel with a patient profile in the messages', async () => {
     mockBedrockSuccess()
-    setupTables()
 
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
@@ -236,22 +220,15 @@ describe('POST /api/intake/submit', () => {
   it('saves the AI brief to the intake record', async () => {
     mockBedrockSuccess()
 
+    let callCount = 0
     let aiBriefSaved: unknown = null
-    let intakesCallCount = 0
-    mockFrom.mockImplementation((table: string) => {
-      const chain = makeChain({ data: null, error: null })
-      if (table === 'intakes') {
-        intakesCallCount++
-        if (intakesCallCount === 2) {
-          // Second intakes call = saving the brief
-          chain.update = jest.fn().mockImplementation((args: unknown) => {
-            aiBriefSaved = args
-            return chain
-          })
-        }
+    mockSet.mockImplementation((args: unknown) => {
+      callCount++
+      if (callCount === 2) {
+        // Second set() call = saving the brief
+        aiBriefSaved = args
       }
-      if (table === 'providers') return makeChain({ data: { id: 'provider-uuid-789' }, error: null })
-      return chain
+      return { where: mockWhere }
     })
 
     const { POST } = await import('../route')
@@ -264,7 +241,6 @@ describe('POST /api/intake/submit', () => {
 
   it('still returns success when Bedrock throws', async () => {
     mockBedrockFailure()
-    setupTables()
 
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_BODY))
@@ -275,7 +251,6 @@ describe('POST /api/intake/submit', () => {
 
   it('still returns success when Bedrock rejects with a network-style error', async () => {
     mockInvokeModel.mockRejectedValue(new Error('Network error'))
-    setupTables()
 
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_BODY))
@@ -286,10 +261,8 @@ describe('POST /api/intake/submit', () => {
 
   // ── Database error → 500 ──────────────────────────────────────────────────
 
-  it('returns 500 when the Supabase intake update fails', async () => {
-    setupTables({
-      intakes: { data: null, error: { message: 'database connection lost' } },
-    })
+  it('returns 500 when the intake update fails', async () => {
+    mockWhere.mockRejectedValue(new Error('database connection lost'))
 
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_BODY))

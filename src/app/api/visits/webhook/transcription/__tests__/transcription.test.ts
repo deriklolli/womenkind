@@ -1,21 +1,37 @@
 import type { NextRequest } from 'next/server'
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
+// ── Drizzle mock ──────────────────────────────────────────────────────────────
 
-const mockUpdate = jest.fn()
-const mockFrom = jest.fn()
+const mockDbUpdate = jest.fn()
+const mockDbSet = jest.fn()
+const mockDbWhere = jest.fn()
+const mockDbInsert = jest.fn()
+const mockDbQueryFindFirst = jest.fn()
 
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const chain: Record<string, jest.Mock> = {}
-  ;['select', 'eq', 'neq'].forEach(m => { chain[m] = jest.fn().mockReturnValue(chain) })
-  chain.single      = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  chain.update      = mockUpdate.mockReturnValue(chain)
-  return chain
-}
+// Chainable update: db.update(table).set({}).where()
+mockDbWhere.mockResolvedValue([])
+mockDbSet.mockReturnValue({ where: mockDbWhere })
+mockDbUpdate.mockReturnValue({ set: mockDbSet })
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({ from: mockFrom })),
+jest.mock('@/lib/db', () => ({
+  db: {
+    update: mockDbUpdate,
+    insert: mockDbInsert,
+    query: {
+      encounter_notes: { findFirst: mockDbQueryFindFirst },
+      patients: { findFirst: jest.fn().mockResolvedValue(null) },
+    },
+  },
+}))
+
+jest.mock('@/lib/db/schema', () => ({
+  encounter_notes: { id: 'id', assemblyai_transcript_id: 'assemblyai_transcript_id' },
+  patients: { id: 'id' },
+  profiles: { id: 'id' },
+}))
+
+jest.mock('drizzle-orm', () => ({
+  eq: jest.fn((col, val) => ({ col, val })),
 }))
 
 // ── Bedrock mock ──────────────────────────────────────────────────────────────
@@ -69,10 +85,14 @@ describe('POST /api/visits/webhook/transcription', () => {
     jest.clearAllMocks()
     process.env.WEBHOOK_SECRET = WEBHOOK_SECRET
     process.env.ASSEMBLYAI_API_KEY = 'assembly-key'
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key'
 
-    mockFrom.mockReturnValue(makeChain({ data: FAKE_NOTE, error: null }))
+    // Default: note found for transcript lookup
+    mockDbQueryFindFirst.mockResolvedValue(FAKE_NOTE)
+
+    // Reset update chain
+    mockDbWhere.mockResolvedValue([])
+    mockDbSet.mockReturnValue({ where: mockDbWhere })
+    mockDbUpdate.mockReturnValue({ set: mockDbSet })
 
     global.fetch = jest.fn().mockImplementation((url: string, opts?: RequestInit) => {
       if (url.includes('assemblyai.com/v2/transcript/') && (!opts?.method || opts.method === 'GET')) {
@@ -114,12 +134,13 @@ describe('POST /api/visits/webhook/transcription', () => {
 
     expect(res.status).toBe(200)
 
-    const updateCalls = mockUpdate.mock.calls
-    const soapUpdate = updateCalls.find((args: unknown[]) =>
+    // Find the db.update().set() call that includes chief_complaint (the SOAP note update)
+    const setCalls = mockDbSet.mock.calls
+    const soapSetCall = setCalls.find((args: unknown[]) =>
       typeof args[0] === 'object' && args[0] !== null && 'chief_complaint' in (args[0] as object)
     )
 
-    expect(soapUpdate).toBeDefined()
-    expect((soapUpdate![0] as Record<string, unknown>).recording_url).toBeNull()
+    expect(soapSetCall).toBeDefined()
+    expect((soapSetCall![0] as Record<string, unknown>).recording_url).toBeNull()
   })
 })

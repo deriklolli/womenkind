@@ -1,13 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-// Lazy-init: don't create at module scope (breaks Vercel build when env vars missing)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { intakes } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/intake/save
@@ -15,33 +9,29 @@ function getSupabase() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabase()
     const { intakeId, patientId, answers, currentSection } = await req.json()
 
     if (!intakeId) {
       // Create a new intake record (draft)
-      const { data, error } = await supabase
-        .from('intakes')
-        .insert({
+      const [row] = await db
+        .insert(intakes)
+        .values({
           status: 'draft',
           answers,
-          started_at: new Date().toISOString(),
+          started_at: new Date(),
           ...(patientId ? { patient_id: patientId } : {}),
         })
-        .select('id')
-        .single()
+        .returning({ id: intakes.id })
 
-      if (error) throw error
-      return NextResponse.json({ intakeId: data.id })
+      return NextResponse.json({ intakeId: row.id })
     }
 
     // Update existing intake
-    const { error } = await supabase
-      .from('intakes')
-      .update({ answers })
-      .eq('id', intakeId)
+    await db
+      .update(intakes)
+      .set({ answers })
+      .where(eq(intakes.id, intakeId))
 
-    if (error) throw error
     return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error('Intake save error:', err)

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { prescriptions, appointments } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { sendPrescription } from '@/lib/canvas-client'
 
@@ -27,6 +29,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Verify the provider has a care relationship with this patient
+    const [relationship] = await db
+      .select({ id: appointments.id })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.provider_id, session.providerId!),
+          eq(appointments.patient_id, patientId)
+        )
+      )
+      .limit(1)
+
+    if (!relationship) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Send via Canvas (mocked)
     const result = await sendPrescription({
       patientId,
@@ -39,28 +57,22 @@ export async function POST(request: Request) {
       pharmacy: pharmacy || '',
     })
 
-    // Save to Supabase
-    const supabase = getServiceSupabase()
-    const { data, error } = await supabase
-      .from('prescriptions')
-      .insert({
+    // NOTE: canvas_prescription_id, visit_id, and pharmacy are not in the Drizzle
+    // prescriptions schema. Insert what the schema supports.
+    const [data] = await db
+      .insert(prescriptions)
+      .values({
         patient_id: patientId,
-        provider_id: session.providerId || null,
-        visit_id: visitId || null,
-        canvas_prescription_id: result.canvasPrescriptionId,
+        provider_id: session.providerId!,
         medication_name: medicationName,
         dosage,
         frequency,
-        quantity: quantity || 30,
+        quantity_dispensed: quantity || 30,
         refills: refills || 0,
-        pharmacy: pharmacy || '',
-        status: 'sent',
-        prescribed_at: result.sentAt,
+        status: 'active',
+        prescribed_at: new Date(result.sentAt),
       })
-      .select()
-      .single()
-
-    if (error) throw error
+      .returning()
 
     return NextResponse.json({ prescription: data, canvas: result })
   } catch (err: any) {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe, STRIPE_PRICES } from '@/lib/stripe'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { intakes, subscriptions } from '@/lib/db/schema'
+import { eq, isNotNull, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/stripe/checkout
@@ -12,8 +15,10 @@ import { getServiceSupabase } from '@/lib/supabase-server'
  */
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await getServerSession()
+    if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const stripe = getStripe()
-    const supabase = getServiceSupabase()
     const { intakeId, patientEmail, addMembership } = await req.json()
 
     if (!intakeId) {
@@ -28,16 +33,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Look up the intake to get patient info
-    const { data: intake } = await supabase
-      .from('intakes')
-      .select('id, patient_id, answers')
-      .eq('id', intakeId)
-      .maybeSingle()
+    const intake = await db.query.intakes.findFirst({
+      where: eq(intakes.id, intakeId),
+    })
+
+    const patientId = intake?.patient_id || null
+    if (authSession.role === 'patient' && authSession.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Determine patient email from intake answers or parameter
     const email =
       patientEmail ||
-      intake?.answers?.email ||
+      (intake?.answers as any)?.email ||
       undefined
 
     // Get or create Stripe customer
@@ -45,13 +53,12 @@ export async function POST(req: NextRequest) {
 
     if (intake?.patient_id) {
       // Check if patient already has a Stripe customer
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('patient_id', intake.patient_id)
-        .not('stripe_customer_id', 'is', null)
-        .limit(1)
-        .maybeSingle()
+      const subscription = await db.query.subscriptions.findFirst({
+        where: and(
+          eq(subscriptions.patient_id, intake.patient_id),
+          isNotNull(subscriptions.stripe_customer_id)
+        ),
+      })
 
       if (subscription?.stripe_customer_id) {
         customerId = subscription.stripe_customer_id

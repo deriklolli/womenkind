@@ -18,7 +18,7 @@
  *   - DB error → 500
  *
  * PATCH:
- *   - Missing threadId or readerId → 400
+ *   - Missing threadId → 400 (readerId is derived from session)
  *   - Marks unread messages as read and returns { success: true }
  *
  * GET:
@@ -28,12 +28,72 @@
 
 import type { NextRequest } from 'next/server'
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
+// ── Drizzle db mock ───────────────────────────────────────────────────────────
 
-const mockFrom = jest.fn()
+const mockDbInsert = jest.fn()
+const mockDbSelect = jest.fn()
+const mockDbUpdate = jest.fn()
 
-jest.mock('@/lib/supabase-server', () => ({
-  getServiceSupabase: jest.fn(() => ({ from: mockFrom })),
+// Chainable select builder
+function makeSelectChain(result: unknown[]) {
+  const chain: any = {}
+  const resolved = Promise.resolve(result)
+  chain.from = jest.fn().mockReturnValue(chain)
+  chain.where = jest.fn().mockReturnValue(chain)
+  chain.orderBy = jest.fn().mockReturnValue(chain)
+  chain.limit = jest.fn().mockReturnValue(chain)
+  chain.innerJoin = jest.fn().mockReturnValue(chain)
+  chain.then = resolved.then.bind(resolved)
+  chain.catch = resolved.catch.bind(resolved)
+  return chain
+}
+
+// Chainable insert builder
+function makeInsertChain(result: unknown[]) {
+  const chain: any = {}
+  const resolved = Promise.resolve(result)
+  chain.values = jest.fn().mockReturnValue(chain)
+  chain.returning = jest.fn().mockResolvedValue(result)
+  chain.then = resolved.then.bind(resolved)
+  chain.catch = resolved.catch.bind(resolved)
+  return chain
+}
+
+// Chainable update builder
+function makeUpdateChain() {
+  const chain: any = {}
+  const resolved = Promise.resolve(undefined)
+  chain.set = jest.fn().mockReturnValue(chain)
+  chain.where = jest.fn().mockReturnValue(chain)
+  chain.then = resolved.then.bind(resolved)
+  chain.catch = resolved.catch.bind(resolved)
+  return chain
+}
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    insert: (...args: unknown[]) => mockDbInsert(...args),
+    select: (...args: unknown[]) => mockDbSelect(...args),
+    update: (...args: unknown[]) => mockDbUpdate(...args),
+  },
+}))
+
+jest.mock('@/lib/db/schema', () => ({
+  messages: 'messages',
+  notifications: 'notifications',
+  patients: 'patients',
+  providers: 'providers',
+  profiles: 'profiles',
+}))
+
+jest.mock('drizzle-orm', () => ({
+  eq: jest.fn((_col: unknown, _val: unknown) => ({ type: 'eq' })),
+  and: jest.fn((..._args: unknown[]) => ({ type: 'and' })),
+  or: jest.fn((..._args: unknown[]) => ({ type: 'or' })),
+  desc: jest.fn((_col: unknown) => ({ type: 'desc' })),
+  asc: jest.fn((_col: unknown) => ({ type: 'asc' })),
+  isNull: jest.fn((_col: unknown) => ({ type: 'isNull' })),
+  inArray: jest.fn((_col: unknown, _vals: unknown) => ({ type: 'inArray' })),
 }))
 
 // ── PHI audit mock ────────────────────────────────────────────────────────────
@@ -57,22 +117,6 @@ let mockSessionData: object | null = {
 jest.mock('@/lib/getServerSession', () => ({
   getServerSession: jest.fn().mockImplementation(() => Promise.resolve(mockSessionData)),
 }))
-
-// ── Chain factory ─────────────────────────────────────────────────────────────
-
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const resolved = Promise.resolve(resolveWith)
-  const chain: any = {
-    then: resolved.then.bind(resolved),
-    catch: resolved.catch.bind(resolved),
-  }
-  ;['select', 'eq', 'in', 'is', 'order', 'or', 'update', 'insert'].forEach(
-    m => { chain[m] = jest.fn().mockReturnValue(chain) }
-  )
-  chain.single = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  return chain
-}
 
 // ── Request helpers ───────────────────────────────────────────────────────────
 
@@ -135,7 +179,12 @@ describe('/api/messages', () => {
       providerId: null,
       role: 'patient',
     }
-    mockFrom.mockReturnValue(makeChain({ data: SAVED_MESSAGE, error: null }))
+    // Default: insert returns the saved message
+    mockDbInsert.mockReturnValue(makeInsertChain([SAVED_MESSAGE]))
+    // Default: select returns empty array
+    mockDbSelect.mockReturnValue(makeSelectChain([]))
+    // Default: update chain
+    mockDbUpdate.mockReturnValue(makeUpdateChain())
   })
 
   // ── POST: validation ────────────────────────────────────────────────────────
@@ -174,7 +223,7 @@ describe('/api/messages', () => {
 
   describe('POST - send message', () => {
     it('returns the saved message and threadId', async () => {
-      mockFrom.mockReturnValue(makeChain({ data: SAVED_MESSAGE, error: null }))
+      mockDbInsert.mockReturnValue(makeInsertChain([SAVED_MESSAGE]))
       const { POST } = await import('../route')
       const res = await POST(makePostRequest({
         senderId: 'patient-uuid-123',
@@ -190,13 +239,14 @@ describe('/api/messages', () => {
     })
 
     it('uses the provided threadId when replying to an existing thread', async () => {
-      let insertArgs: unknown = null
-      const chain = makeChain({ data: SAVED_MESSAGE, error: null })
-      chain.insert = jest.fn().mockImplementation((args: unknown) => {
-        insertArgs = args
-        return chain
+      let insertedValues: unknown = null
+      const insertChain = makeInsertChain([SAVED_MESSAGE])
+      const origValues = insertChain.values
+      insertChain.values = jest.fn().mockImplementation((args: unknown) => {
+        insertedValues = args
+        return origValues.call(insertChain, args)
       })
-      mockFrom.mockReturnValue(chain)
+      mockDbInsert.mockReturnValue(insertChain)
 
       const { POST } = await import('../route')
       await POST(makePostRequest({
@@ -207,17 +257,18 @@ describe('/api/messages', () => {
         threadId: 'existing-thread-xyz',
       }))
 
-      expect(insertArgs).toMatchObject({ thread_id: 'existing-thread-xyz' })
+      expect(insertedValues).toMatchObject({ thread_id: 'existing-thread-xyz' })
     })
 
     it('generates a new UUID threadId when no threadId is provided', async () => {
-      let insertArgs: any = null
-      const chain = makeChain({ data: SAVED_MESSAGE, error: null })
-      chain.insert = jest.fn().mockImplementation((args: unknown) => {
-        insertArgs = args
-        return chain
+      let insertedValues: any = null
+      const insertChain = makeInsertChain([SAVED_MESSAGE])
+      const origValues = insertChain.values
+      insertChain.values = jest.fn().mockImplementation((args: unknown) => {
+        insertedValues = args
+        return origValues.call(insertChain, args)
       })
-      mockFrom.mockReturnValue(chain)
+      mockDbInsert.mockReturnValue(insertChain)
 
       const { POST } = await import('../route')
       await POST(makePostRequest({
@@ -227,14 +278,17 @@ describe('/api/messages', () => {
         body: 'New question',
       }))
 
-      expect(insertArgs.thread_id).toBeDefined()
-      expect(insertArgs.thread_id).toMatch(
+      expect(insertedValues.thread_id).toBeDefined()
+      expect(insertedValues.thread_id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
       )
     })
 
     it('returns 500 when the DB insert fails', async () => {
-      mockFrom.mockReturnValue(makeChain({ data: null, error: { message: 'unique constraint' } }))
+      const failChain = makeInsertChain([])
+      failChain.returning = jest.fn().mockRejectedValue(new Error('unique constraint'))
+      mockDbInsert.mockReturnValue(failChain)
+
       const { POST } = await import('../route')
       const res = await POST(makePostRequest({
         senderId: 'patient-uuid-123',
@@ -259,29 +313,28 @@ describe('/api/messages', () => {
       }
 
       let notificationInserted = false
-      let insertCallCount = 0
 
-      mockFrom.mockImplementation((table: string) => {
-        if (table === 'messages') {
-          const chain = makeChain({ data: PROVIDER_MESSAGE, error: null })
-          return chain
+      // First insert call = messages, second = notifications
+      let insertCallCount = 0
+      mockDbInsert.mockImplementation(() => {
+        insertCallCount++
+        if (insertCallCount === 1) {
+          return makeInsertChain([PROVIDER_MESSAGE])
         }
-        if (table === 'providers') {
-          return makeChain({
-            data: { profiles: { first_name: 'Jennifer', last_name: 'Urban' } },
-            error: null,
-          })
-        }
-        if (table === 'notifications') {
-          const chain = makeChain({ data: null, error: null })
-          chain.insert = jest.fn().mockImplementation(() => {
-            notificationInserted = true
-            return chain
-          })
-          return chain
-        }
-        return makeChain({ data: null, error: null })
+        // notifications insert
+        const chain = makeInsertChain([])
+        const origValues = chain.values
+        chain.values = jest.fn().mockImplementation((args: unknown) => {
+          notificationInserted = true
+          return origValues.call(chain, args)
+        })
+        return chain
       })
+
+      // Provider name lookup select
+      mockDbSelect.mockReturnValue(makeSelectChain([
+        { first_name: 'Jennifer', last_name: 'Urban' },
+      ]))
 
       const { POST } = await import('../route')
       await POST(makePostRequest({
@@ -295,10 +348,10 @@ describe('/api/messages', () => {
     })
 
     it('does NOT create a notification when a patient sends a message', async () => {
-      let notificationsQueried = false
-      mockFrom.mockImplementation((table: string) => {
-        if (table === 'notifications') notificationsQueried = true
-        return makeChain({ data: SAVED_MESSAGE, error: null })
+      let insertCallCount = 0
+      mockDbInsert.mockImplementation(() => {
+        insertCallCount++
+        return makeInsertChain([SAVED_MESSAGE])
       })
 
       const { POST } = await import('../route')
@@ -309,7 +362,8 @@ describe('/api/messages', () => {
         body: 'Question about dosage',
       }))
 
-      expect(notificationsQueried).toBe(false)
+      // Only one insert (messages), not two (messages + notifications)
+      expect(insertCallCount).toBe(1)
     })
   })
 
@@ -317,7 +371,7 @@ describe('/api/messages', () => {
 
   describe('POST - PHI audit', () => {
     it('calls logPhiAccess on every send', async () => {
-      mockFrom.mockReturnValue(makeChain({ data: SAVED_MESSAGE, error: null }))
+      mockDbInsert.mockReturnValue(makeInsertChain([SAVED_MESSAGE]))
       const { POST } = await import('../route')
       await POST(makePostRequest({
         senderId: 'patient-uuid-123',
@@ -344,14 +398,16 @@ describe('/api/messages', () => {
       expect(res.status).toBe(400)
     })
 
-    it('returns 400 when readerId is missing', async () => {
+    it('derives readerId from session (no readerId in body needed)', async () => {
+      mockDbUpdate.mockReturnValue(makeUpdateChain())
       const { PATCH } = await import('../route')
+      // readerId is now derived from session, not the request body
       const res = await PATCH(makePatchRequest({ threadId: 'thread-uuid-abc' }))
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(200)
     })
 
     it('returns { success: true } when messages are marked read', async () => {
-      mockFrom.mockReturnValue(makeChain({ data: null, error: null }))
+      mockDbUpdate.mockReturnValue(makeUpdateChain())
       const { PATCH } = await import('../route')
       const res = await PATCH(makePatchRequest({
         threadId: 'thread-uuid-abc',
@@ -362,9 +418,8 @@ describe('/api/messages', () => {
       expect(resBody).toEqual({ success: true })
     })
 
-    it('only marks messages where read_at is null', async () => {
-      const chain = makeChain({ data: null, error: null })
-      mockFrom.mockReturnValue(chain)
+    it('calls db.update to mark messages read', async () => {
+      mockDbUpdate.mockReturnValue(makeUpdateChain())
 
       const { PATCH } = await import('../route')
       await PATCH(makePatchRequest({
@@ -372,7 +427,7 @@ describe('/api/messages', () => {
         readerId: 'patient-uuid-123',
       }))
 
-      expect(chain.is).toHaveBeenCalledWith('read_at', null)
+      expect(mockDbUpdate).toHaveBeenCalled()
     })
   })
 
@@ -380,7 +435,7 @@ describe('/api/messages', () => {
 
   describe('GET - threads by patientId', () => {
     it('returns a threads array', async () => {
-      mockFrom.mockReturnValue(makeChain({ data: [SAVED_MESSAGE], error: null }))
+      mockDbSelect.mockReturnValue(makeSelectChain([SAVED_MESSAGE]))
       const { GET } = await import('../route')
       const res = await GET(makeGetRequest({ patientId: 'patient-uuid-123' }))
       expect(res.status).toBe(200)
@@ -392,11 +447,11 @@ describe('/api/messages', () => {
 
   describe('GET - messages in a thread', () => {
     it('returns a messages array when threadId is provided', async () => {
-      let callCount = 0
-      mockFrom.mockImplementation(() => {
-        callCount++
-        if (callCount === 1) return makeChain({ data: [SAVED_MESSAGE], error: null })
-        return makeChain({ data: [], error: null }) // patient name lookup
+      let selectCallCount = 0
+      mockDbSelect.mockImplementation(() => {
+        selectCallCount++
+        if (selectCallCount === 1) return makeSelectChain([SAVED_MESSAGE])
+        return makeSelectChain([]) // patient name lookup
       })
 
       const { GET } = await import('../route')

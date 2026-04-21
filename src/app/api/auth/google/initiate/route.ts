@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { randomUUID } from "crypto"
 import { buildOAuthUrl } from "@/lib/google-calendar"
 import { encodeState } from "@/lib/oauth-state"
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from "@/lib/db"
+import { providers } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 
 /**
  * POST /api/auth/google/initiate
@@ -24,12 +19,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify this is a real provider
-    const supabase = getSupabase()
-    const { data: provider } = await supabase
-      .from("providers")
-      .select("id")
-      .eq("id", providerId)
-      .single()
+    const provider = await db.query.providers.findFirst({
+      where: eq(providers.id, providerId),
+    })
 
     if (!provider) {
       return NextResponse.json({ error: "Provider not found" }, { status: 404 })

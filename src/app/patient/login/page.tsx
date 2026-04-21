@@ -51,14 +51,9 @@ export default function PatientLoginPage() {
 
       if (authError) throw authError
 
-      // Verify patient role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single()
-
-      if (profile?.role !== 'patient') {
+      // Verify patient role from auth metadata
+      const role = data.user.user_metadata?.role
+      if (role !== 'patient') {
         await supabase.auth.signOut()
         throw new Error('This account is not a patient account. Please use the provider login.')
       }

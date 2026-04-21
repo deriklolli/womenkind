@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { patients, intakes, visits, wearable_metrics } from '@/lib/db/schema'
+import { eq, gte, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { getComponent } from '@/lib/presentation-components'
 import { invokeModel } from '@/lib/bedrock'
@@ -25,44 +27,52 @@ export async function POST(req: Request) {
 
     // Load patient data, latest intake, visits, and wearable metrics for context
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
-    const [patientRes, intakeRes, visitsRes, wearableRes] = await Promise.all([
-      getServiceSupabase()
-        .from('patients')
-        .select('id, date_of_birth, state, profiles ( first_name, last_name )')
-        .eq('id', patientId)
-        .single(),
-      getServiceSupabase()
-        .from('intakes')
-        .select('answers, ai_brief')
-        .eq('patient_id', patientId)
-        .order('submitted_at', { ascending: false })
-        .limit(1)
-        .single(),
-      getServiceSupabase()
-        .from('visits')
-        .select('visit_type, visit_date, symptom_scores, provider_notes, treatment_updates')
-        .eq('patient_id', patientId)
-        .order('visit_date', { ascending: false })
+    const [patientRow, intakeRow, visitsRows, wearableRows] = await Promise.all([
+      db.query.patients.findFirst({
+        where: eq(patients.id, patientId),
+        with: { profiles: true },
+      }),
+      db.query.intakes.findFirst({
+        where: eq(intakes.patient_id, patientId),
+        orderBy: (intakes, { desc }) => [desc(intakes.submitted_at)],
+      }),
+      db
+        .select({
+          visit_type: visits.visit_type,
+          visit_date: visits.visit_date,
+          symptom_scores: visits.symptom_scores,
+        })
+        .from(visits)
+        .where(eq(visits.patient_id, patientId))
+        .orderBy(desc(visits.visit_date))
         .limit(5),
-      getServiceSupabase()
-        .from('wearable_metrics')
-        .select('metric_type, value, metric_date')
-        .eq('patient_id', patientId)
-        .gte('metric_date', thirtyDaysAgo)
-        .order('metric_date', { ascending: false }),
+      db
+        .select({
+          metric_type: wearable_metrics.metric_type,
+          value: wearable_metrics.value,
+          metric_date: wearable_metrics.metric_date,
+        })
+        .from(wearable_metrics)
+        .where(
+          and(
+            eq(wearable_metrics.patient_id, patientId),
+            gte(wearable_metrics.metric_date, thirtyDaysAgo)
+          )
+        )
+        .orderBy(desc(wearable_metrics.metric_date)),
     ])
 
-    const patient = patientRes.data as any
-    const intake = intakeRes.data
-    const visits = visitsRes.data || []
-    const wearableMetrics = (wearableRes.data || []) as any[]
+    const patient = patientRow as any
+    const intake = intakeRow
+    const visitList = visitsRows || []
+    const wearableMetrics = (wearableRows || []) as any[]
     const firstName = patient?.profiles?.first_name || 'the patient'
 
     // Build context for Claude
-    const aiBrief = intake?.ai_brief
+    const aiBrief = intake?.ai_brief as any
     const symptomSummary = aiBrief?.symptom_summary
     const treatmentPathway = aiBrief?.treatment_pathway
-    const latestScores = visits[0]?.symptom_scores || {}
+    const latestScores = visitList[0]?.symptom_scores || {}
 
     // Summarize Oura metrics by type (avg + most recent)
     const ouraByType: Record<string, number[]> = {}
@@ -120,7 +130,7 @@ PATIENT DATA:
 - Latest symptom scores: ${JSON.stringify(latestScores)}
 ${symptomSummary ? `- Symptom summary: ${JSON.stringify(symptomSummary)}` : ''}
 ${treatmentPathway ? `- Treatment pathway: ${JSON.stringify(treatmentPathway)}` : ''}
-- Recent visit notes: ${visits.map((v: any) => v.provider_notes).filter(Boolean).join(' | ') || 'None'}${ouraSection}
+- Recent visit notes: ${visitList.map((v: any) => (v as any).provider_notes).filter(Boolean).join(' | ') || 'None'}${ouraSection}
 
 Write a 2-3 sentence personalized provider note for the ${component.label} section of ${firstName}'s care presentation.
 

@@ -29,7 +29,7 @@ export default defineConfig({
 
   use: {
     // All tests run against the local dev server
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.TEST_BASE_URL || 'http://localhost:3001',
 
     // Capture a trace on first retry — viewable with `npx playwright show-trace`
     trace: 'on-first-retry',

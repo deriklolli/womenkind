@@ -1,12 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { patients, profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/clinics/geocode
@@ -18,10 +14,17 @@ function getSupabase() {
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { patientId, zip } = await req.json()
 
     if (!patientId || !zip) {
       return NextResponse.json({ error: 'patientId and zip are required' }, { status: 400 })
+    }
+
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const cleanZip = String(zip).trim().slice(0, 10)
@@ -55,27 +58,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Look up the profile_id for this patient
-    const supabase = getSupabase()
-    const { data: patient, error: patientErr } = await supabase
-      .from('patients')
-      .select('profile_id')
-      .eq('id', patientId)
-      .maybeSingle()
+    const patientRows = await db
+      .select({ profile_id: patients.profile_id })
+      .from(patients)
+      .where(eq(patients.id, patientId))
+      .limit(1)
 
-    if (patientErr || !patient?.profile_id) {
+    const patient = patientRows[0]
+    if (!patient?.profile_id) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     }
 
     // Store coordinates + zip on the patient's profile
-    const { error: updateErr } = await supabase
-      .from('profiles')
-      .update({ home_lat: lat, home_lng: lng, home_zip: cleanZip })
-      .eq('id', patient.profile_id)
-
-    if (updateErr) {
-      console.error('[geocode] Profile update error:', updateErr)
-      return NextResponse.json({ error: 'Failed to save location' }, { status: 500 })
-    }
+    await db
+      .update(profiles)
+      .set({ home_lat: lat, home_lng: lng, home_zip: cleanZip })
+      .where(eq(profiles.id, patient.profile_id))
 
     return NextResponse.json({ lat, lng })
   } catch (err: any) {

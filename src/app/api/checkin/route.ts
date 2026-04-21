@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
 import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
+import { db } from '@/lib/db'
+import { visits, appointments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/checkin
@@ -27,7 +29,6 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const supabase = getServiceSupabase()
     const { appointmentId, scores } = await req.json()
 
     if (!appointmentId || !scores) {
@@ -50,13 +51,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch the appointment to get patient_id and visit_date
-    const { data: appointment, error: aptError } = await supabase
-      .from('appointments')
-      .select('id, patient_id, provider_id, starts_at, status')
-      .eq('id', appointmentId)
-      .single()
+    const appointment = await db.query.appointments.findFirst({
+      where: eq(appointments.id, appointmentId),
+      columns: { id: true, patient_id: true, provider_id: true, starts_at: true, status: true },
+    })
 
-    if (aptError || !appointment) {
+    if (!appointment) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
@@ -69,47 +69,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot check in for a canceled appointment' }, { status: 400 })
     }
 
-    const now = new Date().toISOString()
-    const visitDate = appointment.starts_at.split('T')[0]
+    const now = new Date()
+    const visitDate = appointment.starts_at.toISOString().split('T')[0]
 
     // Upsert: if a visit already exists for this appointment, update it
-    const { data: existing } = await supabase
-      .from('visits')
-      .select('id')
-      .eq('appointment_id', appointmentId)
-      .maybeSingle()
+    const existing = await db.query.visits.findFirst({
+      where: eq(visits.appointment_id, appointmentId),
+      columns: { id: true },
+    })
 
     let visit
     if (existing) {
-      const { data, error } = await supabase
-        .from('visits')
-        .update({
-          symptom_scores: scores,
-          checked_in_at: now,
-        })
-        .eq('id', existing.id)
-        .select()
-        .single()
+      const [updated] = await db.update(visits).set({
+        symptom_scores: scores,
+        checked_in_at: now,
+      }).where(eq(visits.id, existing.id)).returning()
 
-      if (error) throw error
-      visit = data
+      visit = updated
     } else {
-      const { data, error } = await supabase
-        .from('visits')
-        .insert({
-          patient_id: appointment.patient_id,
-          provider_id: appointment.provider_id,
-          appointment_id: appointmentId,
-          visit_type: 'follow_up',
-          visit_date: visitDate,
-          symptom_scores: scores,
-          checked_in_at: now,
-        })
-        .select()
-        .single()
+      const [inserted] = await db.insert(visits).values({
+        patient_id: appointment.patient_id,
+        provider_id: appointment.provider_id,
+        appointment_id: appointmentId,
+        visit_type: 'follow_up',
+        visit_date: visitDate,
+        symptom_scores: scores,
+        checked_in_at: now,
+      }).returning()
 
-      if (error) throw error
-      visit = data
+      visit = inserted
     }
 
     logPhiAccess({ providerId: appointment.provider_id, patientId: appointment.patient_id, recordType: 'appointment', recordId: appointmentId, action: 'create', route: '/api/checkin', req })
@@ -130,18 +118,29 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const supabase = getServiceSupabase()
     const appointmentId = req.nextUrl.searchParams.get('appointmentId')
 
     if (!appointmentId) {
       return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
     }
 
-    const { data: visit } = await supabase
-      .from('visits')
-      .select('id, checked_in_at, symptom_scores')
-      .eq('appointment_id', appointmentId)
-      .maybeSingle()
+    const appt = await db.query.appointments.findFirst({
+      where: eq(appointments.id, appointmentId),
+      columns: { patient_id: true, provider_id: true },
+    })
+    if (!appt) return NextResponse.json({ checkedIn: false, visit: null })
+
+    if (session.role === 'patient' && appt.patient_id !== session.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (session.role === 'provider' && appt.provider_id !== session.providerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const visit = await db.query.visits.findFirst({
+      where: eq(visits.appointment_id, appointmentId),
+      columns: { id: true, checked_in_at: true, symptom_scores: true },
+    })
 
     return NextResponse.json({ checkedIn: !!visit?.checked_in_at, visit })
   } catch (err: any) {

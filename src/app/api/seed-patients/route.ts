@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { profiles, patients, intakes, subscriptions } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
-function getSupabase() {
+// Supabase client kept only for Auth Admin API (user creation/lookup)
+function getSupabaseAuth() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -498,33 +502,35 @@ const PERSONAS = [
 ]
 
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.VERCEL_ENV === 'production') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   // Simple auth check — require a secret or just check for dev/preview
   const { secret } = await req.json().catch(() => ({ secret: '' }))
-  if (secret !== 'womenkind-seed-2026') {
-    return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
+  const seedSecret = process.env.SEED_SECRET
+  if (!seedSecret || secret !== seedSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = getSupabase()
+  // Supabase client used only for Auth Admin API (user creation/lookup)
+  const supabaseAuth = getSupabaseAuth()
   const results: any[] = []
 
   for (const persona of PERSONAS) {
     try {
-      // 1. Find or create auth user
+      // 1. Find or create auth user (Supabase Auth Admin — must stay as Supabase)
       const uniqueEmail = `seed-${persona.first_name.toLowerCase()}.${persona.last_name.toLowerCase()}@womenkind-demo.com`
       let userId: string
 
       // Try to find existing auth user first
-      const { data: existingUsers } = await supabase.auth.admin.listUsers()
+      const { data: existingUsers } = await supabaseAuth.auth.admin.listUsers()
       const existingUser = existingUsers?.users?.find((u: any) => u.email === uniqueEmail)
 
       if (existingUser) {
         userId = existingUser.id
       } else {
-        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        const { data: authData, error: authErr } = await supabaseAuth.auth.admin.createUser({
           email: uniqueEmail,
           password: 'womenkind-demo-2026',
           email_confirm: true,
@@ -533,50 +539,49 @@ export async function POST(req: Request) {
         userId = authData.user.id
       }
 
-      // 2. Upsert profile
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .upsert({
+      // 2. Upsert profile (Drizzle)
+      await db
+        .insert(profiles)
+        .values({
           id: userId,
           first_name: persona.first_name,
           last_name: persona.last_name,
           email: persona.email,
-          role: 'patient',
+        })
+        .onConflictDoUpdate({
+          target: profiles.id,
+          set: {
+            first_name: persona.first_name,
+            last_name: persona.last_name,
+            email: persona.email,
+          },
         })
 
-      if (profileErr) throw profileErr
-
-      // 3. Find or create patient
+      // 3. Find or create patient (Drizzle)
       let patientId: string
-      const { data: existingPatient } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('profile_id', userId)
-        .single()
+      const existingPatient = await db.query.patients.findFirst({
+        where: eq(patients.profile_id, userId),
+      })
 
       if (existingPatient) {
         patientId = existingPatient.id
       } else {
-        const { data: patient, error: patientErr } = await supabase
-          .from('patients')
-          .insert({
+        const [patient] = await db
+          .insert(patients)
+          .values({
             profile_id: userId,
             date_of_birth: persona.dob,
             phone: persona.phone,
             state: persona.state,
           })
-          .select('id')
-          .single()
-        if (patientErr) throw patientErr
+          .returning({ id: patients.id })
         patientId = patient.id
       }
 
-      // 4. Check if intake already exists, skip if so
-      const { data: existingIntake } = await supabase
-        .from('intakes')
-        .select('id')
-        .eq('patient_id', patientId)
-        .single()
+      // 4. Check if intake already exists, skip if so (Drizzle)
+      const existingIntake = await db.query.intakes.findFirst({
+        where: eq(intakes.patient_id, patientId),
+      })
 
       if (existingIntake) {
         results.push({
@@ -588,31 +593,28 @@ export async function POST(req: Request) {
         continue
       }
 
-      // 5. Create intake with full answers, mark as submitted
-      const submittedAt = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
-      const { data: intake, error: intakeErr } = await supabase
-        .from('intakes')
-        .insert({
+      // 5. Create intake with full answers, mark as submitted (Drizzle)
+      const submittedAt = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
+      const [intake] = await db
+        .insert(intakes)
+        .values({
           patient_id: patientId,
           status: 'submitted',
           answers: persona.answers,
-          started_at: new Date(new Date(submittedAt).getTime() - 30 * 60 * 1000).toISOString(),
+          started_at: new Date(submittedAt.getTime() - 30 * 60 * 1000),
           submitted_at: submittedAt,
         })
-        .select('id')
-        .single()
+        .returning({ id: intakes.id })
 
-      if (intakeErr) throw intakeErr
-
-      // 5. Create a subscription marked as paid (skip Stripe)
-      await supabase.from('subscriptions').insert({
+      // 6. Create a subscription marked as paid (skip Stripe) (Drizzle)
+      await db.insert(subscriptions).values({
         patient_id: patientId,
         plan_type: 'intake',
         status: 'active',
-        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       })
 
-      // 6. Generate AI brief via the same function used in submit
+      // 7. Generate AI brief via the same function used in submit
       let briefGenerated = false
       try {
         const briefResponse = await fetch(`${getAppUrl(req)}/api/intake/submit`, {

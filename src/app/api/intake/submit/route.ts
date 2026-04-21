@@ -1,17 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
-
-// Lazy-init: don't create at module scope (breaks Vercel build when env vars missing)
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { intakes, providers, patients, profiles } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/intake/submit
@@ -22,7 +16,6 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const supabase = getSupabase()
     const { intakeId, patientId, answers } = await req.json()
 
     // If a patientId is supplied, verify it belongs to the authenticated user.
@@ -33,27 +26,22 @@ export async function POST(req: NextRequest) {
 
     // 1. Resolve provider — look up the first active provider as the intake recipient
     //    (single-provider MVP; extend this to match by location/specialty in multi-provider phase)
-    const { data: providerRow } = await supabase
-      .from('providers')
-      .select('id')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle()
+    const providerRow = await db.query.providers.findFirst({
+      where: eq(providers.is_active, true),
+    })
     const providerId = providerRow?.id ?? null
 
     // 2. Update intake status to submitted (and link to patient + provider if resolved)
-    const { error: updateError } = await supabase
-      .from('intakes')
-      .update({
+    await db
+      .update(intakes)
+      .set({
         status: 'submitted',
         answers,
-        submitted_at: new Date().toISOString(),
+        submitted_at: new Date(),
         ...(patientId ? { patient_id: patientId } : {}),
         ...(providerId ? { provider_id: providerId } : {}),
       })
-      .eq('id', intakeId)
-
-    if (updateError) throw updateError
+      .where(eq(intakes.id, intakeId))
 
     // 2. Generate AI clinical brief via Bedrock
     let aiBrief = null
@@ -61,10 +49,10 @@ export async function POST(req: NextRequest) {
       aiBrief = await generateClinicalBrief(answers)
 
       // Save brief to intake
-      await supabase
-        .from('intakes')
-        .update({ ai_brief: aiBrief })
-        .eq('id', intakeId)
+      await db
+        .update(intakes)
+        .set({ ai_brief: aiBrief })
+        .where(eq(intakes.id, intakeId))
     } catch (aiErr) {
       console.error('AI brief generation error:', aiErr)
       // Don't fail the submission — brief can be generated later
@@ -72,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     // Send intake confirmation emails (fire and forget)
     if (patientId && process.env.RESEND_API_KEY) {
-      sendIntakeEmails(supabase, { patientId, intakeId }).catch(err =>
+      sendIntakeEmails({ patientId, intakeId }).catch(err =>
         console.error('[RESEND] Intake email error:', err)
       )
     }
@@ -89,21 +77,19 @@ export async function POST(req: NextRequest) {
 }
 
 async function sendIntakeEmails(
-  supabase: ReturnType<typeof getSupabase>,
   { patientId, intakeId }: { patientId: string; intakeId: string }
 ) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
   const resend = new Resend(process.env.RESEND_API_KEY!)
   const from = process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>'
 
-  // Fetch patient name + email
-  const { data: patient } = await supabase
-    .from('patients')
-    .select('profiles(first_name, last_name, email)')
-    .eq('id', patientId)
-    .single()
+  // Fetch patient name + email via join
+  const patientRow = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    with: { profiles: true },
+  })
 
-  const profile = (patient as any)?.profiles
+  const profile = patientRow?.profiles ?? null
   const patientEmail = profile?.email
   const firstName = profile?.first_name || 'there'
 

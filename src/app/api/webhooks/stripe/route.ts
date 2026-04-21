@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { intakes, subscriptions, appointments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { createVideoRoom } from '@/lib/daily-video'
 import { Resend } from 'resend'
@@ -16,7 +18,6 @@ import Stripe from 'stripe'
  */
 export async function POST(req: NextRequest) {
   const stripe = getStripe()
-  const supabase = getServiceSupabase()
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
   if (!webhookSecret) {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
         if (metadata.type === 'intake') {
           // Intake payment completed
-          await handleIntakePayment(supabase, {
+          await handleIntakePayment({
             intakeId: metadata.intakeId,
             patientId: metadata.patientId,
             stripeCustomerId: customerId,
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
           })
         } else if (metadata.type === 'appointment') {
           // Appointment payment completed
-          await handleAppointmentPayment(supabase, {
+          await handleAppointmentPayment({
             appointmentId: metadata.appointmentId,
             patientId: metadata.patientId,
             providerId: metadata.providerId,
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
               ? session.subscription
               : session.subscription?.id || null
 
-          await handleMembershipStart(supabase, {
+          await handleMembershipStart({
             intakeId: metadata.intakeId,
             patientId: metadata.patientId,
             stripeCustomerId: customerId,
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
               : session.subscription?.id || null
 
           // Handle intake portion
-          await handleIntakePayment(supabase, {
+          await handleIntakePayment({
             intakeId: metadata.intakeId,
             patientId: metadata.patientId,
             stripeCustomerId: customerId,
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
           })
 
           // Handle membership portion
-          await handleMembershipStart(supabase, {
+          await handleMembershipStart({
             intakeId: metadata.intakeId,
             patientId: metadata.patientId,
             stripeCustomerId: customerId,
@@ -115,25 +116,26 @@ export async function POST(req: NextRequest) {
             : invoice.subscription?.id || null
 
         if (subscriptionId) {
-          await supabase
-            .from('subscriptions')
-            .update({
+          const periodEnd = invoice.lines.data[0]?.period?.end
+          await db
+            .update(subscriptions)
+            .set({
               status: 'active',
-              current_period_end: invoice.lines.data[0]?.period?.end
-                ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+              current_period_end: periodEnd
+                ? new Date(periodEnd * 1000)
                 : null,
             })
-            .eq('stripe_subscription_id', subscriptionId)
+            .where(eq(subscriptions.stripe_subscription_id, subscriptionId))
         }
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        await supabase
-          .from('subscriptions')
-          .update({ status: 'canceled' })
-          .eq('stripe_subscription_id', subscription.id)
+        await db
+          .update(subscriptions)
+          .set({ status: 'canceled' })
+          .where(eq(subscriptions.stripe_subscription_id, subscription.id))
         break
       }
 
@@ -142,13 +144,13 @@ export async function POST(req: NextRequest) {
         const status = subscription.status === 'active' ? 'active' :
                        subscription.status === 'past_due' ? 'past_due' :
                        subscription.status
-        await supabase
-          .from('subscriptions')
-          .update({
+        await db
+          .update(subscriptions)
+          .set({
             status,
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000),
           })
-          .eq('stripe_subscription_id', subscription.id)
+          .where(eq(subscriptions.stripe_subscription_id, subscription.id))
         break
       }
 
@@ -167,116 +169,115 @@ export async function POST(req: NextRequest) {
 /**
  * Handle intake payment: update intake status, create subscription record
  */
-async function handleIntakePayment(
-  supabase: ReturnType<typeof getServiceSupabase>,
-  data: {
-    intakeId: string
-    patientId: string
-    stripeCustomerId: string | null
-    stripeSessionId: string
-    amountPaid: number | null
-  }
-) {
+async function handleIntakePayment(data: {
+  intakeId: string
+  patientId: string
+  stripeCustomerId: string | null
+  stripeSessionId: string
+  amountPaid: number | null
+}) {
   // Mark intake as paid (status goes from 'draft' to 'submitted', record payment details)
   if (data.intakeId) {
-    const { error: intakeErr } = await supabase
-      .from('intakes')
-      .update({
-        status: 'submitted', // Provider still needs to review
-        paid: true,
-        paid_at: new Date().toISOString(),
-        stripe_session_id: data.stripeSessionId,
-      })
-      .eq('id', data.intakeId)
-    if (intakeErr) console.error('[STRIPE] Failed to update intake after payment:', intakeErr.message)
+    try {
+      await db
+        .update(intakes)
+        .set({
+          status: 'submitted',
+          paid: true,
+          paid_at: new Date(),
+          stripe_session_id: data.stripeSessionId,
+        })
+        .where(eq(intakes.id, data.intakeId))
+    } catch (err: any) {
+      console.error('[STRIPE] Failed to update intake after payment:', err.message)
+    }
   }
 
   // Create a subscription record for the intake payment
   if (data.patientId) {
-    const { error: subErr } = await supabase.from('subscriptions').insert({
-      patient_id: data.patientId,
-      stripe_customer_id: data.stripeCustomerId,
-      plan_type: 'intake',
-      status: 'active',
-      intake_id: data.intakeId || null,
-      created_at: new Date().toISOString(),
-    })
-    if (subErr) console.error('[STRIPE] Failed to create intake subscription record:', subErr.message)
+    try {
+      await db.insert(subscriptions).values({
+        patient_id: data.patientId,
+        stripe_customer_id: data.stripeCustomerId,
+        plan_type: 'intake',
+        status: 'active',
+        intake_id: data.intakeId || null,
+      })
+    } catch (err: any) {
+      console.error('[STRIPE] Failed to create intake subscription record:', err.message)
+    }
   }
 }
 
 /**
  * Handle appointment payment: confirm the appointment + create calendar event
  */
-async function handleAppointmentPayment(
-  supabase: ReturnType<typeof getServiceSupabase>,
-  data: {
-    appointmentId: string
-    patientId: string
-    providerId: string
-    stripeSessionId: string
-  }
-) {
+async function handleAppointmentPayment(data: {
+  appointmentId: string
+  patientId: string
+  providerId: string
+  stripeSessionId: string
+}) {
   // Get appointment details for calendar event
-  const { data: appointment } = await supabase
-    .from('appointments')
-    .select(`
-      *,
-      appointment_types(name, duration_minutes),
-      patients(id, profiles(first_name, last_name, email))
-    `)
-    .eq('id', data.appointmentId)
-    .single()
+  const appointment = await db.query.appointments.findFirst({
+    where: eq(appointments.id, data.appointmentId),
+    with: {
+      appointment_types: true,
+      patients: {
+        with: { profiles: true },
+      },
+    },
+  })
 
   // Confirm the appointment
-  await supabase
-    .from('appointments')
-    .update({
+  await db
+    .update(appointments)
+    .set({
       status: 'confirmed',
       is_paid: true,
       stripe_session_id: data.stripeSessionId,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(),
     })
-    .eq('id', data.appointmentId)
+    .where(eq(appointments.id, data.appointmentId))
 
   // Create video room + Google Calendar event
   if (appointment) {
-    const profile = (appointment as any)?.patients?.profiles
+    const profile = appointment.patients?.profiles
     const patientName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Patient'
-    const typeName = (appointment as any)?.appointment_types?.name || 'Appointment'
+    const typeName = appointment.appointment_types?.name || 'Appointment'
 
     // Create video room
     const videoRoom = await createVideoRoom({
       appointmentId: data.appointmentId,
       appointmentName: typeName,
-      startsAt: appointment.starts_at,
-      endsAt: appointment.ends_at,
+      startsAt: appointment.starts_at.toISOString(),
+      endsAt: appointment.ends_at.toISOString(),
     })
 
     const calendarEventId = await createCalendarEvent({
       providerId: data.providerId,
       summary: `${typeName} — ${patientName}`,
       description: `${appointment.patient_notes || `${typeName} with ${patientName}`}${videoRoom ? `\n\nJoin video call: ${videoRoom.url}` : ''}`,
-      startTime: appointment.starts_at,
-      endTime: appointment.ends_at,
-      patientEmail: profile?.email,
+      startTime: appointment.starts_at.toISOString(),
+      endTime: appointment.ends_at.toISOString(),
+      patientEmail: profile?.email ?? undefined,
     })
 
-    await supabase
-      .from('appointments')
-      .update({
+    await db
+      .update(appointments)
+      .set({
         google_calendar_event_id: calendarEventId,
         ...(videoRoom ? { video_room_url: videoRoom.url, video_room_name: videoRoom.roomName } : {}),
       })
-      .eq('id', data.appointmentId)
+      .where(eq(appointments.id, data.appointmentId))
 
     // Send confirmation email
     if (profile?.email && process.env.RESEND_API_KEY) {
       const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
       const firstName = patientName.split(' ')[0] || 'there'
-      const durationMinutes = (appointment as any)?.appointment_types?.duration_minutes || 0
-      const start = new Date(appointment.starts_at)
-      const end = new Date(appointment.ends_at)
+      const durationMinutes = appointment.appointment_types?.duration_minutes || 0
+      const start = appointment.starts_at
+      const end = appointment.ends_at
 
       const dateStr = start.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Denver',
@@ -470,35 +471,29 @@ async function handleAppointmentPayment(
 /**
  * Handle membership start: create or update subscription record
  */
-async function handleMembershipStart(
-  supabase: ReturnType<typeof getServiceSupabase>,
-  data: {
-    intakeId?: string
-    patientId?: string
-    stripeCustomerId: string | null
-    stripeSubscriptionId: string | null
-  }
-) {
+async function handleMembershipStart(data: {
+  intakeId?: string
+  patientId?: string
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+}) {
   // Resolve patientId — prefer direct value, fall back to intake lookup
   let patientId: string | null = data.patientId || null
 
   if (!patientId && data.intakeId) {
-    const { data: intake } = await supabase
-      .from('intakes')
-      .select('patient_id')
-      .eq('id', data.intakeId)
-      .single()
+    const intake = await db.query.intakes.findFirst({
+      where: eq(intakes.id, data.intakeId),
+    })
     patientId = intake?.patient_id || null
   }
 
   if (patientId) {
-    await supabase.from('subscriptions').insert({
+    await db.insert(subscriptions).values({
       patient_id: patientId,
       stripe_customer_id: data.stripeCustomerId,
       stripe_subscription_id: data.stripeSubscriptionId,
       plan_type: 'membership',
       status: 'active',
-      created_at: new Date().toISOString(),
     })
   }
 }

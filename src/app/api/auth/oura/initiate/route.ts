@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { randomUUID } from "crypto"
 import { buildOuraOAuthUrl } from "@/lib/oura"
 import { encodeState } from "@/lib/oauth-state"
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from "@/lib/db"
+import { patients } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 
 /**
  * POST /api/auth/oura/initiate
@@ -24,12 +19,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify this is a real patient
-    const supabase = getSupabase()
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id")
-      .eq("id", patientId)
-      .single()
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.id, patientId),
+    })
 
     if (!patient) {
       return NextResponse.json({ error: "Patient not found" }, { status: 404 })

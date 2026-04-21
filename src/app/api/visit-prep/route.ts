@@ -1,16 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
+import { db } from '@/lib/db'
+import {
+  appointments,
+  intakes,
+  lab_orders,
+  prescriptions,
+  refill_requests,
+  messages,
+  wearable_metrics,
+} from '@/lib/db/schema'
+import { eq, and, desc, gte } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 /**
  * GET /api/visit-prep?appointmentId=xxx
@@ -28,93 +31,113 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'appointmentId required' }, { status: 400 })
   }
 
-  const supabase = getSupabase()
-
   // ── 1. Get the appointment + patient info ──
-  const { data: appointment, error: aptErr } = await supabase
-    .from('appointments')
-    .select(`
-      id, starts_at, patient_id, provider_id,
-      appointment_types ( name, duration_minutes ),
-      patients ( id, date_of_birth, state, phone, profiles ( first_name, last_name, email ) )
-    `)
-    .eq('id', appointmentId)
-    .single()
+  const appointment = await db.query.appointments.findFirst({
+    where: eq(appointments.id, appointmentId),
+    with: {
+      appointment_types: true,
+      patients: {
+        with: { profiles: true },
+      },
+    },
+  })
 
-  if (aptErr || !appointment) {
+  if (!appointment) {
     return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+  }
+
+  if (appointment.provider_id !== session.providerId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const patientId = appointment.patient_id
 
   // ── 2. Find last completed visit (anchor for "since last visit") ──
-  const { data: lastVisit } = await supabase
-    .from('appointments')
-    .select('id, starts_at, completed_at')
-    .eq('patient_id', patientId)
-    .eq('status', 'completed')
-    .order('completed_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const sinceDate = lastVisit?.completed_at || lastVisit?.starts_at || null
+  const lastVisit = await db.query.appointments.findFirst({
+    where: and(
+      eq(appointments.patient_id, patientId),
+      eq(appointments.status, 'completed')
+    ),
+    orderBy: [desc(appointments.completed_at)],
+    columns: { id: true, starts_at: true, completed_at: true },
+  })
 
   // ── 3. Gather data in parallel ──
   const [
-    { data: intake },
-    { data: labOrders },
-    { data: prescriptions },
-    { data: refillRequests },
-    { data: messages },
-    { data: wearableMetrics },
+    intake,
+    labOrderRows,
+    prescriptionRows,
+    refillRequestRows,
+    messageRows,
+    wearableMetricRows,
   ] = await Promise.all([
     // Latest intake with AI brief
-    supabase
-      .from('intakes')
-      .select('answers, ai_brief, status, submitted_at')
-      .eq('patient_id', patientId)
-      .order('submitted_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    db.query.intakes.findFirst({
+      where: eq(intakes.patient_id, patientId),
+      orderBy: [desc(intakes.submitted_at)],
+      columns: { answers: true, ai_brief: true, status: true, submitted_at: true },
+    }),
 
-    // Lab orders (all if no prior visit, otherwise since last visit)
-    supabase
-      .from('lab_orders')
-      .select('lab_partner, tests, clinical_indication, status, results, ordered_at, created_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false }),
+    // Lab orders (all)
+    db.select({
+      lab_partner: lab_orders.lab_partner,
+      tests: lab_orders.tests,
+      clinical_indication: lab_orders.clinical_indication,
+      status: lab_orders.status,
+      ordered_at: lab_orders.ordered_at,
+      created_at: lab_orders.created_at,
+    }).from(lab_orders)
+      .where(eq(lab_orders.patient_id, patientId))
+      .orderBy(desc(lab_orders.created_at)),
 
     // Active prescriptions
-    supabase
-      .from('prescriptions')
-      .select('medication_name, dosage, frequency, status, prescribed_at')
-      .eq('patient_id', patientId)
-      .order('prescribed_at', { ascending: false }),
+    db.select({
+      medication_name: prescriptions.medication_name,
+      dosage: prescriptions.dosage,
+      frequency: prescriptions.frequency,
+      status: prescriptions.status,
+      prescribed_at: prescriptions.prescribed_at,
+    }).from(prescriptions)
+      .where(eq(prescriptions.patient_id, patientId))
+      .orderBy(desc(prescriptions.prescribed_at)),
 
-    // Refill requests (join prescription for medication name)
-    supabase
-      .from('refill_requests')
-      .select('status, patient_note, provider_note, created_at, prescriptions ( medication_name )')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-      .limit(10),
+    // Refill requests (with prescription name)
+    db.query.refill_requests.findMany({
+      where: eq(refill_requests.patient_id, patientId),
+      orderBy: [desc(refill_requests.created_at)],
+      limit: 10,
+      columns: { status: true, patient_note: true, provider_note: true, created_at: true },
+      with: {
+        prescriptions: { columns: { medication_name: true } },
+      },
+    }),
 
     // Recent messages from patient
-    supabase
-      .from('messages')
-      .select('subject, body, sender_type, sender_id, created_at')
-      .eq('sender_id', patientId)
-      .eq('sender_type', 'patient')
-      .order('created_at', { ascending: false })
+    db.select({
+      subject: messages.subject,
+      body: messages.body,
+      sender_type: messages.sender_type,
+      sender_id: messages.sender_id,
+      created_at: messages.created_at,
+    }).from(messages)
+      .where(and(
+        eq(messages.sender_id, patientId),
+        eq(messages.sender_type, 'patient')
+      ))
+      .orderBy(desc(messages.created_at))
       .limit(10),
 
     // Wearable metrics (last 14 days)
-    supabase
-      .from('wearable_metrics')
-      .select('metric_type, value, metric_date')
-      .eq('patient_id', patientId)
-      .gte('metric_date', new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0])
-      .order('metric_date', { ascending: false }),
+    db.select({
+      metric_type: wearable_metrics.metric_type,
+      value: wearable_metrics.value,
+      metric_date: wearable_metrics.metric_date,
+    }).from(wearable_metrics)
+      .where(and(
+        eq(wearable_metrics.patient_id, patientId),
+        gte(wearable_metrics.metric_date, new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0])
+      ))
+      .orderBy(desc(wearable_metrics.metric_date)),
   ])
 
   // ── 4. Build the context document ──
@@ -146,7 +169,7 @@ export async function GET(req: NextRequest) {
 
   // Intake summary (use AI brief if available, otherwise raw answers)
   if (intake?.ai_brief) {
-    const brief = intake.ai_brief
+    const brief = intake.ai_brief as any
     const overview = brief.symptom_summary?.overview || ''
     const stage = brief.metadata?.menopausal_stage || ''
     const burden = brief.metadata?.symptom_burden || ''
@@ -159,27 +182,19 @@ export async function GET(req: NextRequest) {
   }
 
   // Lab results
-  if (labOrders && labOrders.length > 0) {
-    const labLines = labOrders.map((order: any) => {
+  if (labOrderRows && labOrderRows.length > 0) {
+    const labLines = labOrderRows.map((order: any) => {
       const status = order.status
       const partner = order.lab_partner === 'quest' ? 'Quest' : order.lab_partner === 'labcorp' ? 'Labcorp' : order.lab_partner
       const date = order.ordered_at ? new Date(order.ordered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'
-
-      if (status === 'results_available' && order.results) {
-        const resultLines = order.results.map((r: any) => {
-          const flagStr = r.flag && r.flag !== 'normal' ? ` [${r.flag.toUpperCase()}]` : ''
-          return `  - ${r.testName}: ${r.value} ${r.unit} (ref: ${r.referenceRange})${flagStr}`
-        })
-        return `${partner} — Ordered ${date} — Results:\n${resultLines.join('\n')}`
-      }
       return `${partner} — Ordered ${date} — Status: ${status}`
     })
     sections.push(`LAB ORDERS:\n${labLines.join('\n\n')}`)
   }
 
   // Prescriptions
-  if (prescriptions && prescriptions.length > 0) {
-    const rxLines = prescriptions.map((rx: any) => {
+  if (prescriptionRows && prescriptionRows.length > 0) {
+    const rxLines = prescriptionRows.map((rx: any) => {
       const date = rx.prescribed_at ? new Date(rx.prescribed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
       return `- ${rx.medication_name} ${rx.dosage || ''} ${rx.frequency || ''} (${rx.status})${date ? ` — prescribed ${date}` : ''}`
     })
@@ -187,8 +202,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Refill requests
-  if (refillRequests && refillRequests.length > 0) {
-    const refillLines = refillRequests.map((r: any) => {
+  if (refillRequestRows && refillRequestRows.length > 0) {
+    const refillLines = refillRequestRows.map((r: any) => {
       const date = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       const medName = r.prescriptions?.medication_name || 'Unknown medication'
       return `- ${medName} — ${r.status} (${date})${r.patient_note ? ` — Patient: "${r.patient_note}"` : ''}`
@@ -196,9 +211,9 @@ export async function GET(req: NextRequest) {
     sections.push(`REFILL REQUESTS:\n${refillLines.join('\n')}`)
   }
 
-  // Messages from patient (already filtered in query)
-  if (messages && messages.length > 0) {
-    const msgLines = messages.slice(0, 5).map((m: any) => {
+  // Messages from patient
+  if (messageRows && messageRows.length > 0) {
+    const msgLines = messageRows.slice(0, 5).map((m: any) => {
       const date = new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       const preview = m.body?.length > 120 ? m.body.slice(0, 120) + '...' : m.body
       return `- [${date}] ${m.subject || '(no subject)'}: "${preview}"`
@@ -207,9 +222,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Wearable trends — grouped by clinical domain with menopause-specific context
-  if (wearableMetrics && wearableMetrics.length > 0) {
+  if (wearableMetricRows && wearableMetricRows.length > 0) {
     const byType: Record<string, number[]> = {}
-    for (const m of wearableMetrics as any[]) {
+    for (const m of wearableMetricRows as any[]) {
       if (!byType[m.metric_type]) byType[m.metric_type] = []
       byType[m.metric_type].push(m.value)
     }

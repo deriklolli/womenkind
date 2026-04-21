@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { subscriptions } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/stripe/cancel
@@ -12,24 +15,30 @@ import { getServiceSupabase } from '@/lib/supabase-server'
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const stripe = getStripe()
-    const supabase = getServiceSupabase()
     const { patientId } = await req.json()
 
     if (!patientId) {
       return NextResponse.json({ error: 'patientId is required' }, { status: 400 })
     }
 
-    // Look up subscription
-    const { data: subscription, error } = await supabase
-      .from('subscriptions')
-      .select('id, stripe_customer_id, stripe_subscription_id, status')
-      .eq('patient_id', patientId)
-      .eq('plan_type', 'membership')
-      .eq('status', 'active')
-      .single()
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
-    if (error || !subscription) {
+    // Look up subscription
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.patient_id, patientId),
+        eq(subscriptions.plan_type, 'membership'),
+        eq(subscriptions.status, 'active')
+      ),
+    })
+
+    if (!subscription) {
       return NextResponse.json(
         { error: 'No active membership found' },
         { status: 404 }
@@ -50,10 +59,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Update the local subscription status
-    await supabase
-      .from('subscriptions')
-      .update({ status: 'canceled' })
-      .eq('id', subscription.id)
+    await db
+      .update(subscriptions)
+      .set({ status: 'canceled' })
+      .where(eq(subscriptions.id, subscription.id))
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

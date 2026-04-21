@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { patients, providers } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 export interface ServerSession {
   userId: string
@@ -9,35 +11,19 @@ export interface ServerSession {
   role: 'patient' | 'provider' | 'unknown'
 }
 
-/**
- * Verifies the current request's Supabase session from cookies.
- * Returns null if the user is not authenticated.
- * Returns a ServerSession with their role and patient/provider ID if authenticated.
- *
- * Usage in API routes:
- *   const session = await getServerSession()
- *   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
- */
 export async function getServerSession(): Promise<ServerSession | null> {
   const cookieStore = await cookies()
 
-  // Use the anon key with cookie-based session storage to verify the JWT
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
+        getAll() { return cookieStore.getAll() },
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Ignore errors when called from Server Components
-          }
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {}
         },
       },
     }
@@ -46,46 +32,23 @@ export async function getServerSession(): Promise<ServerSession | null> {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return null
 
-  // Use the service client for DB lookups so RLS doesn't block the role resolution
-  const db = getServiceSupabase()
-
-  // Check if this user is a patient
-  const { data: patient } = await db
-    .from('patients')
-    .select('id')
-    .eq('profile_id', user.id)
-    .maybeSingle()
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.profile_id, user.id),
+    columns: { id: true },
+  })
 
   if (patient) {
-    return {
-      userId: user.id,
-      patientId: patient.id,
-      providerId: null,
-      role: 'patient',
-    }
+    return { userId: user.id, patientId: patient.id, providerId: null, role: 'patient' }
   }
 
-  // Check if this user is a provider
-  const { data: provider } = await db
-    .from('providers')
-    .select('id')
-    .eq('profile_id', user.id)
-    .maybeSingle()
+  const provider = await db.query.providers.findFirst({
+    where: eq(providers.profile_id, user.id),
+    columns: { id: true },
+  })
 
   if (provider) {
-    return {
-      userId: user.id,
-      patientId: null,
-      providerId: provider.id,
-      role: 'provider',
-    }
+    return { userId: user.id, patientId: null, providerId: provider.id, role: 'provider' }
   }
 
-  // Authenticated but role not yet assigned (e.g. mid-signup)
-  return {
-    userId: user.id,
-    patientId: null,
-    providerId: null,
-    role: 'unknown',
-  }
+  return { userId: user.id, patientId: null, providerId: null, role: 'unknown' }
 }
