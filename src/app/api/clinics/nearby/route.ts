@@ -1,12 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { patients, profiles } from '@/lib/db/schema'
+import { eq, sql } from 'drizzle-orm'
 
 export interface NearbyClinic {
   id: string
@@ -23,7 +18,7 @@ export interface NearbyClinic {
 /**
  * GET /api/clinics/nearby?patientId=xxx&radiusMiles=60
  * Looks up the patient's stored home coordinates and runs the
- * get_nearby_clinics Haversine RPC.
+ * get_nearby_clinics Haversine stored procedure.
  *
  * Returns:
  *   { clinics: NearbyClinic[], hasLocation: boolean }
@@ -40,49 +35,46 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'patientId is required' }, { status: 400 })
     }
 
-    const supabase = getSupabase()
-
     // Get the patient's profile_id so we can look up their home coordinates
-    const { data: patient, error: patientErr } = await supabase
-      .from('patients')
-      .select('profile_id')
-      .eq('id', patientId)
-      .maybeSingle()
+    const patientRows = await db
+      .select({ profile_id: patients.profile_id })
+      .from(patients)
+      .where(eq(patients.id, patientId))
+      .limit(1)
 
-    if (patientErr || !patient?.profile_id) {
+    const patient = patientRows[0]
+    if (!patient?.profile_id) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     }
 
     // Fetch home coordinates from profile
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('home_lat, home_lng, home_zip')
-      .eq('id', patient.profile_id)
-      .maybeSingle()
+    const profileRows = await db
+      .select({
+        home_lat: profiles.home_lat,
+        home_lng: profiles.home_lng,
+        home_zip: profiles.home_zip,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, patient.profile_id))
+      .limit(1)
 
-    if (profileErr) {
-      return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 })
-    }
+    const profile = profileRows[0]
 
     // No coordinates stored yet — tell the client to prompt for zip
     if (!profile?.home_lat || !profile?.home_lng) {
       return NextResponse.json({ clinics: [], hasLocation: false })
     }
 
-    // Run the Haversine RPC
-    const { data: clinics, error: rpcErr } = await supabase.rpc('get_nearby_clinics', {
-      patient_lat: profile.home_lat,
-      patient_lng: profile.home_lng,
-      radius_miles: radiusMiles,
-    })
+    const lat = profile.home_lat
+    const lng = profile.home_lng
 
-    if (rpcErr) {
-      console.error('[nearby] RPC error:', rpcErr)
-      return NextResponse.json({ error: 'Failed to query clinics' }, { status: 500 })
-    }
+    // Run the Haversine stored procedure
+    const rows = await db.execute(
+      sql`SELECT * FROM get_nearby_clinics(${lat}, ${lng}, ${radiusMiles})`
+    )
 
     return NextResponse.json({
-      clinics: (clinics || []) as NearbyClinic[],
+      clinics: (rows.rows || []) as NearbyClinic[],
       hasLocation: true,
     })
   } catch (err: any) {

@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { clinic_appointment_requests, patients, profiles, clinics } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { Resend } from 'resend'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 /**
  * POST /api/clinics/request
@@ -24,7 +19,6 @@ function getSupabase() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabase()
     const { patientId, clinicId, preferredDates, preferredTime, notes, contactPhone } =
       await req.json()
 
@@ -33,9 +27,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Save the request
-    const { data: requestRow, error: insertErr } = await supabase
-      .from('clinic_appointment_requests')
-      .insert({
+    const [requestRow] = await db
+      .insert(clinic_appointment_requests)
+      .values({
         patient_id: patientId,
         clinic_id: clinicId,
         preferred_dates: preferredDates,
@@ -44,17 +38,16 @@ export async function POST(req: NextRequest) {
         contact_phone: contactPhone || null,
         status: 'pending',
       })
-      .select('id')
-      .single()
+      .returning({ id: clinic_appointment_requests.id })
 
-    if (insertErr) {
-      console.error('[clinic/request] Insert error:', insertErr)
+    if (!requestRow) {
+      console.error('[clinic/request] Insert returned no row')
       return NextResponse.json({ error: 'Failed to save request' }, { status: 500 })
     }
 
     // Fire-and-forget email to provider
     if (process.env.RESEND_API_KEY) {
-      sendProviderEmail(supabase, {
+      sendProviderEmail({
         patientId,
         clinicId,
         preferredDates,
@@ -71,17 +64,14 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function sendProviderEmail(
-  supabase: ReturnType<typeof getSupabase>,
-  opts: {
-    patientId: string
-    clinicId: string
-    preferredDates: string
-    preferredTime: string
-    notes?: string
-    contactPhone?: string
-  }
-) {
+async function sendProviderEmail(opts: {
+  patientId: string
+  clinicId: string
+  preferredDates: string
+  preferredTime: string
+  notes?: string
+  contactPhone?: string
+}) {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
   const resend = new Resend(process.env.RESEND_API_KEY!)
   const from = process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>'
@@ -89,25 +79,36 @@ async function sendProviderEmail(
   if (!providerEmail) return
 
   // Fetch patient name + email
-  const { data: patient } = await supabase
-    .from('patients')
-    .select('profiles(first_name, last_name, email)')
-    .eq('id', opts.patientId)
-    .single()
+  const patientRows = await db
+    .select({
+      first_name: profiles.first_name,
+      last_name: profiles.last_name,
+      email: profiles.email,
+    })
+    .from(patients)
+    .leftJoin(profiles, eq(patients.profile_id, profiles.id))
+    .where(eq(patients.id, opts.patientId))
+    .limit(1)
 
-  const profile = (patient as any)?.profiles
+  const profile = patientRows[0] || null
   const patientName = profile
     ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
     : 'A patient'
   const patientEmail = profile?.email || ''
 
   // Fetch clinic name
-  const { data: clinic } = await supabase
-    .from('clinics')
-    .select('name, address, city, state')
-    .eq('id', opts.clinicId)
-    .maybeSingle()
+  const clinicRows = await db
+    .select({
+      name: clinics.name,
+      address: clinics.address,
+      city: clinics.city,
+      state: clinics.state,
+    })
+    .from(clinics)
+    .where(eq(clinics.id, opts.clinicId))
+    .limit(1)
 
+  const clinic = clinicRows[0] || null
   const clinicLabel = clinic
     ? `${clinic.name} — ${clinic.address}, ${clinic.city}, ${clinic.state}`
     : 'Unknown clinic'

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { prescriptions } from '@/lib/db/schema'
+import { eq, and, asc } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 
@@ -9,7 +11,6 @@ import { logPhiAccess } from '@/lib/phi-audit'
  */
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
     const patientId = req.nextUrl.searchParams.get('patientId')
 
     if (!patientId) {
@@ -22,19 +23,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
-      .from('prescriptions')
-      .select('*')
-      .eq('patient_id', patientId)
-      .eq('status', 'active')
-      .order('runs_out_at', { ascending: true })
-
-    if (error) throw error
+    const data = await db
+      .select()
+      .from(prescriptions)
+      .where(and(eq(prescriptions.patient_id, patientId), eq(prescriptions.status, 'active')))
+      .orderBy(asc(prescriptions.runs_out_at))
 
     const now = new Date()
-    const prescriptions = (data || []).map((rx) => {
-      const runsOutAt = new Date(rx.runs_out_at)
-      const daysRemaining = Math.max(0, Math.ceil((runsOutAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    const rxList = (data || []).map((rx) => {
+      const runsOutAt = rx.runs_out_at ? new Date(rx.runs_out_at) : null
+      const daysRemaining = runsOutAt
+        ? Math.max(0, Math.ceil((runsOutAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0
       const refillsRemaining = (rx.refills || 0) - (rx.refills_used || 0)
 
       return {
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     })
 
     logPhiAccess({ patientId, recordType: 'prescription', action: 'read', route: '/api/prescriptions', req })
-    return NextResponse.json({ prescriptions })
+    return NextResponse.json({ prescriptions: rxList })
   } catch (err: any) {
     console.error('Failed to fetch prescriptions:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
