@@ -76,8 +76,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    const assemblyKey = process.env.ASSEMBLYAI_API_KEY
+    if (!assemblyKey) {
+      console.error('[transcription-webhook] ASSEMBLYAI_API_KEY not set')
+      return NextResponse.json({ ok: true })
+    }
+
     // Fetch the full transcript from AssemblyAI
-    const assemblyKey = process.env.ASSEMBLYAI_API_KEY!
     const transcriptRes = await fetch(
       `https://api.assemblyai.com/v2/transcript/${transcript_id}`,
       { headers: { Authorization: assemblyKey } }
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
     if (!transcriptRes.ok) {
       console.error('[transcription-webhook] Failed to fetch transcript from AssemblyAI')
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
-      return NextResponse.json({ error: 'Transcript fetch failed' }, { status: 502 })
+      return NextResponse.json({ ok: true })
     }
 
     const transcriptData = await transcriptRes.json()
@@ -135,8 +140,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    console.error('[transcription-webhook] Error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[transcription-webhook] Unhandled error:', err)
+    return NextResponse.json({ ok: true })
   }
 }
 
@@ -195,13 +200,22 @@ Return this exact JSON structure:
     ],
   })
 
+  let parsed: Record<string, unknown>
   try {
-    return JSON.parse(text)
+    parsed = JSON.parse(text)
   } catch {
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) return JSON.parse(jsonMatch[0])
-    throw new Error('Failed to parse SOAP note JSON from Bedrock')
+    const jsonMatch = text.match(/\{[\s\S]*?\}/)
+    if (!jsonMatch) throw new Error('Failed to extract JSON from Bedrock SOAP note response')
+    parsed = JSON.parse(jsonMatch[0])
   }
+
+  const required = ['chief_complaint', 'hpi', 'ros', 'assessment', 'plan'] as const
+  const missing = required.filter(k => !parsed[k] || typeof parsed[k] !== 'string' || !(parsed[k] as string).trim())
+  if (missing.length > 0) {
+    throw new Error(`SOAP note missing required fields: ${missing.join(', ')}`)
+  }
+
+  return parsed as { chief_complaint: string; hpi: string; ros: string; assessment: string; plan: string }
 }
 
 async function notifyProvider(
