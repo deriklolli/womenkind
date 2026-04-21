@@ -32,3 +32,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .worktrees/
+
+# playwright-cli artifacts
+.playwright-cli/
