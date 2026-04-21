@@ -101,11 +101,16 @@ export async function GET() {
     }
   }
 
-  // Active provider (there is only one — Dr. Urban)
-  const provider = await db.query.providers.findFirst({
-    where: eq(providers.is_active, true),
-    columns: { id: true },
-  })
+  // Find the provider whose profile row exists (inner join filters out orphaned seeded records).
+  // Ordered by created_at DESC so the real record (created on first login) wins if there are duplicates.
+  const providerRows = await db
+    .select({ id: providers.id })
+    .from(providers)
+    .innerJoin(profiles, eq(providers.profile_id, profiles.id))
+    .where(eq(providers.is_active, true))
+    .orderBy(desc(providers.created_at))
+    .limit(1)
+  const provider = providerRows[0] ?? null
 
   return NextResponse.json({
     patientId,
