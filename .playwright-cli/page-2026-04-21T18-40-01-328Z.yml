@@ -1,0 +1,26 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 83%
+    - generic [ref=e1185]:
+      - generic [ref=e1186]: Optional
+      - heading "About how many grams of protein do you get per day? (optional)" [level=2] [ref=e1187]
+      - spinbutton [active] [ref=e1189]
+      - generic [ref=e1190]:
+        - button "Back" [ref=e1191] [cursor=pointer]:
+          - img [ref=e1192]
+          - text: Back
+        - button "Next" [ref=e1194] [cursor=pointer]:
+          - text: Next
+          - img [ref=e1196]
+      - paragraph [ref=e1198]: Press Enter to continue
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

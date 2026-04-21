@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 69%
+    - generic [ref=e927]:
+      - heading "How much have you been bothered by brain fog, forgetfulness, or trouble finding words?" [level=2] [ref=e928]
+      - generic [ref=e930]:
+        - button "None" [ref=e931] [cursor=pointer]:
+          - generic [ref=e932]: None
+        - button "Mild" [ref=e934] [cursor=pointer]:
+          - generic [ref=e935]: Mild
+        - button "Moderate" [ref=e937] [cursor=pointer]:
+          - generic [ref=e938]: Moderate
+        - button "Severe" [ref=e940] [cursor=pointer]:
+          - generic [ref=e941]: Severe
+        - button "Very severe / debilitating" [ref=e943] [cursor=pointer]:
+          - generic [ref=e944]: Very severe / debilitating
+      - generic [ref=e946]:
+        - button "Back" [ref=e947] [cursor=pointer]:
+          - img [ref=e948]
+          - text: Back
+        - button "Next" [disabled] [ref=e950]:
+          - text: Next
+          - img [ref=e952]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 66%
+    - generic [ref=e873]:
+      - heading "How much have you been bothered by irritability, a short fuse, or feelings of anger or rage?" [level=2] [ref=e874]
+      - generic [ref=e876]:
+        - button "None" [ref=e877] [cursor=pointer]:
+          - generic [ref=e878]: None
+        - button "Mild" [ref=e880] [cursor=pointer]:
+          - generic [ref=e881]: Mild
+        - button "Moderate" [ref=e883] [cursor=pointer]:
+          - generic [ref=e884]: Moderate
+        - button "Severe" [ref=e886] [cursor=pointer]:
+          - generic [ref=e887]: Severe
+        - button "Very severe / debilitating" [ref=e889] [cursor=pointer]:
+          - generic [ref=e890]: Very severe / debilitating
+      - generic [ref=e892]:
+        - button "Back" [ref=e893] [cursor=pointer]:
+          - img [ref=e894]
+          - text: Back
+        - button "Next" [disabled] [ref=e896]:
+          - text: Next
+          - img [ref=e898]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 60%
+    - generic [ref=e792]:
+      - heading "How much have you been bothered by waking around 3 AM or struggling to get back to sleep?" [level=2] [ref=e793]
+      - generic [ref=e795]:
+        - button "None" [ref=e796] [cursor=pointer]:
+          - generic [ref=e797]: None
+        - button "Mild" [ref=e799] [cursor=pointer]:
+          - generic [ref=e800]: Mild
+        - button "Moderate" [ref=e802] [cursor=pointer]:
+          - generic [ref=e803]: Moderate
+        - button "Severe" [ref=e805] [cursor=pointer]:
+          - generic [ref=e806]: Severe
+        - button "Very severe / debilitating" [ref=e808] [cursor=pointer]:
+          - generic [ref=e809]: Very severe / debilitating
+      - generic [ref=e811]:
+        - button "Back" [ref=e812] [cursor=pointer]:
+          - img [ref=e813]
+          - text: Back
+        - button "Next" [disabled] [ref=e815]:
+          - text: Next
+          - img [ref=e817]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

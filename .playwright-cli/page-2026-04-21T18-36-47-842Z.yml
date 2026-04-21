@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 22%
+    - generic [ref=e219]:
+      - heading "Do you still have a uterus?" [level=2] [ref=e220]
+      - generic [ref=e222]:
+        - button "Yes" [ref=e223] [cursor=pointer]:
+          - generic [ref=e224]: "Yes"
+        - button "No" [ref=e226] [cursor=pointer]:
+          - generic [ref=e227]: "No"
+        - button "Unsure" [ref=e229] [cursor=pointer]:
+          - generic [ref=e230]: Unsure
+      - generic [ref=e232]:
+        - button "Back" [ref=e233] [cursor=pointer]:
+          - img [ref=e234]
+          - text: Back
+        - button "Next" [disabled] [ref=e236]:
+          - text: Next
+          - img [ref=e238]
+    - generic [ref=e241]:
+      - generic [ref=e242]:
+        - generic [ref=e243]: ↑
+        - generic [ref=e244]: ↓
+        - text: navigate
+      - generic [ref=e245]:
+        - generic [ref=e246]: Enter
+        - text: continue
+  - alert [ref=e13]

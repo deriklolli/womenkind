@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 81%
+    - generic [ref=e1154]:
+      - heading "Do you currently do strength or resistance training?" [level=2] [ref=e1155]
+      - generic [ref=e1157]:
+        - button "Yes" [ref=e1158] [cursor=pointer]:
+          - generic [ref=e1159]: "Yes"
+        - button "No" [ref=e1161] [cursor=pointer]:
+          - generic [ref=e1162]: "No"
+      - generic [ref=e1164]:
+        - button "Back" [ref=e1165] [cursor=pointer]:
+          - img [ref=e1166]
+          - text: Back
+        - button "Next" [disabled] [ref=e1168]:
+          - text: Next
+          - img [ref=e1170]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

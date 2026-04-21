@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 27%
+    - generic [ref=e345]:
+      - paragraph [ref=e350]: Health basics
+      - paragraph [ref=e352]: A few quick health measurements.
+      - button "Continue" [ref=e353] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e355]
+  - alert [ref=e13]

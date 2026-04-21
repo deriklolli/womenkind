@@ -1,0 +1,48 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 34%
+    - generic [ref=e394]:
+      - heading "Currently using any of the following? Select all that apply." [level=2] [ref=e395]
+      - generic [ref=e397]:
+        - button "Combined birth control pill" [ref=e398] [cursor=pointer]:
+          - generic [ref=e399]: Combined birth control pill
+        - button "Progestin-only pill" [ref=e401] [cursor=pointer]:
+          - generic [ref=e402]: Progestin-only pill
+        - button "Hormonal IUD" [ref=e404] [cursor=pointer]:
+          - generic [ref=e405]: Hormonal IUD
+        - button "Patch, ring, shot, or implant" [ref=e407] [cursor=pointer]:
+          - generic [ref=e408]: Patch, ring, shot, or implant
+        - button "Estrogen" [ref=e410] [cursor=pointer]:
+          - generic [ref=e411]: Estrogen
+        - button "Progesterone or progestin" [ref=e413] [cursor=pointer]:
+          - generic [ref=e414]: Progesterone or progestin
+        - button "Testosterone" [ref=e416] [cursor=pointer]:
+          - generic [ref=e417]: Testosterone
+        - button "Antidepressant / anti-anxiety" [ref=e419] [cursor=pointer]:
+          - generic [ref=e420]: Antidepressant / anti-anxiety
+        - button "Thyroid medication" [ref=e422] [cursor=pointer]:
+          - generic [ref=e423]: Thyroid medication
+        - button "Sleep medication" [ref=e425] [cursor=pointer]:
+          - generic [ref=e426]: Sleep medication
+        - button "GLP-1 or weight medication" [ref=e428] [cursor=pointer]:
+          - generic [ref=e429]: GLP-1 or weight medication
+        - button "None of these" [ref=e431] [cursor=pointer]:
+          - generic [ref=e432]: None of these
+      - generic [ref=e434]:
+        - button "Back" [ref=e435] [cursor=pointer]:
+          - img [ref=e436]
+          - text: Back
+        - button "Next" [disabled] [ref=e438]:
+          - text: Next
+          - img [ref=e440]
+    - generic [ref=e443]:
+      - generic [ref=e444]:
+        - generic [ref=e445]: ↑
+        - generic [ref=e446]: ↓
+        - text: navigate
+      - generic [ref=e447]:
+        - generic [ref=e448]: Enter
+        - text: continue
+  - alert [ref=e13]

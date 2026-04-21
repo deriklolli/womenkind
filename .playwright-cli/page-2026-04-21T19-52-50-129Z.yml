@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e24]
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - navigation [ref=e27]:
+        - generic [ref=e28]:
+          - button "Womenkind" [ref=e30] [cursor=pointer]:
+            - img "Womenkind" [ref=e31]
+          - button "J Dr. Joseph Urban Jr." [ref=e34] [cursor=pointer]:
+            - generic [ref=e36]: J
+            - text: Dr. Joseph Urban Jr.
+            - img [ref=e37]
+      - generic [ref=e41]:
+        - button "Intake Queue" [ref=e42] [cursor=pointer]:
+          - generic [ref=e43]:
+            - img [ref=e44]
+            - text: Intake Queue
+        - button "My Patients" [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]:
+            - img [ref=e48]
+            - text: My Patients
+        - button "Schedule" [ref=e50] [cursor=pointer]:
+          - generic [ref=e51]:
+            - img [ref=e52]
+            - text: Schedule
+        - button "Messages" [ref=e54] [cursor=pointer]:
+          - generic [ref=e55]:
+            - img [ref=e56]
+            - text: Messages
+        - button "Refill Requests" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]:
+            - img [ref=e60]
+            - text: Refill Requests
+    - generic [ref=e63]:
+      - generic [ref=e65]:
+        - heading "Intake Queue" [level=1] [ref=e66]
+        - paragraph [ref=e67]: 0 new intakes awaiting review
+      - generic [ref=e68]:
+        - button "All0" [ref=e69] [cursor=pointer]
+        - button "New0" [ref=e70] [cursor=pointer]
+        - button "Reviewed0" [ref=e71] [cursor=pointer]
+        - button "Care Plan Sent0" [ref=e72] [cursor=pointer]
+      - paragraph [ref=e75]: Loading intakes...
+  - button [ref=e76] [cursor=pointer]:
+    - img [ref=e77]

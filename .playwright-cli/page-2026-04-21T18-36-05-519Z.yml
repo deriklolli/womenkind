@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 16%
+    - generic [ref=e117]:
+      - heading "Preferred pharmacy" [level=2] [ref=e118]
+      - textbox "Name + location" [active] [ref=e120]
+      - generic [ref=e121]:
+        - button "Back" [ref=e122] [cursor=pointer]:
+          - img [ref=e123]
+          - text: Back
+        - button "Next" [disabled] [ref=e125]:
+          - text: Next
+          - img [ref=e127]
+      - paragraph [ref=e129]: Press Enter to continue
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: ↑
+        - generic [ref=e35]: ↓
+        - text: navigate
+      - generic [ref=e36]:
+        - generic [ref=e37]: Enter
+        - text: continue
+  - alert [ref=e13]

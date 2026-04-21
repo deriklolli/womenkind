@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 93%
+    - generic [ref=e1312]:
+      - heading "Current birth control need?" [level=2] [ref=e1313]
+      - generic [ref=e1315]:
+        - button "Pregnancy prevention still matters" [ref=e1316] [cursor=pointer]:
+          - generic [ref=e1317]: Pregnancy prevention still matters
+        - button "It probably matters" [ref=e1319] [cursor=pointer]:
+          - generic [ref=e1320]: It probably matters
+        - button "It does not matter" [ref=e1322] [cursor=pointer]:
+          - generic [ref=e1323]: It does not matter
+        - button "Unsure" [ref=e1325] [cursor=pointer]:
+          - generic [ref=e1326]: Unsure
+      - generic [ref=e1328]:
+        - button "Back" [ref=e1329] [cursor=pointer]:
+          - img [ref=e1330]
+          - text: Back
+        - button "Next" [disabled] [ref=e1332]:
+          - text: Next
+          - img [ref=e1334]
+    - generic [ref=e1337]:
+      - generic [ref=e1338]:
+        - generic [ref=e1339]: ↑
+        - generic [ref=e1340]: ↓
+        - text: navigate
+      - generic [ref=e1341]:
+        - generic [ref=e1342]: Enter
+        - text: continue
+  - alert [ref=e13]

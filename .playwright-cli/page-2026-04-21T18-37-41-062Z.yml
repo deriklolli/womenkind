@@ -1,0 +1,26 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 36%
+    - generic [ref=e451]:
+      - heading "List current prescriptions, OTC meds, and supplements." [level=2] [ref=e452]
+      - paragraph [ref=e453]: Include dose and frequency. Mention any past hormone use and how it made you feel.
+      - textbox "e.g. Levothyroxine 50mcg daily. Tried estradiol patch 2022 — helped with sleep but caused breast tenderness..." [active] [ref=e455]
+      - generic [ref=e456]:
+        - button "Back" [ref=e457] [cursor=pointer]:
+          - img [ref=e458]
+          - text: Back
+        - button "Next" [disabled] [ref=e460]:
+          - text: Next
+          - img [ref=e462]
+      - paragraph [ref=e464]: Press Enter to continue
+    - generic [ref=e443]:
+      - generic [ref=e444]:
+        - generic [ref=e445]: ↑
+        - generic [ref=e446]: ↓
+        - text: navigate
+      - generic [ref=e447]:
+        - generic [ref=e448]: Enter
+        - text: continue
+  - alert [ref=e13]

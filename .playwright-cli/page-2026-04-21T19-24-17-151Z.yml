@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - navigation [ref=e5]:
+        - button "Womenkind" [ref=e8] [cursor=pointer]:
+          - img "Womenkind" [ref=e9]
+      - generic [ref=e12]:
+        - button "Intake Queue" [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]:
+            - img [ref=e15]
+            - text: Intake Queue
+        - button "My Patients" [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]:
+            - img [ref=e19]
+            - text: My Patients
+        - button "Schedule" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]:
+            - img [ref=e23]
+            - text: Schedule
+        - button "Messages" [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]:
+            - img [ref=e27]
+            - text: Messages
+        - button "Refill Requests" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - text: Refill Requests
+    - generic [ref=e34]:
+      - generic [ref=e36]:
+        - heading "Intake Queue" [level=1] [ref=e37]
+        - paragraph [ref=e38]: 0 new intakes awaiting review
+      - generic [ref=e39]:
+        - button "All0" [ref=e40] [cursor=pointer]
+        - button "New0" [ref=e41] [cursor=pointer]
+        - button "Reviewed0" [ref=e42] [cursor=pointer]
+        - button "Care Plan Sent0" [ref=e43] [cursor=pointer]
+      - paragraph [ref=e46]: Loading intakes...
+  - button [ref=e47] [cursor=pointer]:
+    - img [ref=e48]

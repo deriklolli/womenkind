@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 92%
+    - generic [ref=e1300]:
+      - paragraph [ref=e1305]: Treatment preferences
+      - paragraph [ref=e1307]: Finally, your treatment preferences.
+      - button "Continue" [ref=e1308] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e1310]
+  - alert [ref=e13]

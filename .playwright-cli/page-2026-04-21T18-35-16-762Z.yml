@@ -1,0 +1,9 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - img "Womenkind" [ref=e6]
+    - heading "Your intake starts here" [level=2] [ref=e7]
+    - paragraph [ref=e8]: This questionnaire helps your clinician understand your symptoms, history, and goals before your first visit. It takes about 15–20 minutes. If you need to step away, your progress is saved automatically and you can pick up right where you left off.
+    - button "Begin Your Intake" [ref=e9] [cursor=pointer]:
+      - text: Begin Your Intake
+      - img [ref=e11]
+  - alert [ref=e13]

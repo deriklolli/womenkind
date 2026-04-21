@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 55%
+    - generic [ref=e704]:
+      - heading "How much have you been bothered by heart racing, skipped beats, or pounding?" [level=2] [ref=e705]
+      - generic [ref=e707]:
+        - button "None" [ref=e708] [cursor=pointer]:
+          - generic [ref=e709]: None
+        - button "Mild" [ref=e711] [cursor=pointer]:
+          - generic [ref=e712]: Mild
+        - button "Moderate" [ref=e714] [cursor=pointer]:
+          - generic [ref=e715]: Moderate
+        - button "Severe" [ref=e717] [cursor=pointer]:
+          - generic [ref=e718]: Severe
+        - button "Very severe / debilitating" [ref=e720] [cursor=pointer]:
+          - generic [ref=e721]: Very severe / debilitating
+      - generic [ref=e723]:
+        - button "Back" [ref=e724] [cursor=pointer]:
+          - img [ref=e725]
+          - text: Back
+        - button "Next" [disabled] [ref=e727]:
+          - text: Next
+          - img [ref=e729]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 27%
+    - generic [ref=e307]:
+      - heading "Any abnormal bleeding? Select all that apply." [level=2] [ref=e308]
+      - generic [ref=e310]:
+        - button "Bleeding between periods" [ref=e311] [cursor=pointer]:
+          - generic [ref=e312]: Bleeding between periods
+        - button "Bleeding after sex" [ref=e314] [cursor=pointer]:
+          - generic [ref=e315]: Bleeding after sex
+        - button "Bleeding after 12 months without periods" [ref=e317] [cursor=pointer]:
+          - generic [ref=e318]: Bleeding after 12 months without periods
+        - button "Periods lasting more than 10 days" [ref=e320] [cursor=pointer]:
+          - generic [ref=e321]: Periods lasting more than 10 days
+        - button "Soaking a pad in less than 1 hour" [ref=e323] [cursor=pointer]:
+          - generic [ref=e324]: Soaking a pad in less than 1 hour
+        - button "Large clots" [ref=e326] [cursor=pointer]:
+          - generic [ref=e327]: Large clots
+        - button "Lightheadedness from bleeding" [ref=e329] [cursor=pointer]:
+          - generic [ref=e330]: Lightheadedness from bleeding
+        - button "None of these" [ref=e332] [cursor=pointer]:
+          - generic [ref=e333]: None of these
+      - generic [ref=e335]:
+        - button "Back" [ref=e336] [cursor=pointer]:
+          - img [ref=e337]
+          - text: Back
+        - button "Next" [disabled] [ref=e339]:
+          - text: Next
+          - img [ref=e341]
+    - generic [ref=e241]:
+      - generic [ref=e242]:
+        - generic [ref=e243]: ↑
+        - generic [ref=e244]: ↓
+        - text: navigate
+      - generic [ref=e245]:
+        - generic [ref=e246]: Enter
+        - text: continue
+  - alert [ref=e13]

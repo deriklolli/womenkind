@@ -409,62 +409,16 @@ function RangeRow({ result }: { result: LabResultItem }) {
   const isFlagged = flag !== 'normal'
   const info = getTestInfo(result.testCode)
 
-  // Hover tooltip on test name
-  const [showInfo, setShowInfo] = useState(false)
-  const [infoPos, setInfoPos] = useState({ x: 0, y: 0 })
-  const nameRef = useRef<HTMLSpanElement>(null)
-
-  const updateInfoPos = useCallback(() => {
-    if (!nameRef.current) return
-    const r = nameRef.current.getBoundingClientRect()
-    setInfoPos({ x: r.left + r.width / 2, y: r.top })
-  }, [])
-
-  useEffect(() => {
-    if (!showInfo) return
-    const onScroll = () => updateInfoPos()
-    window.addEventListener('scroll', onScroll, true)
-    return () => window.removeEventListener('scroll', onScroll, true)
-  }, [showInfo, updateInfoPos])
-
   // Where the "normal zone" sits on the bar
   const zonePctLeft = normalise(range.low, range.low, range.high)
   const zonePctRight = normalise(range.high, range.low, range.high)
-
-  const fallbackInfo = { summary: result.testName, relevance: 'Your provider included this test as part of your evaluation. Ask about it at your next visit.' }
-  const tooltip = info || fallbackInfo
 
   return (
     <div className={`rounded-brand px-4 py-3 ${isFlagged ? 'bg-aubergine/[0.02]' : ''}`}>
       {/* Top line — test name + value + flag */}
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
         <span className="text-sm font-sans font-medium text-aubergine flex items-center gap-1.5">
-          <span
-            ref={nameRef}
-            className="cursor-default"
-            onMouseEnter={() => { updateInfoPos(); setShowInfo(true) }}
-            onMouseLeave={() => setShowInfo(false)}
-          >
-            {result.testName}
-          </span>
-          {showInfo && createPortal(
-            <span
-              className="fixed w-72 px-3.5 py-3 rounded-lg bg-aubergine text-white text-sm font-sans leading-relaxed shadow-lg pointer-events-none"
-              style={{
-                left: `${infoPos.x}px`,
-                top: `${infoPos.y}px`,
-                transform: 'translate(-50%, -100%) translateY(-8px)',
-                zIndex: 9997,
-              }}
-            >
-              <span className="block mb-1">{tooltip.summary}</span>
-              <span className="block text-white/60">
-                <span className="text-white/80 font-medium">Why it matters: </span>
-                {tooltip.relevance}
-              </span>
-            </span>,
-            document.body
-          )}
+          {result.testName}
           <LabAudioButton testCode={result.testCode} />
         </span>
         <div className="flex items-baseline gap-2 flex-shrink-0">

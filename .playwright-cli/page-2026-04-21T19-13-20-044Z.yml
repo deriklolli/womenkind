@@ -1,0 +1,36 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "WOMENKIND" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img "WOMENKIND" [ref=e8]
+      - generic [ref=e9]:
+        - navigation [ref=e10]:
+          - generic [ref=e11]:
+            - link "HOME" [ref=e12] [cursor=pointer]:
+              - /url: /
+            - link "BLOG" [ref=e13] [cursor=pointer]:
+              - /url: /blog
+        - navigation [ref=e14]
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - paragraph [ref=e19]: "We couldn't find the page you were looking for. This is either because:"
+      - list [ref=e20]:
+        - listitem [ref=e21]: There is an error in the URL entered into your web browser. Please check the URL and try again.
+        - listitem [ref=e22]: The page you are looking for has been moved or deleted.
+      - paragraph [ref=e23]:
+        - text: You can return to our homepage by
+        - link "clicking here" [ref=e24] [cursor=pointer]:
+          - /url: /
+        - text: ", or you can try searching for the content you are seeking by"
+        - link "clicking here" [ref=e25] [cursor=pointer]:
+          - /url: /search
+        - text: .
+  - contentinfo [ref=e26]:
+    - generic [ref=e30]:
+      - paragraph [ref=e34]:
+        - emphasis [ref=e35]: Copyright © 2019 | All rights reserved | Designed by Sandi O'Brien
+      - navigation [ref=e40]:
+        - link "milanjensen" [ref=e41] [cursor=pointer]:
+          - /url: http://instagram.com/milanjensen
+          - img [ref=e43]

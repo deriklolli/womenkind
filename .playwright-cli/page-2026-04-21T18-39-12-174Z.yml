@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 72%
+    - generic [ref=e981]:
+      - heading "Compared with before symptoms started, how much change have you noticed in sexual desire or satisfaction?" [level=2] [ref=e982]
+      - generic [ref=e984]:
+        - button "None" [ref=e985] [cursor=pointer]:
+          - generic [ref=e986]: None
+        - button "Mild" [ref=e988] [cursor=pointer]:
+          - generic [ref=e989]: Mild
+        - button "Moderate" [ref=e991] [cursor=pointer]:
+          - generic [ref=e992]: Moderate
+        - button "Severe" [ref=e994] [cursor=pointer]:
+          - generic [ref=e995]: Severe
+        - button "Very severe / debilitating" [ref=e997] [cursor=pointer]:
+          - generic [ref=e998]: Very severe / debilitating
+      - generic [ref=e1000]:
+        - button "Back" [ref=e1001] [cursor=pointer]:
+          - img [ref=e1002]
+          - text: Back
+        - button "Next" [disabled] [ref=e1004]:
+          - text: Next
+          - img [ref=e1006]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

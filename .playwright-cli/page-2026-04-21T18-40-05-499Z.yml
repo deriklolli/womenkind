@@ -1,0 +1,26 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 85%
+    - generic [ref=e1199]:
+      - generic [ref=e1200]: Optional
+      - heading "About how many alcoholic drinks per week? (optional)" [level=2] [ref=e1201]
+      - spinbutton [active] [ref=e1203]
+      - generic [ref=e1204]:
+        - button "Back" [ref=e1205] [cursor=pointer]:
+          - img [ref=e1206]
+          - text: Back
+        - button "Next" [ref=e1208] [cursor=pointer]:
+          - text: Next
+          - img [ref=e1210]
+      - paragraph [ref=e1212]: Press Enter to continue
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

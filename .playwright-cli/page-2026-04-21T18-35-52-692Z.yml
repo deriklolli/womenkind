@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 10%
+    - generic [ref=e77]:
+      - heading "Height" [level=2] [ref=e78]
+      - textbox "e.g. 5'6\"" [active] [ref=e80]
+      - generic [ref=e81]:
+        - button "Back" [ref=e82] [cursor=pointer]:
+          - img [ref=e83]
+          - text: Back
+        - button "Next" [disabled] [ref=e85]:
+          - text: Next
+          - img [ref=e87]
+      - paragraph [ref=e89]: Press Enter to continue
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: ↑
+        - generic [ref=e35]: ↓
+        - text: navigate
+      - generic [ref=e36]:
+        - generic [ref=e37]: Enter
+        - text: continue
+  - alert [ref=e13]

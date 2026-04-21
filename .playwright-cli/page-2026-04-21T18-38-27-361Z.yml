@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 49%
+    - generic [ref=e657]:
+      - heading "On a typical day over the past 2 weeks, how many hot flashes or night sweats in total?" [level=2] [ref=e658]
+      - generic [ref=e660]:
+        - button "0 — None" [ref=e661] [cursor=pointer]:
+          - generic [ref=e662]: 0 — None
+        - button "1–2 per day" [ref=e664] [cursor=pointer]:
+          - generic [ref=e665]: 1–2 per day
+        - button "3–5 per day" [ref=e667] [cursor=pointer]:
+          - generic [ref=e668]: 3–5 per day
+        - button "6–10 per day" [ref=e670] [cursor=pointer]:
+          - generic [ref=e671]: 6–10 per day
+        - button "More than 10 per day" [ref=e673] [cursor=pointer]:
+          - generic [ref=e674]: More than 10 per day
+      - generic [ref=e676]:
+        - button "Back" [ref=e677] [cursor=pointer]:
+          - img [ref=e678]
+          - text: Back
+        - button "Next" [disabled] [ref=e680]:
+          - text: Next
+          - img [ref=e682]
+    - generic [ref=e685]:
+      - generic [ref=e686]:
+        - generic [ref=e687]: ↑
+        - generic [ref=e688]: ↓
+        - text: navigate
+      - generic [ref=e689]:
+        - generic [ref=e690]: Enter
+        - text: continue
+  - alert [ref=e13]

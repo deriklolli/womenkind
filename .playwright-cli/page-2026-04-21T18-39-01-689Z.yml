@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 64%
+    - generic [ref=e846]:
+      - heading "How much have you been bothered by feeling down, low-motivation, or depressed?" [level=2] [ref=e847]
+      - generic [ref=e849]:
+        - button "None" [ref=e850] [cursor=pointer]:
+          - generic [ref=e851]: None
+        - button "Mild" [ref=e853] [cursor=pointer]:
+          - generic [ref=e854]: Mild
+        - button "Moderate" [ref=e856] [cursor=pointer]:
+          - generic [ref=e857]: Moderate
+        - button "Severe" [ref=e859] [cursor=pointer]:
+          - generic [ref=e860]: Severe
+        - button "Very severe / debilitating" [ref=e862] [cursor=pointer]:
+          - generic [ref=e863]: Very severe / debilitating
+      - generic [ref=e865]:
+        - button "Back" [ref=e866] [cursor=pointer]:
+          - img [ref=e867]
+          - text: Back
+        - button "Next" [disabled] [ref=e869]:
+          - text: Next
+          - img [ref=e871]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

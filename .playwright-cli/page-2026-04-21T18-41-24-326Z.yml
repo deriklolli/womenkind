@@ -1,0 +1,72 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e13]
+  - generic [ref=e1436]:
+    - img "Womenkind" [ref=e1438]
+    - generic [ref=e1439]:
+      - heading "You've taken the first step" [level=1] [ref=e1440]
+      - paragraph [ref=e1441]: Your responses are ready. Choose your care plan to share them with your provider and begin your personalized menopause care.
+    - generic [ref=e1442]:
+      - generic [ref=e1443]:
+        - generic [ref=e1444]:
+          - generic [ref=e1445]:
+            - heading "Intake Assessment" [level=2] [ref=e1446]
+            - paragraph [ref=e1447]:
+              - text: 90-minute comprehensive consultation with your
+              - text: MD provider
+          - generic [ref=e1448]: $650
+        - generic [ref=e1450]:
+          - generic [ref=e1451]:
+            - img [ref=e1452]
+            - generic [ref=e1454]: Comprehensive health assessment review
+          - generic [ref=e1455]:
+            - img [ref=e1456]
+            - generic [ref=e1458]: Personalized treatment pathway
+          - generic [ref=e1459]:
+            - img [ref=e1460]
+            - generic [ref=e1462]: Your Future Health Blueprint
+          - generic [ref=e1463]:
+            - img [ref=e1464]
+            - generic [ref=e1466]: Initial provider consultation (telehealth)
+        - generic [ref=e1468]:
+          - img [ref=e1469]
+          - text: Added
+      - generic [ref=e1471]:
+        - generic [ref=e1472]:
+          - generic [ref=e1473]: $200/mo
+          - generic [ref=e1474]: First Month Free
+        - generic [ref=e1475]:
+          - heading "Monthly Membership" [level=2] [ref=e1476]
+          - paragraph [ref=e1477]: Ongoing care, prescription management, and provider access
+        - generic [ref=e1479]:
+          - generic [ref=e1480]:
+            - img [ref=e1481]
+            - generic [ref=e1483]: Ongoing provider follow-up consultations
+          - generic [ref=e1484]:
+            - img [ref=e1485]
+            - generic [ref=e1487]: Prescription management & refills
+          - generic [ref=e1488]:
+            - img [ref=e1489]
+            - generic [ref=e1491]: Lab work coordination & review
+          - generic [ref=e1492]:
+            - img [ref=e1493]
+            - generic [ref=e1495]: Secure patient portal access
+        - button "Add Membership" [ref=e1497] [cursor=pointer]:
+          - img [ref=e1498]
+          - text: Add Membership
+    - generic [ref=e1500]:
+      - generic [ref=e1501]:
+        - text: Due today
+        - generic [ref=e1503]: $650
+      - button "Continue to Payment — $650" [ref=e1504] [cursor=pointer]
+      - generic [ref=e1505]:
+        - generic [ref=e1506]:
+          - img [ref=e1507]
+          - generic [ref=e1509]: Secure checkout
+        - generic [ref=e1511]:
+          - img [ref=e1512]
+          - generic [ref=e1514]: HIPAA compliant
+        - generic [ref=e1516]:
+          - img [ref=e1517]
+          - generic [ref=e1519]: Powered by Stripe
+      - 'button "Demo: Skip Payment" [ref=e1520] [cursor=pointer]'
+      - paragraph [ref=e1521]: Membership can be canceled anytime from your patient portal.

@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 38%
+    - generic [ref=e465]:
+      - heading "Do you have any medication allergies?" [level=2] [ref=e466]
+      - generic [ref=e468]:
+        - button "Yes" [ref=e469] [cursor=pointer]:
+          - generic [ref=e470]: "Yes"
+        - button "No" [ref=e472] [cursor=pointer]:
+          - generic [ref=e473]: "No"
+      - generic [ref=e475]:
+        - button "Back" [ref=e476] [cursor=pointer]:
+          - img [ref=e477]
+          - text: Back
+        - button "Next" [disabled] [ref=e479]:
+          - text: Next
+          - img [ref=e481]
+    - generic [ref=e443]:
+      - generic [ref=e444]:
+        - generic [ref=e445]: ↑
+        - generic [ref=e446]: ↓
+        - text: navigate
+      - generic [ref=e447]:
+        - generic [ref=e448]: Enter
+        - text: continue
+  - alert [ref=e13]

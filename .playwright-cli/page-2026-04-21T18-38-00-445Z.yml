@@ -1,0 +1,38 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 42%
+    - generic [ref=e517]:
+      - heading "Cardiovascular or clotting history — select all that apply." [level=2] [ref=e518]
+      - generic [ref=e520]:
+        - button "High blood pressure" [ref=e521] [cursor=pointer]:
+          - generic [ref=e522]: High blood pressure
+        - button "Blood clots (DVT/PE)" [ref=e524] [cursor=pointer]:
+          - generic [ref=e525]: Blood clots (DVT/PE)
+        - button "Migraine with aura" [ref=e527] [cursor=pointer]:
+          - generic [ref=e528]: Migraine with aura
+        - button "Heart disease or stroke" [ref=e530] [cursor=pointer]:
+          - generic [ref=e531]: Heart disease or stroke
+        - button "High cholesterol" [ref=e533] [cursor=pointer]:
+          - generic [ref=e534]: High cholesterol
+        - button "Diabetes" [ref=e536] [cursor=pointer]:
+          - generic [ref=e537]: Diabetes
+        - button "None of these" [ref=e539] [cursor=pointer]:
+          - generic [ref=e540]: None of these
+      - generic [ref=e542]:
+        - button "Back" [ref=e543] [cursor=pointer]:
+          - img [ref=e544]
+          - text: Back
+        - button "Next" [disabled] [ref=e546]:
+          - text: Next
+          - img [ref=e548]
+    - generic [ref=e551]:
+      - generic [ref=e552]:
+        - generic [ref=e553]: ↑
+        - generic [ref=e554]: ↓
+        - text: navigate
+      - generic [ref=e555]:
+        - generic [ref=e556]: Enter
+        - text: continue
+  - alert [ref=e13]

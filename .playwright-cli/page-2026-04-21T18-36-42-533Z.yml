@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 20%
+    - generic [ref=e207]:
+      - paragraph [ref=e212]: Reproductive history
+      - paragraph [ref=e214]: Next, some questions about your reproductive history and cycle.
+      - button "Continue" [ref=e215] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e217]
+  - alert [ref=e13]

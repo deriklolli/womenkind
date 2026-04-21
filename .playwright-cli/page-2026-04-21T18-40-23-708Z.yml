@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 92%
+    - generic [ref=e1273]:
+      - heading "Have you ever had a bone density scan (DEXA)?" [level=2] [ref=e1274]
+      - generic [ref=e1276]:
+        - button "Never had one" [ref=e1277] [cursor=pointer]:
+          - generic [ref=e1278]: Never had one
+        - button "Normal" [ref=e1280] [cursor=pointer]:
+          - generic [ref=e1281]: Normal
+        - button "Osteopenia" [ref=e1283] [cursor=pointer]:
+          - generic [ref=e1284]: Osteopenia
+        - button "Osteoporosis" [ref=e1286] [cursor=pointer]:
+          - generic [ref=e1287]: Osteoporosis
+        - button "Don't know" [ref=e1289] [cursor=pointer]:
+          - generic [ref=e1290]: Don't know
+      - generic [ref=e1292]:
+        - button "Back" [ref=e1293] [cursor=pointer]:
+          - img [ref=e1294]
+          - text: Back
+        - button "Next" [disabled] [ref=e1296]:
+          - text: Next
+          - img [ref=e1298]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

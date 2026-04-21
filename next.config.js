@@ -17,7 +17,7 @@ const nextConfig = {
 
 module.exports = withSentryConfig(nextConfig, {
   // Your Sentry organization and project slugs (from sentry.io → Settings → General)
-  org: 'womenkind',
+  org: 'lolliprojects',
   project: 'womenkind',
 
   // Suppress source map upload logs during build

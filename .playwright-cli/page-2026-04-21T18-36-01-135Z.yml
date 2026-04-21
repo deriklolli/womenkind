@@ -1,0 +1,26 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 14%
+    - generic [ref=e103]:
+      - generic [ref=e104]: Optional
+      - heading "Primary care clinician (optional)" [level=2] [ref=e105]
+      - textbox "Name + clinic" [active] [ref=e107]
+      - generic [ref=e108]:
+        - button "Back" [ref=e109] [cursor=pointer]:
+          - img [ref=e110]
+          - text: Back
+        - button "Next" [ref=e112] [cursor=pointer]:
+          - text: Next
+          - img [ref=e114]
+      - paragraph [ref=e116]: Press Enter to continue
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: ↑
+        - generic [ref=e35]: ↓
+        - text: navigate
+      - generic [ref=e36]:
+        - generic [ref=e37]: Enter
+        - text: continue
+  - alert [ref=e13]

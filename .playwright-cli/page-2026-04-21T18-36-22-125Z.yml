@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 18%
+    - generic [ref=e142]:
+      - heading "If you could change one thing about your health right now, what would it be?" [level=2] [ref=e143]
+      - textbox "Describe in your own words..." [ref=e145]: This is a test intake submission for Derik Lolli (dlolli@gmail.com) to allow Dr. Urban to review the intake system. Energy levels and sleep quality are the primary test concerns.
+      - generic [ref=e146]:
+        - button "Back" [ref=e147] [cursor=pointer]:
+          - img [ref=e148]
+          - text: Back
+        - button "Next" [ref=e150] [cursor=pointer]:
+          - text: Next
+          - img [ref=e152]
+      - paragraph [ref=e154]: Press Enter to continue
+    - generic [ref=e156]:
+      - generic [ref=e157]:
+        - generic [ref=e158]: ↑
+        - generic [ref=e159]: ↓
+        - text: navigate
+      - generic [ref=e160]:
+        - generic [ref=e161]: Enter
+        - text: continue
+  - alert [ref=e13]

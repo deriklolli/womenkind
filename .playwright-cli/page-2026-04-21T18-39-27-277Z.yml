@@ -1,0 +1,38 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 74%
+    - generic [ref=e1021]:
+      - heading "Which of the following apply to you? Select all that apply." [level=2] [ref=e1022]
+      - generic [ref=e1024]:
+        - button "Vaginal dryness or burning" [ref=e1025] [cursor=pointer]:
+          - generic [ref=e1026]: Vaginal dryness or burning
+        - button "Pain with sex" [ref=e1028] [cursor=pointer]:
+          - generic [ref=e1029]: Pain with sex
+        - button "Frequent UTIs" [ref=e1031] [cursor=pointer]:
+          - generic [ref=e1032]: Frequent UTIs
+        - button "Bladder leakage" [ref=e1034] [cursor=pointer]:
+          - generic [ref=e1035]: Bladder leakage
+        - button "Urinary urgency or frequency" [ref=e1037] [cursor=pointer]:
+          - generic [ref=e1038]: Urinary urgency or frequency
+        - button "None of these" [active] [ref=e1040] [cursor=pointer]:
+          - generic [ref=e1041]:
+            - img [ref=e1058]
+            - text: None of these
+      - generic [ref=e1043]:
+        - button "Back" [ref=e1044] [cursor=pointer]:
+          - img [ref=e1045]
+          - text: Back
+        - button "Next" [ref=e1047] [cursor=pointer]:
+          - text: Next
+          - img [ref=e1049]
+    - generic [ref=e1052]:
+      - generic [ref=e1053]:
+        - generic [ref=e1054]: ↑
+        - generic [ref=e1055]: ↓
+        - text: navigate
+      - generic [ref=e1056]:
+        - generic [ref=e1057]: Enter
+        - text: continue
+  - alert [ref=e13]

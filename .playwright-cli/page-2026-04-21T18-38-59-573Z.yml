@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 62%
+    - generic [ref=e819]:
+      - heading "How much have you felt “wired but tired” — exhausted but unable to fully rest?" [level=2] [ref=e820]
+      - generic [ref=e822]:
+        - button "None" [ref=e823] [cursor=pointer]:
+          - generic [ref=e824]: None
+        - button "Mild" [ref=e826] [cursor=pointer]:
+          - generic [ref=e827]: Mild
+        - button "Moderate" [ref=e829] [cursor=pointer]:
+          - generic [ref=e830]: Moderate
+        - button "Severe" [ref=e832] [cursor=pointer]:
+          - generic [ref=e833]: Severe
+        - button "Very severe / debilitating" [ref=e835] [cursor=pointer]:
+          - generic [ref=e836]: Very severe / debilitating
+      - generic [ref=e838]:
+        - button "Back" [ref=e839] [cursor=pointer]:
+          - img [ref=e840]
+          - text: Back
+        - button "Next" [disabled] [ref=e842]:
+          - text: Next
+          - img [ref=e844]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

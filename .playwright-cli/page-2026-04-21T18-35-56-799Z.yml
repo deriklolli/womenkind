@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 12%
+    - generic [ref=e90]:
+      - heading "Current weight" [level=2] [ref=e91]
+      - textbox "e.g. 150 lb" [active] [ref=e93]
+      - generic [ref=e94]:
+        - button "Back" [ref=e95] [cursor=pointer]:
+          - img [ref=e96]
+          - text: Back
+        - button "Next" [disabled] [ref=e98]:
+          - text: Next
+          - img [ref=e100]
+      - paragraph [ref=e102]: Press Enter to continue
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: ↑
+        - generic [ref=e35]: ↓
+        - text: navigate
+      - generic [ref=e36]:
+        - generic [ref=e37]: Enter
+        - text: continue
+  - alert [ref=e13]

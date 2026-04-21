@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 40%
+    - generic [ref=e505]:
+      - paragraph [ref=e510]: Medical history
+      - paragraph [ref=e512]: Some important medical history questions.
+      - button "Continue" [ref=e513] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e515]
+  - alert [ref=e13]

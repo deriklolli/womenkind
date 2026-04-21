@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 43%
+    - generic [ref=e559]:
+      - heading "Smoking status" [level=2] [ref=e560]
+      - generic [ref=e562]:
+        - button "Current" [ref=e563] [cursor=pointer]:
+          - generic [ref=e564]: Current
+        - button "Past" [ref=e566] [cursor=pointer]:
+          - generic [ref=e567]: Past
+        - button "Never" [ref=e569] [cursor=pointer]:
+          - generic [ref=e570]: Never
+      - generic [ref=e572]:
+        - button "Back" [ref=e573] [cursor=pointer]:
+          - img [ref=e574]
+          - text: Back
+        - button "Next" [disabled] [ref=e576]:
+          - text: Next
+          - img [ref=e578]
+    - generic [ref=e551]:
+      - generic [ref=e552]:
+        - generic [ref=e553]: ↑
+        - generic [ref=e554]: ↓
+        - text: navigate
+      - generic [ref=e555]:
+        - generic [ref=e556]: Enter
+        - text: continue
+  - alert [ref=e13]

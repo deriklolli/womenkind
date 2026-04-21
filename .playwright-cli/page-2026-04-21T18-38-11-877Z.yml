@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 45%
+    - generic [ref=e580]:
+      - heading "Have you ever been diagnosed with breast, uterine, ovarian, endometrial, or another hormone-sensitive cancer?" [level=2] [ref=e581]
+      - generic [ref=e583]:
+        - button "No" [ref=e584] [cursor=pointer]:
+          - generic [ref=e585]: "No"
+        - button "Yes" [ref=e587] [cursor=pointer]:
+          - generic [ref=e588]: "Yes"
+        - button "Unsure" [ref=e590] [cursor=pointer]:
+          - generic [ref=e591]: Unsure
+      - generic [ref=e593]:
+        - button "Back" [ref=e594] [cursor=pointer]:
+          - img [ref=e595]
+          - text: Back
+        - button "Next" [disabled] [ref=e597]:
+          - text: Next
+          - img [ref=e599]
+    - generic [ref=e551]:
+      - generic [ref=e552]:
+        - generic [ref=e553]: ↑
+        - generic [ref=e554]: ↓
+        - text: navigate
+      - generic [ref=e555]:
+        - generic [ref=e556]: Enter
+        - text: continue
+  - alert [ref=e13]

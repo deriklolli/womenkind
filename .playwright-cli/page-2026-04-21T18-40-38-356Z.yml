@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 95%
+    - generic [ref=e1343]:
+      - heading "What treatments have you already tried for these symptoms, and how did they work?" [level=2] [ref=e1344]
+      - textbox "e.g. Tried black cohosh for 3 months — no effect..." [active] [ref=e1346]
+      - generic [ref=e1347]:
+        - button "Back" [ref=e1348] [cursor=pointer]:
+          - img [ref=e1349]
+          - text: Back
+        - button "Next" [disabled] [ref=e1351]:
+          - text: Next
+          - img [ref=e1353]
+      - paragraph [ref=e1355]: Press Enter to continue
+    - generic [ref=e1337]:
+      - generic [ref=e1338]:
+        - generic [ref=e1339]: ↑
+        - generic [ref=e1340]: ↓
+        - text: navigate
+      - generic [ref=e1341]:
+        - generic [ref=e1342]: Enter
+        - text: continue
+  - alert [ref=e13]

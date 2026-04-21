@@ -1,0 +1,31 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 40%
+    - generic [ref=e483]:
+      - heading "Are you allergic to peanuts?" [level=2] [ref=e484]
+      - paragraph [ref=e485]: Relevant for certain compounded hormone formulations.
+      - generic [ref=e487]:
+        - button "Yes" [ref=e488] [cursor=pointer]:
+          - generic [ref=e489]: "Yes"
+        - button "No" [ref=e491] [cursor=pointer]:
+          - generic [ref=e492]: "No"
+        - button "Unsure" [ref=e494] [cursor=pointer]:
+          - generic [ref=e495]: Unsure
+      - generic [ref=e497]:
+        - button "Back" [ref=e498] [cursor=pointer]:
+          - img [ref=e499]
+          - text: Back
+        - button "Next" [disabled] [ref=e501]:
+          - text: Next
+          - img [ref=e503]
+    - generic [ref=e443]:
+      - generic [ref=e444]:
+        - generic [ref=e445]: ↑
+        - generic [ref=e446]: ↓
+        - text: navigate
+      - generic [ref=e447]:
+        - generic [ref=e448]: Enter
+        - text: continue
+  - alert [ref=e13]

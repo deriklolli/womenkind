@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 59%
+    - generic [ref=e765]:
+      - heading "How much trouble have you had falling asleep?" [level=2] [ref=e766]
+      - generic [ref=e768]:
+        - button "None" [ref=e769] [cursor=pointer]:
+          - generic [ref=e770]: None
+        - button "Mild" [ref=e772] [cursor=pointer]:
+          - generic [ref=e773]: Mild
+        - button "Moderate" [ref=e775] [cursor=pointer]:
+          - generic [ref=e776]: Moderate
+        - button "Severe" [ref=e778] [cursor=pointer]:
+          - generic [ref=e779]: Severe
+        - button "Very severe / debilitating" [ref=e781] [cursor=pointer]:
+          - generic [ref=e782]: Very severe / debilitating
+      - generic [ref=e784]:
+        - button "Back" [ref=e785] [cursor=pointer]:
+          - img [ref=e786]
+          - text: Back
+        - button "Next" [disabled] [ref=e788]:
+          - text: Next
+          - img [ref=e790]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,46 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 47%
+    - generic [ref=e601]:
+      - heading "Other medical considerations — select all that apply." [level=2] [ref=e602]
+      - generic [ref=e604]:
+        - button "Unexplained vaginal bleeding" [ref=e605] [cursor=pointer]:
+          - generic [ref=e606]: Unexplained vaginal bleeding
+        - button "Liver disease" [ref=e608] [cursor=pointer]:
+          - generic [ref=e609]: Liver disease
+        - button "Gallbladder disease" [ref=e611] [cursor=pointer]:
+          - generic [ref=e612]: Gallbladder disease
+        - button "Seizure disorder" [ref=e614] [cursor=pointer]:
+          - generic [ref=e615]: Seizure disorder
+        - button "Glaucoma" [ref=e617] [cursor=pointer]:
+          - generic [ref=e618]: Glaucoma
+        - button "Sleep apnea" [ref=e620] [cursor=pointer]:
+          - generic [ref=e621]: Sleep apnea
+        - button "Endometriosis" [ref=e623] [cursor=pointer]:
+          - generic [ref=e624]: Endometriosis
+        - button "Pregnant now" [ref=e626] [cursor=pointer]:
+          - generic [ref=e627]: Pregnant now
+        - button "Could become pregnant without contraception" [ref=e629] [cursor=pointer]:
+          - generic [ref=e630]: Could become pregnant without contraception
+        - button "None of these" [active] [ref=e632] [cursor=pointer]:
+          - generic [ref=e633]:
+            - img [ref=e643]
+            - text: None of these
+      - generic [ref=e635]:
+        - button "Back" [ref=e636] [cursor=pointer]:
+          - img [ref=e637]
+          - text: Back
+        - button "Next" [ref=e639] [cursor=pointer]:
+          - text: Next
+          - img [ref=e641]
+    - generic [ref=e551]:
+      - generic [ref=e552]:
+        - generic [ref=e553]: ↑
+        - generic [ref=e554]: ↓
+        - text: navigate
+      - generic [ref=e555]:
+        - generic [ref=e556]: Enter
+        - text: continue
+  - alert [ref=e13]

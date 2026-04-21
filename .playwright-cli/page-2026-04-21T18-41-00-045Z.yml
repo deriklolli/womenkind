@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 98%
+    - generic [ref=e1392]:
+      - generic [ref=e1393]: Optional
+      - heading "Which treatment routine sounds easiest to stick with?" [level=2] [ref=e1394]
+      - generic [ref=e1396]:
+        - button "Daily" [ref=e1397] [cursor=pointer]:
+          - generic [ref=e1398]: Daily
+        - button "Weekly" [ref=e1400] [cursor=pointer]:
+          - generic [ref=e1401]: Weekly
+        - button "Longer-acting / low-maintenance" [ref=e1403] [cursor=pointer]:
+          - generic [ref=e1404]: Longer-acting / low-maintenance
+        - button "No preference" [ref=e1406] [cursor=pointer]:
+          - generic [ref=e1407]: No preference
+        - button "Unsure" [ref=e1409] [cursor=pointer]:
+          - generic [ref=e1410]: Unsure
+      - generic [ref=e1412]:
+        - button "Back" [ref=e1413] [cursor=pointer]:
+          - img [ref=e1414]
+          - text: Back
+        - button "Next" [ref=e1416] [cursor=pointer]:
+          - text: Next
+          - img [ref=e1417]
+    - generic [ref=e1337]:
+      - generic [ref=e1338]:
+        - generic [ref=e1339]: ↑
+        - generic [ref=e1340]: ↓
+        - text: navigate
+      - generic [ref=e1341]:
+        - generic [ref=e1342]: Enter
+        - text: continue
+  - alert [ref=e13]

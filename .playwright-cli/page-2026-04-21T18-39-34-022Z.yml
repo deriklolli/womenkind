@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 78%
+    - generic [ref=e1087]:
+      - heading "How much have vaginal dryness, burning, or discomfort bothered you?" [level=2] [ref=e1088]
+      - generic [ref=e1090]:
+        - button "None" [ref=e1091] [cursor=pointer]:
+          - generic [ref=e1092]: None
+        - button "Mild" [ref=e1094] [cursor=pointer]:
+          - generic [ref=e1095]: Mild
+        - button "Moderate" [ref=e1097] [cursor=pointer]:
+          - generic [ref=e1098]: Moderate
+        - button "Severe" [ref=e1100] [cursor=pointer]:
+          - generic [ref=e1101]: Severe
+        - button "Very severe / debilitating" [ref=e1103] [cursor=pointer]:
+          - generic [ref=e1104]: Very severe / debilitating
+      - generic [ref=e1106]:
+        - button "Back" [ref=e1107] [cursor=pointer]:
+          - img [ref=e1108]
+          - text: Back
+        - button "Next" [disabled] [ref=e1110]:
+          - text: Next
+          - img [ref=e1112]
+    - generic [ref=e1052]:
+      - generic [ref=e1053]:
+        - generic [ref=e1054]: ↑
+        - generic [ref=e1055]: ↓
+        - text: navigate
+      - generic [ref=e1056]:
+        - generic [ref=e1057]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 78%
+    - generic [ref=e1114]:
+      - paragraph [ref=e1119]: Body & bone
+      - paragraph [ref=e1121]: Almost done — body composition and bone health.
+      - button "Continue" [ref=e1122] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e1124]
+  - alert [ref=e13]

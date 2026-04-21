@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 86%
+    - generic [ref=e1213]:
+      - heading "Have you had a fracture after age 40 from a fall?" [level=2] [ref=e1214]
+      - generic [ref=e1216]:
+        - button "Yes" [ref=e1217] [cursor=pointer]:
+          - generic [ref=e1218]: "Yes"
+        - button "No" [ref=e1220] [cursor=pointer]:
+          - generic [ref=e1221]: "No"
+      - generic [ref=e1223]:
+        - button "Back" [ref=e1224] [cursor=pointer]:
+          - img [ref=e1225]
+          - text: Back
+        - button "Next" [disabled] [ref=e1227]:
+          - text: Next
+          - img [ref=e1229]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

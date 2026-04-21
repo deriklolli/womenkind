@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 47%
+    - generic [ref=e645]:
+      - paragraph [ref=e650]: Vasomotor
+      - paragraph [ref=e652]: Now we’ll ask about common symptoms over the last 2 weeks.
+      - button "Continue" [ref=e653] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e655]
+  - alert [ref=e13]

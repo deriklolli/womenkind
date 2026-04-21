@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 57%
+    - generic [ref=e738]:
+      - heading "How much have you been bothered by joint pain, muscle aches, or stiffness?" [level=2] [ref=e739]
+      - generic [ref=e741]:
+        - button "None" [ref=e742] [cursor=pointer]:
+          - generic [ref=e743]: None
+        - button "Mild" [ref=e745] [cursor=pointer]:
+          - generic [ref=e746]: Mild
+        - button "Moderate" [ref=e748] [cursor=pointer]:
+          - generic [ref=e749]: Moderate
+        - button "Severe" [ref=e751] [cursor=pointer]:
+          - generic [ref=e752]: Severe
+        - button "Very severe / debilitating" [ref=e754] [cursor=pointer]:
+          - generic [ref=e755]: Very severe / debilitating
+      - generic [ref=e757]:
+        - button "Back" [ref=e758] [cursor=pointer]:
+          - img [ref=e759]
+          - text: Back
+        - button "Next" [disabled] [ref=e761]:
+          - text: Next
+          - img [ref=e763]
+    - generic [ref=e732]:
+      - generic [ref=e733]:
+        - generic [ref=e734]: ↑
+        - generic [ref=e735]: ↓
+        - text: navigate
+      - generic [ref=e736]:
+        - generic [ref=e737]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,48 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 20%
+    - generic [ref=e162]:
+      - heading "Top health concerns — select all that apply" [level=2] [ref=e163]
+      - generic [ref=e165]:
+        - button "Energy" [ref=e166] [cursor=pointer]:
+          - generic [ref=e167]:
+            - img [ref=e201]
+            - text: Energy
+        - button "Weight" [ref=e169] [cursor=pointer]:
+          - generic [ref=e170]: Weight
+        - button "Mood" [active] [ref=e172] [cursor=pointer]:
+          - generic [ref=e173]:
+            - img [ref=e205]
+            - text: Mood
+        - button "Sleep" [ref=e175] [cursor=pointer]:
+          - generic [ref=e176]:
+            - img [ref=e203]
+            - text: Sleep
+        - button "Sexual health" [ref=e178] [cursor=pointer]:
+          - generic [ref=e179]: Sexual health
+        - button "Brain fog" [ref=e181] [cursor=pointer]:
+          - generic [ref=e182]: Brain fog
+        - button "Hot flashes / night sweats" [ref=e184] [cursor=pointer]:
+          - generic [ref=e185]: Hot flashes / night sweats
+        - button "Vaginal symptoms" [ref=e187] [cursor=pointer]:
+          - generic [ref=e188]: Vaginal symptoms
+        - button "Other" [ref=e190] [cursor=pointer]:
+          - generic [ref=e191]: Other
+      - generic [ref=e193]:
+        - button "Back" [ref=e194] [cursor=pointer]:
+          - img [ref=e195]
+          - text: Back
+        - button "Next" [ref=e197] [cursor=pointer]:
+          - text: Next
+          - img [ref=e199]
+    - generic [ref=e156]:
+      - generic [ref=e157]:
+        - generic [ref=e158]: ↑
+        - generic [ref=e159]: ↓
+        - text: navigate
+      - generic [ref=e160]:
+        - generic [ref=e161]: Enter
+        - text: continue
+  - alert [ref=e13]

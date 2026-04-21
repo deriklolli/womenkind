@@ -1,0 +1,10 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e5]:
+    - img "Womenkind" [ref=e7]
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - img [ref=e11]
+        - heading "Payment confirmed" [level=2] [ref=e13]
+        - paragraph [ref=e14]: Your intake has been submitted to your provider. They'll review your clinical brief and prepare for your consultation.
+      - button "See your dashboard & schedule your consultation" [ref=e15] [cursor=pointer]

@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 29%
+    - generic [ref=e357]:
+      - heading "Do you know your most recent blood pressure?" [level=2] [ref=e358]
+      - generic [ref=e360]:
+        - button "Yes" [ref=e361] [cursor=pointer]:
+          - generic [ref=e362]: "Yes"
+        - button "No" [ref=e364] [cursor=pointer]:
+          - generic [ref=e365]: "No"
+      - generic [ref=e367]:
+        - button "Back" [ref=e368] [cursor=pointer]:
+          - img [ref=e369]
+          - text: Back
+        - button "Next" [disabled] [ref=e371]:
+          - text: Next
+          - img [ref=e373]
+    - generic [ref=e376]:
+      - generic [ref=e377]:
+        - generic [ref=e378]: ↑
+        - generic [ref=e379]: ↓
+        - text: navigate
+      - generic [ref=e380]:
+        - generic [ref=e381]: Enter
+        - text: continue
+  - alert [ref=e13]

@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 79%
+    - generic [ref=e1126]:
+      - heading "Have you noticed new weight gain mainly in your midsection?" [level=2] [ref=e1127]
+      - generic [ref=e1129]:
+        - button "Yes" [ref=e1130] [cursor=pointer]:
+          - generic [ref=e1131]: "Yes"
+        - button "No" [ref=e1133] [cursor=pointer]:
+          - generic [ref=e1134]: "No"
+        - button "Unsure" [ref=e1136] [cursor=pointer]:
+          - generic [ref=e1137]: Unsure
+      - generic [ref=e1139]:
+        - button "Back" [ref=e1140] [cursor=pointer]:
+          - img [ref=e1141]
+          - text: Back
+        - button "Next" [disabled] [ref=e1143]:
+          - text: Next
+          - img [ref=e1145]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

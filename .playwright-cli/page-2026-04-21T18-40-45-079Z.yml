@@ -1,0 +1,36 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 97%
+    - generic [ref=e1356]:
+      - heading "Which options are you open to discussing?" [level=2] [ref=e1357]
+      - generic [ref=e1359]:
+        - button "Hormone therapy" [ref=e1360] [cursor=pointer]:
+          - generic [ref=e1361]: Hormone therapy
+        - button "Non-hormonal prescription options" [ref=e1363] [cursor=pointer]:
+          - generic [ref=e1364]: Non-hormonal prescription options
+        - button "Local vaginal treatment" [ref=e1366] [cursor=pointer]:
+          - generic [ref=e1367]: Local vaginal treatment
+        - button "Testosterone if appropriate" [ref=e1369] [cursor=pointer]:
+          - generic [ref=e1370]: Testosterone if appropriate
+        - button "Lifestyle-only first" [ref=e1372] [cursor=pointer]:
+          - generic [ref=e1373]: Lifestyle-only first
+        - button "Not sure yet" [ref=e1375] [cursor=pointer]:
+          - generic [ref=e1376]: Not sure yet
+      - generic [ref=e1378]:
+        - button "Back" [ref=e1379] [cursor=pointer]:
+          - img [ref=e1380]
+          - text: Back
+        - button "Next" [disabled] [ref=e1382]:
+          - text: Next
+          - img [ref=e1384]
+    - generic [ref=e1337]:
+      - generic [ref=e1338]:
+        - generic [ref=e1339]: ↑
+        - generic [ref=e1340]: ↓
+        - text: navigate
+      - generic [ref=e1341]:
+        - generic [ref=e1342]: Enter
+        - text: continue
+  - alert [ref=e13]

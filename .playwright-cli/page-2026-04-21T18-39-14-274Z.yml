@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 72%
+    - generic [ref=e1008]:
+      - paragraph [ref=e1013]: Vaginal & bladder
+      - generic [ref=e1014]:
+        - heading "A note before we continue" [level=2] [ref=e1015]
+        - paragraph [ref=e1016]: The next questions ask about vaginal and bladder symptoms. These are extremely common during menopause and nothing to feel embarrassed about. Your answers help your clinician recommend the most effective treatment.
+      - button "Continue" [ref=e1017] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e1019]
+  - alert [ref=e13]

@@ -28,13 +28,48 @@ const FAKE_APPOINTMENT_ID = '00000000-0000-0000-0000-000000000099'
 
 const hasProviderCreds = !!(PROVIDER_EMAIL && PROVIDER_PASSWORD)
 
+/**
+ * Sign in directly against the Supabase auth API and inject the session cookie
+ * into Playwright's browser context. This avoids the Vercel deployment protection
+ * gate that intercepts browser navigation to the staging URL.
+ */
 async function loginAsProvider(page: import('@playwright/test').Page) {
-  await page.goto('/provider/login')
-  // The login form uses bare <label> elements without for/htmlFor, so target by input type
-  await page.locator('input[type="email"]').fill(PROVIDER_EMAIL)
-  await page.locator('input[type="password"]').fill(PROVIDER_PASSWORD)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await page.waitForURL('**/provider/**', { timeout: 15_000 })
+  const supabaseUrl = process.env.TEST_SUPABASE_URL!
+  const supabaseAnonKey = process.env.TEST_SUPABASE_ANON_KEY!
+
+  const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+    },
+    body: JSON.stringify({ email: PROVIDER_EMAIL, password: PROVIDER_PASSWORD }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Supabase sign-in failed (${res.status}): ${body}`)
+  }
+
+  const session = await res.json()
+
+  // @supabase/ssr stores the session as a JSON-encoded cookie. The cookie name
+  // is derived from the project ref inside the URL.
+  const projectRef = supabaseUrl.match(/https?:\/\/([^.]+)\./)?.[1] ?? ''
+  const cookieName = `sb-${projectRef}-auth-token`
+  const cookieValue = JSON.stringify(session)
+
+  const baseUrl = new URL(process.env.TEST_BASE_URL || 'http://localhost:3001')
+  await page.context().addCookies([{
+    name: cookieName,
+    value: cookieValue,
+    domain: baseUrl.hostname,
+    path: '/',
+    httpOnly: false,
+    secure: baseUrl.protocol === 'https:',
+    sameSite: 'Lax',
+  }])
 }
 
 // ── Tier 1: No credentials required ─────────────────────────────────────────

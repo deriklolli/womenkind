@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 25%
+    - generic [ref=e271]:
+      - heading "Which best describes your current menstrual status?" [level=2] [ref=e272]
+      - generic [ref=e274]:
+        - button "Regular periods" [ref=e275] [cursor=pointer]:
+          - generic [ref=e276]: Regular periods
+        - button "Periods earlier or later than usual" [ref=e278] [cursor=pointer]:
+          - generic [ref=e279]: Periods earlier or later than usual
+        - button "Skipped periods" [ref=e281] [cursor=pointer]:
+          - generic [ref=e282]: Skipped periods
+        - button "No natural period for 12+ months" [ref=e284] [cursor=pointer]:
+          - generic [ref=e285]: No natural period for 12+ months
+        - button "No periods — hormonal IUD or birth control" [ref=e287] [cursor=pointer]:
+          - generic [ref=e288]: No periods — hormonal IUD or birth control
+        - button "No periods — uterine procedure" [ref=e290] [cursor=pointer]:
+          - generic [ref=e291]: No periods — uterine procedure
+        - button "No periods — hysterectomy" [ref=e293] [cursor=pointer]:
+          - generic [ref=e294]: No periods — hysterectomy
+        - button "No periods — both ovaries removed" [ref=e296] [cursor=pointer]:
+          - generic [ref=e297]: No periods — both ovaries removed
+      - generic [ref=e299]:
+        - button "Back" [ref=e300] [cursor=pointer]:
+          - img [ref=e301]
+          - text: Back
+        - button "Next" [disabled] [ref=e303]:
+          - text: Next
+          - img [ref=e305]
+    - generic [ref=e241]:
+      - generic [ref=e242]:
+        - generic [ref=e243]: ↑
+        - generic [ref=e244]: ↓
+        - text: navigate
+      - generic [ref=e245]:
+        - generic [ref=e246]: Enter
+        - text: continue
+  - alert [ref=e13]

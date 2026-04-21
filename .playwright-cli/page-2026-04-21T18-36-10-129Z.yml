@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 16%
+    - generic [ref=e130]:
+      - paragraph [ref=e135]: Your goals
+      - paragraph [ref=e137]: Before we get into symptoms, tell us what matters most to you.
+      - button "Continue" [ref=e138] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e140]
+  - alert [ref=e13]

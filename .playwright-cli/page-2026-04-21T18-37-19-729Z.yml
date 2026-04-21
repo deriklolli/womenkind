@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 32%
+    - generic [ref=e382]:
+      - paragraph [ref=e387]: Medications
+      - paragraph [ref=e389]: Now let’s cover your current medications and any allergies.
+      - button "Continue" [ref=e390] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e392]
+  - alert [ref=e13]

@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "Womenkind" [ref=e5]
+      - paragraph [ref=e6]: Provider Portal
+    - generic [ref=e7]:
+      - heading "Sign in to your account" [level=2] [ref=e8]
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]: Email
+          - textbox "you@clinic.com" [ref=e12]: josephurbanmd@gmail.com
+        - generic [ref=e13]:
+          - generic [ref=e14]:
+            - generic [ref=e15]: Password
+            - button "Forgot password?" [ref=e16] [cursor=pointer]
+          - generic [ref=e17]:
+            - textbox "••••••••" [ref=e18]: WomenKind2024!
+            - button [ref=e19] [cursor=pointer]:
+              - img [ref=e20]
+        - paragraph [ref=e25]: Invalid login credentials
+        - button "Sign In" [ref=e23] [cursor=pointer]
+  - alert [ref=e24]

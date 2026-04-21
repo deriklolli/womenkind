@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 4%
+    - generic [ref=e38]:
+      - heading "Date of birth" [level=2] [ref=e39]
+      - textbox [active] [ref=e41]
+      - generic [ref=e42]:
+        - button "Back" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+          - text: Back
+        - button "Next" [disabled] [ref=e46]:
+          - text: Next
+          - img [ref=e48]
+      - paragraph [ref=e50]: Press Enter to continue
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - generic [ref=e34]: ↑
+        - generic [ref=e35]: ↓
+        - text: navigate
+      - generic [ref=e36]:
+        - generic [ref=e37]: Enter
+        - text: continue
+  - alert [ref=e13]

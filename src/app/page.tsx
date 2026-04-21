@@ -1,7 +1,16 @@
 import Header from '@/components/Header'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { getServerSession } from '@/lib/getServerSession'
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Authenticated users belong on their dashboard, not the marketing home.
+  // Unauthenticated visitors on the public domain are already caught by the
+  // coming-soon rewrite in middleware.ts.
+  const session = await getServerSession()
+  if (session?.role === 'patient') redirect('/patient/dashboard')
+  if (session?.role === 'provider') redirect('/provider/dashboard')
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

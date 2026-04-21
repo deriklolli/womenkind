@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 90%
+    - generic [ref=e1252]:
+      - heading "Has anyone in your family been diagnosed with osteoporosis?" [level=2] [ref=e1253]
+      - generic [ref=e1255]:
+        - button "Yes" [ref=e1256] [cursor=pointer]:
+          - generic [ref=e1257]: "Yes"
+        - button "No" [ref=e1259] [cursor=pointer]:
+          - generic [ref=e1260]: "No"
+        - button "Unsure" [ref=e1262] [cursor=pointer]:
+          - generic [ref=e1263]: Unsure
+      - generic [ref=e1265]:
+        - button "Back" [ref=e1266] [cursor=pointer]:
+          - img [ref=e1267]
+          - text: Back
+        - button "Next" [disabled] [ref=e1269]:
+          - text: Next
+          - img [ref=e1271]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

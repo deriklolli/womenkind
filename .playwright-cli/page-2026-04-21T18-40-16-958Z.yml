@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 88%
+    - generic [ref=e1231]:
+      - heading "Did either parent ever break a hip?" [level=2] [ref=e1232]
+      - generic [ref=e1234]:
+        - button "Yes" [ref=e1235] [cursor=pointer]:
+          - generic [ref=e1236]: "Yes"
+        - button "No" [ref=e1238] [cursor=pointer]:
+          - generic [ref=e1239]: "No"
+        - button "Unsure" [ref=e1241] [cursor=pointer]:
+          - generic [ref=e1242]: Unsure
+      - generic [ref=e1244]:
+        - button "Back" [ref=e1245] [cursor=pointer]:
+          - img [ref=e1246]
+          - text: Back
+        - button "Next" [disabled] [ref=e1248]:
+          - text: Next
+          - img [ref=e1250]
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

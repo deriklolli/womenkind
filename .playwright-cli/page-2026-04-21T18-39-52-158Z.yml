@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 81%
+    - generic [ref=e1172]:
+      - heading "How many days per week do you strength train?" [level=2] [ref=e1173]
+      - spinbutton [active] [ref=e1175]
+      - generic [ref=e1176]:
+        - button "Back" [ref=e1177] [cursor=pointer]:
+          - img [ref=e1178]
+          - text: Back
+        - button "Next" [disabled] [ref=e1180]:
+          - text: Next
+          - img [ref=e1182]
+      - paragraph [ref=e1184]: Press Enter to continue
+    - generic [ref=e1148]:
+      - generic [ref=e1149]:
+        - generic [ref=e1150]: ↑
+        - generic [ref=e1151]: ↓
+        - text: navigate
+      - generic [ref=e1152]:
+        - generic [ref=e1153]: Enter
+        - text: continue
+  - alert [ref=e13]

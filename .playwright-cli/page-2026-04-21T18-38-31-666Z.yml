@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 53%
+    - generic [ref=e691]:
+      - paragraph [ref=e696]: Mood & cognition
+      - generic [ref=e697]:
+        - heading "Checking in on how you feel" [level=2] [ref=e698]
+        - paragraph [ref=e699]: Mood changes, sleep disruption, and cognitive shifts are among the most common — and most under-recognized — symptoms of hormonal change. There are no wrong answers here. Just be honest about what you’ve been experiencing.
+      - button "Continue" [ref=e700] [cursor=pointer]:
+        - text: Continue
+        - img [ref=e702]
+  - alert [ref=e13]

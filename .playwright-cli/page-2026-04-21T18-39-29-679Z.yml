@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 76%
+    - generic [ref=e1060]:
+      - heading "How much have bladder symptoms bothered you — urgency, frequency, leaking, or difficulty emptying?" [level=2] [ref=e1061]
+      - generic [ref=e1063]:
+        - button "None" [ref=e1064] [cursor=pointer]:
+          - generic [ref=e1065]: None
+        - button "Mild" [ref=e1067] [cursor=pointer]:
+          - generic [ref=e1068]: Mild
+        - button "Moderate" [ref=e1070] [cursor=pointer]:
+          - generic [ref=e1071]: Moderate
+        - button "Severe" [ref=e1073] [cursor=pointer]:
+          - generic [ref=e1074]: Severe
+        - button "Very severe / debilitating" [ref=e1076] [cursor=pointer]:
+          - generic [ref=e1077]: Very severe / debilitating
+      - generic [ref=e1079]:
+        - button "Back" [ref=e1080] [cursor=pointer]:
+          - img [ref=e1081]
+          - text: Back
+        - button "Next" [disabled] [ref=e1083]:
+          - text: Next
+          - img [ref=e1085]
+    - generic [ref=e1052]:
+      - generic [ref=e1053]:
+        - generic [ref=e1054]: ↑
+        - generic [ref=e1055]: ↓
+        - text: navigate
+      - generic [ref=e1056]:
+        - generic [ref=e1057]: Enter
+        - text: continue
+  - alert [ref=e13]

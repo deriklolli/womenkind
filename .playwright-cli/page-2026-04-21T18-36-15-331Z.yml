@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e16]:
+      - img "Womenkind" [ref=e17]
+      - generic [ref=e18]: 18%
+    - generic [ref=e142]:
+      - heading "If you could change one thing about your health right now, what would it be?" [level=2] [ref=e143]
+      - textbox "Describe in your own words..." [active] [ref=e145]
+      - generic [ref=e146]:
+        - button "Back" [ref=e147] [cursor=pointer]:
+          - img [ref=e148]
+          - text: Back
+        - button "Next" [disabled] [ref=e150]:
+          - text: Next
+          - img [ref=e152]
+      - paragraph [ref=e154]: Press Enter to continue
+    - generic [ref=e156]:
+      - generic [ref=e157]:
+        - generic [ref=e158]: ↑
+        - generic [ref=e159]: ↓
+        - text: navigate
+      - generic [ref=e160]:
+        - generic [ref=e161]: Enter
+        - text: continue
+  - alert [ref=e13]
