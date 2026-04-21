@@ -16,9 +16,8 @@ function getSupabase() {
  * POST /api/visits/ambient-recording
  *
  * 1. Creates encounter_note record
- * 2. Downloads audio from Supabase Storage via service role
- * 3. Uploads audio to AssemblyAI (so they host it — no signed URL issues)
- * 4. Submits transcript job pointing at AssemblyAI-hosted URL
+ * 2. Generates a pre-signed S3 GET URL for the recording
+ * 3. Submits transcript job to AssemblyAI pointing at the S3 URL
  *
  * Body: { patientId, providerId, recordingStoragePath }
  */
