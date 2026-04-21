@@ -4,6 +4,7 @@ import { appointments } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { cancelCalendarEvent } from '@/lib/google-calendar'
 import { Resend } from 'resend'
+import { getServerSession } from '@/lib/getServerSession'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -168,6 +169,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Allow patient who owns the appointment, or any provider
+    if (session.role === 'patient' && session.patientId !== appointment.patient_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     if (appointment.status === 'canceled') {
       return NextResponse.json({ error: 'Appointment is already canceled' }, { status: 400 })
     }
@@ -228,7 +236,7 @@ export async function POST(req: NextRequest) {
       if (providerEmail) {
         await sendCancellationEmail({
           toEmail: providerEmail,
-          toName: 'Dr. Urban',
+          toName: providerDisplayName,
           canceledByName: patientName,
           appointmentName: appointmentTypeName,
           durationMinutes,

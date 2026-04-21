@@ -7,6 +7,7 @@ import { isSlotAvailable, getDayOfWeek } from '@/lib/scheduling'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { createVideoRoom, startCloudRecording } from '@/lib/daily-video'
 import { Resend } from 'resend'
+import { getServerSession } from '@/lib/getServerSession'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -289,6 +290,9 @@ async function sendProviderBookingNotification({
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { patientId, providerId, appointmentTypeId, startsAt, patientNotes } = await req.json()
 
     if (!patientId || !providerId || !appointmentTypeId || !startsAt) {
@@ -296,6 +300,10 @@ export async function POST(req: NextRequest) {
         { error: 'patientId, providerId, appointmentTypeId, and startsAt are required' },
         { status: 400 }
       )
+    }
+
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // 1. Get appointment type details

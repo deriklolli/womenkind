@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { appointments } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/scheduling/calendar-export?appointmentId=xxx
@@ -10,6 +11,9 @@ import { eq } from 'drizzle-orm'
  */
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const appointmentId = req.nextUrl.searchParams.get('appointmentId')
 
     if (!appointmentId) {

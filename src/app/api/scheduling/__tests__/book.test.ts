@@ -82,6 +82,14 @@ jest.mock('@/lib/stripe', () => ({
   },
 }))
 
+// ── Auth mock ─────────────────────────────────────────────────────────────────
+
+const mockGetServerSession = jest.fn()
+
+jest.mock('@/lib/getServerSession', () => ({
+  getServerSession: (...args: unknown[]) => mockGetServerSession(...args),
+}))
+
 // ── External service mocks ────────────────────────────────────────────────────
 
 const mockCreateVideoRoom = jest.fn()
@@ -194,6 +202,8 @@ function validBody(overrides: Record<string, unknown> = {}) {
 describe('POST /api/scheduling/book', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: authenticated as the patient who owns the appointment
+    mockGetServerSession.mockResolvedValue({ role: 'patient', patientId: 'patient-uuid-123' })
     mockIsSlotAvailable.mockReturnValue(true)
     mockCreateVideoRoom.mockResolvedValue({
       url: 'https://womenkind.daily.co/test-room',

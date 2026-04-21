@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { appointment_types } from '@/lib/db/schema'
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * GET /api/scheduling/appointment-types?providerId=xxx
@@ -32,6 +33,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const body = await req.json()
     const { id, providerId, name, durationMinutes, priceCents, color } = body
 
@@ -49,7 +54,7 @@ export async function POST(req: NextRequest) {
           price_cents: priceCents ?? 0,
           color: color ?? '#944fed',
         })
-        .where(eq(appointment_types.id, id))
+        .where(and(eq(appointment_types.id, id), eq(appointment_types.provider_id, providerId)))
         .returning()
 
       if (!data) {
