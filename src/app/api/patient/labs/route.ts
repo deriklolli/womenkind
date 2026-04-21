@@ -36,7 +36,6 @@ export async function GET(req: NextRequest) {
       tests,
       clinical_indication,
       status,
-      results,
       ordered_at,
       created_at
     FROM lab_orders

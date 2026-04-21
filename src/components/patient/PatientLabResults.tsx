@@ -12,13 +12,20 @@ interface LabResultItem {
   flag: 'normal' | 'high' | 'low' | 'critical' | null
 }
 
+interface LabTest {
+  code: string
+  name: string
+  result?: string
+  reference?: string
+  flag?: string | null
+}
+
 interface LabOrder {
   id: string
   lab_partner: string
-  tests: { code: string; name: string }[]
+  tests: LabTest[] | null
   clinical_indication: string
   status: string
-  results: LabResultItem[] | null
   ordered_at: string | null
   created_at: string
 }
@@ -39,6 +46,22 @@ const STATUS_LABELS: Record<string, { label: string; style: string }> = {
   results_available: { label: 'Results Ready', style: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
 }
 
+function hasResults(order: LabOrder) {
+  const resultStatuses = ['results_available', 'resulted', 'completed']
+  return resultStatuses.includes(order.status) && Array.isArray(order.tests) && order.tests.some(t => t.result)
+}
+
+function testsToResultItems(tests: LabTest[]): LabResultItem[] {
+  return tests.filter(t => t.result).map(t => ({
+    testCode: t.code,
+    testName: t.name,
+    value: t.result ?? '',
+    unit: '',
+    referenceRange: t.reference ?? '',
+    flag: (t.flag as LabResultItem['flag']) ?? null,
+  }))
+}
+
 export default function PatientLabResults({ patientId }: PatientLabResultsProps) {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,8 +73,7 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
       if (res.ok) {
         const { labOrders: data } = await res.json()
         setLabOrders(data as LabOrder[])
-        // Auto-expand the first order with results
-        const firstWithResults = data.find((o: any) => o.status === 'results_available' && o.results)
+        const firstWithResults = data.find((o: any) => hasResults(o))
         if (firstWithResults) setExpandedId(firstWithResults.id)
       }
       setLoading(false)
@@ -84,8 +106,8 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
     )
   }
 
-  const ordersWithResults = labOrders.filter((o) => o.status === 'results_available' && o.results)
-  const pendingOrders = labOrders.filter((o) => o.status !== 'results_available')
+  const ordersWithResults = labOrders.filter(hasResults)
+  const pendingOrders = labOrders.filter((o) => !hasResults(o))
 
   return (
     <div className="space-y-6">
@@ -98,7 +120,7 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
             const orderedDate = order.ordered_at
               ? new Date(order.ordered_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
               : null
-            const results = order.results || []
+            const results = testsToResultItems(order.tests || [])
             const hasFlags = results.some((r) => r.flag && r.flag !== 'normal')
 
             return (
