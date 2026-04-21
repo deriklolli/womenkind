@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
 import { PRESENTATION_COMPONENTS, type PresentationComponent } from '@/lib/presentation-components'
 import { useChatContext } from '@/lib/chat-context'
@@ -53,19 +52,17 @@ export default function CreatePresentationPage() {
 
   const loadPatient = async () => {
     try {
-      const { data } = await supabase
-        .from('patients')
-        .select('id, profiles ( first_name, last_name )')
-        .eq('id', patientId)
-        .single()
-      const patientData = data as unknown as PatientInfo
-      setPatient(patientData)
+      const res = await fetch(`/api/provider/patients/${patientId}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const { patient: data } = await res.json()
+      setPatient({ id: data.id, profiles: data.profiles })
 
-      // Set chat context for AI assistant
+      const firstName = data.profiles?.first_name || ''
+      const lastName = data.profiles?.last_name || ''
       setPageContext({
         page: 'presentation-create',
         patientId,
-        patientName: `${patientData.profiles?.first_name || ''} ${patientData.profiles?.last_name || ''}`.trim(),
+        patientName: `${firstName} ${lastName}`.trim(),
       })
     } catch (err) {
       console.error('Failed to load patient:', err)
