@@ -5,6 +5,7 @@ import { intakes, subscriptions, appointments } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { createVideoRoom } from '@/lib/daily-video'
+import { generateClinicalBrief } from '@/lib/intake-brief'
 import { Resend } from 'resend'
 import Stripe from 'stripe'
 
@@ -190,6 +191,21 @@ async function handleIntakePayment(data: {
         .where(eq(intakes.id, data.intakeId))
     } catch (err: any) {
       console.error('[STRIPE] Failed to update intake after payment:', err.message)
+    }
+
+    // Generate AI brief now that intake is confirmed paid + submitted
+    try {
+      const intake = await db.query.intakes.findFirst({
+        where: eq(intakes.id, data.intakeId),
+        columns: { answers: true, ai_brief: true },
+      })
+      if (intake?.answers && !intake.ai_brief) {
+        const aiBrief = await generateClinicalBrief(intake.answers as Record<string, any>)
+        await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, data.intakeId))
+        console.log(`[STRIPE] AI brief generated for intake ${data.intakeId}`)
+      }
+    } catch (aiErr: any) {
+      console.error('[STRIPE] AI brief generation failed:', aiErr.message)
     }
   }
 
