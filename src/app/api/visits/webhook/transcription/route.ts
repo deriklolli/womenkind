@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
+import { invokeModel } from '@/lib/bedrock'
 
 function getSupabase() {
   return createClient(
@@ -99,15 +100,8 @@ export async function POST(req: NextRequest) {
       .update({ transcript: fullTranscript })
       .eq('id', note.id)
 
-    // Generate SOAP note with Claude
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (!anthropicKey) {
-      console.warn('[transcription-webhook] ANTHROPIC_API_KEY not set — saving transcript only')
-      await supabase.from('encounter_notes').update({ status: 'draft' }).eq('id', note.id)
-      return NextResponse.json({ ok: true })
-    }
-
-    const soapNote = await generateSoapNote(fullTranscript, anthropicKey)
+    // Generate SOAP note with Bedrock
+    const soapNote = await generateSoapNote(fullTranscript)
 
     // Save the structured SOAP note as a draft
     await supabase
@@ -119,6 +113,7 @@ export async function POST(req: NextRequest) {
         assessment: soapNote.assessment,
         plan: soapNote.plan,
         status: 'draft',
+        recording_url: null,
       })
       .eq('id', note.id)
 
@@ -160,27 +155,16 @@ function buildLabeledTranscript(transcriptData: any): string {
     .join('\n\n')
 }
 
-async function generateSoapNote(
-  transcript: string,
-  apiKey: string
-): Promise<{
+async function generateSoapNote(transcript: string): Promise<{
   chief_complaint: string
   hpi: string
   ros: string
   assessment: string
   plan: string
 }> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: `You are a clinical documentation specialist for Womenkind, a telehealth menopause care platform.
+  const text = await invokeModel({
+    maxTokens: 4096,
+    system: `You are a clinical documentation specialist for Womenkind, a telehealth menopause care platform.
 Your task is to generate a structured SOAP note from a clinical visit transcript.
 
 Guidelines:
@@ -191,10 +175,10 @@ Guidelines:
 - Plan should be actionable and specific
 - Do not fabricate information not present in the transcript
 - Return ONLY a JSON object, no markdown`,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate a SOAP note from this clinical visit transcript. Return ONLY a JSON object.
+    messages: [
+      {
+        role: 'user',
+        content: `Generate a SOAP note from this clinical visit transcript. Return ONLY a JSON object.
 
 TRANSCRIPT:
 ${transcript}
@@ -207,24 +191,16 @@ Return this exact JSON structure:
   "assessment": "Clinical assessment including differential considerations and working diagnosis",
   "plan": "Treatment plan including medications, follow-up, labs ordered, patient education, and next steps"
 }`,
-        },
-      ],
-    }),
+      },
+    ],
   })
-
-  if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`)
-  }
-
-  const data = await response.json()
-  const text = data.content?.[0]?.text || ''
 
   try {
     return JSON.parse(text)
   } catch {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) return JSON.parse(jsonMatch[0])
-    throw new Error('Failed to parse SOAP note JSON from Claude')
+    throw new Error('Failed to parse SOAP note JSON from Bedrock')
   }
 }
 
