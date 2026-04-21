@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { profiles, intakes, subscriptions, care_presentations } from '@/lib/db/schema'
-import { eq, and, neq, desc } from 'drizzle-orm'
+import { eq, and, ne, desc } from 'drizzle-orm'
 
 /**
  * GET /api/patient/me
@@ -39,7 +39,7 @@ export async function GET() {
   const intake = await db.query.intakes.findFirst({
     where: and(
       eq(intakes.patient_id, patientId),
-      neq(intakes.status, 'draft')
+      ne(intakes.status, 'draft')
     ),
     columns: {
       id: true,
