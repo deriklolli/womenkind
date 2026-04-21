@@ -21,11 +21,10 @@ interface Prescription {
 
 interface Props {
   patientId: string
+  providerId: string
 }
 
-const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
-
-export default function PrescriptionList({ patientId }: Props) {
+export default function PrescriptionList({ patientId, providerId }: Props) {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [loading, setLoading] = useState(true)
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
@@ -73,7 +72,7 @@ export default function PrescriptionList({ patientId }: Props) {
         body: JSON.stringify({
           prescriptionId,
           patientId,
-          providerId: PROVIDER_ID,
+          providerId: providerId,
         }),
       })
       const data = await res.json()
