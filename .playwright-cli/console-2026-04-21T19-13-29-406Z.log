@@ -23,3 +23,4 @@
 [ 4822627ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
 [ 4929517ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
 [ 5213785ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/debug/invoke-test:0
+[ 5381790ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/debug/invoke-test:0
