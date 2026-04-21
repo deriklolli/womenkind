@@ -190,12 +190,16 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { messages, context }: { messages: ChatMessage[]; context?: ChatContext } = await req.json()
 
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
+      if (context?.patientId && session.patientId && session.patientId !== context.patientId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
       const data = await getPatientContext(context.patientId)
       patientContext = `
 CURRENT PATIENT CONTEXT:

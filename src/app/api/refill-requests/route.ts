@@ -185,7 +185,7 @@ export async function PATCH(req: NextRequest) {
         reviewed_at: new Date(),
         updated_at: new Date(),
       })
-      .where(eq(refill_requests.id, requestId))
+      .where(and(eq(refill_requests.id, requestId), eq(refill_requests.provider_id, session.providerId!)))
       .returning()
 
     if (!request) {

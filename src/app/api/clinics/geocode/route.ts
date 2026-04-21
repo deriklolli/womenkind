@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/clinics/geocode
@@ -13,10 +14,17 @@ import { eq } from 'drizzle-orm'
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { patientId, zip } = await req.json()
 
     if (!patientId || !zip) {
       return NextResponse.json({ error: 'patientId and zip are required' }, { status: 400 })
+    }
+
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const cleanZip = String(zip).trim().slice(0, 10)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { patients, profiles } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 export interface NearbyClinic {
   id: string
@@ -27,12 +28,19 @@ export interface NearbyClinic {
  */
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(req.url)
     const patientId = searchParams.get('patientId')
     const radiusMiles = parseFloat(searchParams.get('radiusMiles') || '60')
 
     if (!patientId) {
       return NextResponse.json({ error: 'patientId is required' }, { status: 400 })
+    }
+
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Get the patient's profile_id so we can look up their home coordinates

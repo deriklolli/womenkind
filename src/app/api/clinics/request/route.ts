@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { clinic_appointment_requests, patients, profiles, clinics } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { Resend } from 'resend'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/clinics/request
@@ -19,6 +20,9 @@ import { Resend } from 'resend'
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { patientId, clinicId, preferredDates, preferredTime, notes, contactPhone } =
       await req.json()
 
