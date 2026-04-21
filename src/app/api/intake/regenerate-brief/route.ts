@@ -31,8 +31,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Intake not found or has no answers' }, { status: 404 })
   }
 
-  const aiBrief = await generateClinicalBrief(intake.answers as Record<string, any>)
-  await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, intakeId))
-
-  return NextResponse.json({ success: true })
+  try {
+    const aiBrief = await generateClinicalBrief(intake.answers as Record<string, any>)
+    await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, intakeId))
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('[regenerate-brief] error:', err)
+    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 })
+  }
 }
