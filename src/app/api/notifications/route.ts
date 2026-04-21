@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest) {
 
     if (session.role === 'patient') {
       await db.update(notifications)
-        .set({ read_at: new Date() })
+        .set(updates)
         .where(and(eq(notifications.id, body.id), eq(notifications.patient_id, session.patientId!)))
     } else {
       await db.update(notifications)
