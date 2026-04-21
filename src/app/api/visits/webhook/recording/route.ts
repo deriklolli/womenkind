@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { encounter_notes, appointments } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/visits/webhook/recording
@@ -71,14 +66,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const supabase = getSupabase()
-
     // Look up the appointment by room name
-    const { data: appointment } = await supabase
-      .from('appointments')
-      .select('id, patient_id, provider_id, starts_at')
-      .eq('video_room_name', room_name)
-      .maybeSingle()
+    const appointment = await db.query.appointments.findFirst({
+      where: eq(appointments.video_room_name, room_name),
+      columns: { id: true, patient_id: true, provider_id: true, starts_at: true },
+    })
 
     if (!appointment) {
       console.error(`[recording-webhook] No appointment found for room: ${room_name}`)
@@ -86,21 +78,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Create encounter note in 'transcribing' state
-    const { data: note, error: noteErr } = await supabase
-      .from('encounter_notes')
-      .insert({
-        patient_id: appointment.patient_id,
-        provider_id: appointment.provider_id,
-        appointment_id: appointment.id,
-        source: 'telehealth',
-        recording_url: s3_url,
-        status: 'transcribing',
-      })
-      .select('id')
-      .single()
+    const [note] = await db.insert(encounter_notes).values({
+      patient_id: appointment.patient_id,
+      provider_id: appointment.provider_id,
+      appointment_id: appointment.id,
+      source: 'telehealth',
+      recording_url: s3_url,
+      status: 'transcribing',
+    }).returning({ id: encounter_notes.id })
 
-    if (noteErr || !note) {
-      console.error('[recording-webhook] Failed to create encounter note:', noteErr)
+    if (!note) {
+      console.error('[recording-webhook] Failed to create encounter note')
       return NextResponse.json({ error: 'DB error' }, { status: 500 })
     }
 
@@ -108,10 +96,7 @@ export async function POST(req: NextRequest) {
     const assemblyKey = process.env.ASSEMBLYAI_API_KEY
     if (!assemblyKey) {
       console.warn('[recording-webhook] ASSEMBLYAI_API_KEY not set — skipping transcription')
-      await supabase
-        .from('encounter_notes')
-        .update({ status: 'failed' })
-        .eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ ok: true })
     }
 
@@ -139,20 +124,16 @@ export async function POST(req: NextRequest) {
     if (!transcriptRes.ok) {
       const err = await transcriptRes.text()
       console.error('[recording-webhook] AssemblyAI submit failed:', err)
-      await supabase
-        .from('encounter_notes')
-        .update({ status: 'failed' })
-        .eq('id', note.id)
+      await db.update(encounter_notes).set({ status: 'failed' }).where(eq(encounter_notes.id, note.id))
       return NextResponse.json({ error: 'Transcription submit failed' }, { status: 502 })
     }
 
     const transcriptData = await transcriptRes.json()
 
     // Store the AssemblyAI transcript ID so we can match it when the callback arrives
-    await supabase
-      .from('encounter_notes')
-      .update({ assemblyai_transcript_id: transcriptData.id })
-      .eq('id', note.id)
+    await db.update(encounter_notes)
+      .set({ assemblyai_transcript_id: transcriptData.id })
+      .where(eq(encounter_notes.id, note.id))
 
     console.log(`[recording-webhook] Transcription submitted for note ${note.id}, transcript ${transcriptData.id}`)
     return NextResponse.json({ ok: true })
