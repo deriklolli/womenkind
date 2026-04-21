@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
+import { getDownloadUrl } from '@/lib/s3'
 
 
 function getSupabase() {
@@ -65,19 +66,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ noteId: note.id })
     }
 
-    // ── Step 1: Generate signed URL server-side using service role ────────
-    // Service role bypasses RLS — produces a valid URL AssemblyAI can fetch
-    const { data: signedData, error: signedErr } = await supabase.storage
-      .from('recordings')
-      .createSignedUrl(recordingStoragePath, 3600)
-
-    if (signedErr || !signedData?.signedUrl) {
-      console.error('[ambient-recording] Failed to create signed URL:', signedErr)
+    // ── Step 1: Generate pre-signed S3 GET URL for AssemblyAI ────────────
+    let audioUrl: string
+    try {
+      audioUrl = await getDownloadUrl(recordingStoragePath)
+    } catch (err) {
+      console.error('[ambient-recording] Failed to create S3 signed URL:', err)
       await supabase.from('encounter_notes').update({ status: 'failed' }).eq('id', note.id)
       return NextResponse.json({ error: 'Could not generate audio URL' }, { status: 500 })
     }
 
-    console.log('[ambient-recording] Signed URL created via service role')
+    console.log('[ambient-recording] S3 pre-signed URL created')
 
     // ── Step 2: Submit transcript job directly with signed URL ─────────────
     const appUrl = (
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        audio_url: signedData.signedUrl,
+        audio_url: audioUrl,
         speech_models: ['universal-2'],
         speaker_labels: true,
         speakers_expected: 2,
