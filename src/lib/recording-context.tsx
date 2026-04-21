@@ -54,31 +54,37 @@ export function RecordingProvider({ children }: { children: ReactNode }) {
   const upload = useCallback(async (pid: string, pName: string, mime: string) => {
     setState('uploading')
     try {
-      const { supabase } = await import('@/lib/supabase-browser')
-
-      const ext = mime.includes('ogg') ? 'ogg' : 'webm'
       const blob = new Blob(chunksRef.current, { type: mime })
 
       if (blob.size === 0) {
         throw new Error('No audio was captured. Please check your microphone and try again.')
       }
 
-      const filename = `ambient/${Date.now()}_${pid}.${ext}`
+      // Step 1: Get a pre-signed S3 PUT URL from our API
+      const uploadUrlRes = await fetch('/api/storage/recording-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: pid, mimeType: mime }),
+      })
+      if (!uploadUrlRes.ok) throw new Error('Failed to get upload URL')
+      const { uploadUrl, s3Key } = await uploadUrlRes.json()
 
-      const { error: uploadErr } = await supabase.storage
-        .from('recordings')
-        .upload(filename, blob, { contentType: mime, upsert: false })
+      // Step 2: Upload directly to S3 using the pre-signed URL
+      const s3Res = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': mime },
+      })
+      if (!s3Res.ok) throw new Error('Failed to upload recording to S3')
 
-      if (uploadErr) throw uploadErr
-
-      // API route downloads via service role and uploads to AssemblyAI directly
+      // Step 3: Trigger transcription (pass s3Key as the storage path)
       const res = await fetch('/api/visits/ambient-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId: pid,
           providerId: providerIdRef.current,
-          recordingStoragePath: filename,
+          recordingStoragePath: s3Key,
         }),
       })
 
