@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { invokeModel } from '@/lib/bedrock'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,10 +29,6 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = getSupabase()
-  const anthropicKey = process.env.ANTHROPIC_API_KEY
-  if (!anthropicKey) {
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
-  }
 
   // ── 1. Get the appointment + patient info ──
   const { data: appointment, error: aptErr } = await supabase
@@ -274,16 +271,10 @@ export async function GET(req: NextRequest) {
   const contextDocument = sections.join('\n\n')
 
   // ── 5. Generate AI narrative ──
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+  let narrative: string
+  try {
+    narrative = await invokeModel({
+      maxTokens: 2048,
       system: `You are a clinical assistant for Dr. Urban at Womenkind, a telehealth menopause care platform. Generate a concise pre-visit narrative brief.
 
 Your role:
@@ -310,17 +301,11 @@ Length: 150-250 words. Be concise.`,
           content: `Generate a pre-visit brief for Dr. Urban. Here is everything we know about this patient:\n\n${contextDocument}`,
         },
       ],
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Claude API error:', errorText)
+    })
+  } catch (err) {
+    console.error('Bedrock error:', err)
     return NextResponse.json({ error: 'Failed to generate brief' }, { status: 500 })
   }
-
-  const data = await response.json()
-  const narrative = data.content?.[0]?.text || ''
 
   return NextResponse.json({
     narrative,

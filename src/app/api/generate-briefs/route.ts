@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { invokeModel } from '@/lib/bedrock'
 
 function getSupabase() {
   return createClient(
@@ -21,11 +22,6 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabase()
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
-
-    if (!anthropicKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
-    }
 
     // Find all submitted intakes without briefs (include patient_id for wearable lookup)
     const { data: intakes, error: fetchError } = await supabase
@@ -57,7 +53,7 @@ export async function POST(req: NextRequest) {
           wearableMetrics = metrics || []
         }
 
-        const brief = await generateClinicalBrief(intake.answers, anthropicKey, wearableMetrics)
+        const brief = await generateClinicalBrief(intake.answers, wearableMetrics)
 
         const { error: updateError } = await supabase
           .from('intakes')
@@ -85,23 +81,14 @@ export async function POST(req: NextRequest) {
 
 async function generateClinicalBrief(
   answers: Record<string, any>,
-  apiKey: string,
   wearableMetrics: { metric_type: string; value: number; metric_date: string }[] = []
 ) {
   const patientProfile = buildPatientProfile(answers)
   const ouraSection = buildOuraProfile(wearableMetrics)
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
+  const text = await invokeModel({
+    maxTokens: 4096,
+    system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
 
 Key context:
 - Womenkind treats perimenopausal and postmenopausal patients
@@ -118,10 +105,10 @@ When Oura Ring wearable data is present:
 - Disrupted sleep architecture (low deep sleep, low REM, low efficiency) = objective sleep impairment — flag in symptom domains and treatment pathway
 - Wearable data can escalate or de-escalate treatment pathway recommendations (e.g., frequent temp spikes despite patient minimizing symptoms = stronger HRT case)
 - Reference wearable findings explicitly in relevant symptom domains, risk flags, and treatment rationale`,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
+    messages: [
+      {
+        role: 'user',
+        content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
 
 PATIENT INTAKE DATA:
 ${patientProfile}
@@ -169,18 +156,9 @@ Return this exact JSON structure:
     "generated_at": "${new Date().toISOString()}"
   }
 }`,
-        },
-      ],
-    }),
+      },
+    ],
   })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Claude API error: ${response.status} — ${errorText}`)
-  }
-
-  const data = await response.json()
-  const text = data.content?.[0]?.text || ''
 
   try {
     return JSON.parse(text)

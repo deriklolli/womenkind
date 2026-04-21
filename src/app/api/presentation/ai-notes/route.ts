@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
 import { getServerSession } from '@/lib/getServerSession'
 import { getComponent } from '@/lib/presentation-components'
+import { invokeModel } from '@/lib/bedrock'
 
 export async function POST(req: Request) {
   try {
@@ -133,31 +134,19 @@ RULES:
 - Do NOT use medical jargon without explaining it
 - Do NOT start with "Dear" or letter formatting — this is a conversational note`
 
-    // Call Claude API
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
+    // Call Claude via Bedrock
+    let draft: string
+    try {
+      draft = await invokeModel({
+        maxTokens: 300,
         messages: [{ role: 'user', content: prompt }],
-      }),
-    })
-
-    if (!anthropicRes.ok) {
-      console.error('Claude API error:', await anthropicRes.text())
-      // Return a sensible fallback
+      })
+    } catch (err) {
+      console.error('Bedrock error:', err)
       return NextResponse.json({
         draft: `${firstName}, based on our evaluation, the ${component.shortLabel.toLowerCase()} findings are an important part of your care plan. I'll be monitoring this closely and adjusting your treatment as needed.`,
       })
     }
-
-    const claudeData = await anthropicRes.json()
-    const draft = claudeData.content?.[0]?.text || ''
 
     return NextResponse.json({ draft })
   } catch (err) {

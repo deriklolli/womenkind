@@ -19,6 +19,14 @@
 
 import type { NextRequest } from 'next/server'
 
+// ── Bedrock mock ──────────────────────────────────────────────────────────────
+
+const mockInvokeModel = jest.fn()
+
+jest.mock('@/lib/bedrock', () => ({
+  invokeModel: (...args: unknown[]) => mockInvokeModel(...args),
+}))
+
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
 const mockFrom = jest.fn()
@@ -129,36 +137,25 @@ function setupTables(overrides: Record<string, unknown> = {}) {
   mockFrom.mockImplementation((table: string) => makeChain(defaults[table] ?? { data: null, error: null }))
 }
 
-/** Mock a successful Anthropic API response */
-function mockAnthropicSuccess(brief = MOCK_AI_BRIEF) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      content: [{ text: JSON.stringify(brief) }],
-    }),
-  } as Response)
+/** Mock a successful Bedrock invokeModel response */
+function mockBedrockSuccess(brief = MOCK_AI_BRIEF) {
+  mockInvokeModel.mockResolvedValue(JSON.stringify(brief))
 }
 
-/** Mock a failed Anthropic API response */
-function mockAnthropicFailure(status = 500) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: false,
-    status,
-    text: async () => 'Internal Server Error',
-  } as Response)
+/** Mock a failed Bedrock invokeModel response */
+function mockBedrockFailure() {
+  mockInvokeModel.mockRejectedValue(new Error('Bedrock error'))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('POST /api/intake/submit', () => {
-  const originalFetch = global.fetch
-
   beforeEach(() => {
     jest.clearAllMocks()
     setupTables()
-    // No Anthropic key by default — AI brief generation is skipped
-    delete process.env.ANTHROPIC_API_KEY
     delete process.env.RESEND_API_KEY
+    // Bedrock fails by default — AI brief generation is skipped
+    mockBedrockFailure()
     // Authenticated provider session by default
     mockGetServerSession.mockResolvedValue({
       userId: 'user-uuid-provider',
@@ -168,13 +165,9 @@ describe('POST /api/intake/submit', () => {
     })
   })
 
-  afterEach(() => {
-    global.fetch = originalFetch
-  })
-
   // ── Happy path (no AI brief) ──────────────────────────────────────────────
 
-  it('returns { success: true, briefGenerated: false } when no Anthropic key is set', async () => {
+  it('returns { success: true, briefGenerated: false } when Bedrock fails', async () => {
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_BODY))
     expect(res.status).toBe(200)
@@ -213,9 +206,8 @@ describe('POST /api/intake/submit', () => {
 
   // ── Happy path (with AI brief) ────────────────────────────────────────────
 
-  it('returns { success: true, briefGenerated: true } when AI key is set and Claude responds', async () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
-    mockAnthropicSuccess()
+  it('returns { success: true, briefGenerated: true } when Bedrock responds successfully', async () => {
+    mockBedrockSuccess()
     setupTables()
 
     const { POST } = await import('../route')
@@ -225,28 +217,24 @@ describe('POST /api/intake/submit', () => {
     expect(body).toEqual({ success: true, briefGenerated: true })
   })
 
-  it('calls the Anthropic API with the correct model and patient profile', async () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
-    mockAnthropicSuccess()
+  it('calls invokeModel with a patient profile in the messages', async () => {
+    mockBedrockSuccess()
     setupTables()
 
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.anthropic.com/v1/messages',
+    expect(mockInvokeModel).toHaveBeenCalledWith(
       expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'x-api-key': 'sk-ant-test-key',
-        }),
+        messages: expect.arrayContaining([
+          expect.objectContaining({ role: 'user' }),
+        ]),
       })
     )
   })
 
   it('saves the AI brief to the intake record', async () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
-    mockAnthropicSuccess()
+    mockBedrockSuccess()
 
     let aiBriefSaved: unknown = null
     let intakesCallCount = 0
@@ -274,9 +262,8 @@ describe('POST /api/intake/submit', () => {
 
   // ── AI brief failure is non-fatal ─────────────────────────────────────────
 
-  it('still returns success when the Claude API call fails', async () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
-    mockAnthropicFailure()
+  it('still returns success when Bedrock throws', async () => {
+    mockBedrockFailure()
     setupTables()
 
     const { POST } = await import('../route')
@@ -286,9 +273,8 @@ describe('POST /api/intake/submit', () => {
     expect(body).toEqual({ success: true, briefGenerated: false })
   })
 
-  it('still returns success when the Claude API throws a network error', async () => {
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
-    global.fetch = jest.fn().mockRejectedValue(new Error('Network error'))
+  it('still returns success when Bedrock rejects with a network-style error', async () => {
+    mockInvokeModel.mockRejectedValue(new Error('Network error'))
     setupTables()
 
     const { POST } = await import('../route')
@@ -328,7 +314,7 @@ describe('POST /api/intake/submit', () => {
     )
   })
 
-  it('calls logPhiAccess even when no Anthropic key is set', async () => {
+  it('calls logPhiAccess even when Bedrock fails', async () => {
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
     expect(mockLogPhiAccess).toHaveBeenCalledTimes(1)

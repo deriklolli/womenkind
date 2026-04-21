@@ -17,6 +17,14 @@
 
 import type { NextRequest } from 'next/server'
 
+// ── Bedrock mock ──────────────────────────────────────────────────────────────
+
+const mockInvokeModel = jest.fn()
+
+jest.mock('@/lib/bedrock', () => ({
+  invokeModel: (...args: unknown[]) => mockInvokeModel(...args),
+}))
+
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
 const mockFrom = jest.fn()
@@ -81,37 +89,22 @@ const SAMPLE_INTAKES = [
   },
 ]
 
-function mockAnthropicSuccess() {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ content: [{ text: JSON.stringify(MOCK_BRIEF) }] }),
-  } as Response)
+function mockBedrockSuccess(brief = MOCK_BRIEF) {
+  mockInvokeModel.mockResolvedValue(JSON.stringify(brief))
 }
 
-function mockAnthropicFailure() {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: false,
-    status: 500,
-    text: async () => 'Internal Server Error',
-  } as Response)
+function mockBedrockFailure() {
+  mockInvokeModel.mockRejectedValue(new Error('Bedrock error'))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('POST /api/generate-briefs', () => {
-  const originalFetch = global.fetch
-
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key'
     // Default: no intakes pending
     mockFrom.mockReturnValue(makeChain({ data: [], error: null }))
-    mockAnthropicSuccess()
-  })
-
-  afterEach(() => {
-    global.fetch = originalFetch
-    delete process.env.ANTHROPIC_API_KEY
+    mockBedrockSuccess()
   })
 
   // ── Auth ────────────────────────────────────────────────────────────────────
@@ -128,17 +121,6 @@ describe('POST /api/generate-briefs', () => {
     const { POST } = await import('../route')
     const res = await POST(makeRequest({}))
     expect(res.status).toBe(401)
-  })
-
-  // ── Missing API key ─────────────────────────────────────────────────────────
-
-  it('returns 500 when ANTHROPIC_API_KEY is not set', async () => {
-    delete process.env.ANTHROPIC_API_KEY
-    const { POST } = await import('../route')
-    const res = await POST(makeRequest(VALID_SECRET))
-    expect(res.status).toBe(500)
-    const body = await res.json()
-    expect(body.error).toMatch(/ANTHROPIC_API_KEY/)
   })
 
   // ── No pending intakes ──────────────────────────────────────────────────────
@@ -228,22 +210,10 @@ describe('POST /api/generate-briefs', () => {
   // ── Per-intake error isolation ──────────────────────────────────────────────
 
   it('marks a single intake as failed without stopping the rest of the batch', async () => {
-    let fetchCallCount = 0
-    global.fetch = jest.fn().mockImplementation(() => {
-      fetchCallCount++
-      // First intake: Anthropic fails; second: succeeds
-      if (fetchCallCount === 1) {
-        return Promise.resolve({
-          ok: false,
-          status: 429,
-          text: async () => 'Rate limited',
-        } as Response)
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ content: [{ text: JSON.stringify(MOCK_BRIEF) }] }),
-      } as Response)
-    })
+    // First intake: Bedrock fails; second: succeeds
+    mockInvokeModel
+      .mockRejectedValueOnce(new Error('Rate limited'))
+      .mockResolvedValueOnce(JSON.stringify(MOCK_BRIEF))
 
     let intakesCallCount = 0
     mockFrom.mockImplementation((table: string) => {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
+import { invokeModel } from '@/lib/bedrock'
 
 // Lazy-init: don't create at module scope (breaks Vercel build when env vars missing)
 function getSupabase() {
@@ -54,23 +55,19 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError
 
-    // 2. Generate AI clinical brief via Claude API
+    // 2. Generate AI clinical brief via Bedrock
     let aiBrief = null
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    try {
+      aiBrief = await generateClinicalBrief(answers)
 
-    if (anthropicKey) {
-      try {
-        aiBrief = await generateClinicalBrief(answers, anthropicKey)
-
-        // Save brief to intake
-        await supabase
-          .from('intakes')
-          .update({ ai_brief: aiBrief })
-          .eq('id', intakeId)
-      } catch (aiErr) {
-        console.error('AI brief generation error:', aiErr)
-        // Don't fail the submission — brief can be generated later
-      }
+      // Save brief to intake
+      await supabase
+        .from('intakes')
+        .update({ ai_brief: aiBrief })
+        .eq('id', intakeId)
+    } catch (aiErr) {
+      console.error('AI brief generation error:', aiErr)
+      // Don't fail the submission — brief can be generated later
     }
 
     // Send intake confirmation emails (fire and forget)
@@ -260,21 +257,13 @@ async function sendIntakeEmails(
   }
 }
 
-async function generateClinicalBrief(answers: Record<string, any>, apiKey: string) {
+async function generateClinicalBrief(answers: Record<string, any>) {
   // Build a readable patient summary from structured answers
   const patientProfile = buildPatientProfile(answers)
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
+  const text = await invokeModel({
+    maxTokens: 4096,
+    system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
 
 Key context:
 - Womenkind treats perimenopausal and postmenopausal patients
@@ -283,10 +272,10 @@ Key context:
 - Reference current menopause care guidelines (IMS, NAMS, Menopause Society) where relevant
 - Preserve the patient's own words when they add clinical value
 - Be specific to THIS patient — never use generic boilerplate`,
-      messages: [
-        {
-          role: 'user',
-          content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
+    messages: [
+      {
+        role: 'user',
+        content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
 
 PATIENT INTAKE DATA:
 ${patientProfile}
@@ -334,18 +323,9 @@ Return this exact JSON structure:
     "generated_at": "${new Date().toISOString()}"
   }
 }`,
-        },
-      ],
-    }),
+      },
+    ],
   })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Claude API error: ${response.status} — ${errorText}`)
-  }
-
-  const data = await response.json()
-  const text = data.content?.[0]?.text || ''
 
   // Parse the JSON from Claude's response
   try {

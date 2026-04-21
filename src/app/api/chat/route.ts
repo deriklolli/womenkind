@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase-server'
 import { getServerSession } from '@/lib/getServerSession'
+import { invokeModel } from '@/lib/bedrock'
 
 interface ChatContext {
   page: string
@@ -177,13 +178,6 @@ export async function POST(req: Request) {
 
     const { messages, context }: { messages: ChatMessage[]; context?: ChatContext } = await req.json()
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({
-        response: "The AI assistant isn't configured yet. Please add your ANTHROPIC_API_KEY to .env.local to enable this feature.",
-      })
-    }
-
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
@@ -254,35 +248,20 @@ RULES:
 - For clinical questions, reference current menopause care guidelines (NAMS, IMS)
 - You can answer general questions even without patient context`
 
-    // Call Claude
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+    // Call Claude via Bedrock
+    let responseText: string
+    try {
+      responseText = await invokeModel({
+        maxTokens: 1024,
         system: systemPrompt,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      }),
-    })
-
-    if (!claudeRes.ok) {
-      const errText = await claudeRes.text()
-      console.error('Claude API error:', errText)
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      })
+    } catch (err: any) {
+      console.error('Bedrock error:', err)
       return NextResponse.json({
-        response: 'Sorry, there was an error communicating with the AI. Please check the API key configuration.',
+        response: 'Sorry, there was an error communicating with the AI.',
       })
     }
-
-    const claudeData = await claudeRes.json()
-    let responseText = claudeData.content?.[0]?.text || 'No response generated.'
 
     // Check for action blocks in the response
     const actionMatch = responseText.match(/```action\n([\s\S]*?)\n```/)
