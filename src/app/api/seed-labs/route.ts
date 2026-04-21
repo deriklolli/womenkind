@@ -15,9 +15,15 @@ const DEMO_PATIENT_ID = 'c0000000-0000-0000-0000-000000000001'
  * NOTE: The `results` field is stored in `tests` JSON as a workaround since
  * the lab_orders schema does not have a dedicated `results` column.
  */
-export async function POST() {
-  if (process.env.NODE_ENV === 'production') {
+export async function POST(req: Request) {
+  if (process.env.VERCEL_ENV === 'production') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const body = await req.json().catch(() => ({}))
+  const seedSecret = process.env.SEED_SECRET
+  if (!seedSecret || body.secret !== seedSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Check for existing seeded lab order to avoid duplicates
