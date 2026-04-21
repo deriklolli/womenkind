@@ -5,12 +5,18 @@ export async function GET() {
   try {
     const sts = new STSClient({ region: process.env.AWS_REGION || 'us-west-2' })
     const res = await sts.send(new GetCallerIdentityCommand({}))
+    const awsEnvKeys = Object.keys(process.env)
+      .filter(k => k.startsWith('AWS_') || k.includes('AMZN') || k === 'VERCEL_OIDC_TOKEN')
+      .map(k => ({
+        key: k,
+        valuePrefix: (process.env[k] || '').slice(0, 12),
+        length: (process.env[k] || '').length,
+      }))
     return NextResponse.json({
       arn: res.Arn,
       account: res.Account,
       userId: res.UserId,
-      keyIdPrefix: (process.env.AWS_ACCESS_KEY_ID || '').slice(0, 8),
-      region: process.env.AWS_REGION,
+      awsEnvKeys,
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
