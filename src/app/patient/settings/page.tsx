@@ -47,9 +47,17 @@ export default function SettingsPage() {
         return
       }
 
-      // Real auth — fetch from RDS via API
+      // Verify Supabase session before hitting the API
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/patient/login'); return }
+
       const res = await fetch('/api/patient/settings')
-      if (!res.ok) { router.push('/patient/login'); return }
+      if (!res.ok) {
+        if (res.status === 401) { router.push('/patient/login'); return }
+        // 403 or 5xx — still authenticated, stay on page with empty state
+        console.error('Settings API returned', res.status)
+        return
+      }
 
       const data = await res.json()
 
