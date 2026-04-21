@@ -123,44 +123,23 @@ export default function PatientSchedulePage() {
       return
     }
 
-    // Get profile for name/email
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, email')
-      .eq('id', session.user.id)
-      .single()
-
-    if (profile) {
-      setPatientName(`${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Patient')
-      setPatientEmail(profile.email || session.user.email || '')
-    }
-
-    // Get patient ID and membership status
-    const { data: patient } = await supabase
-      .from('patients')
-      .select('id')
-      .eq('profile_id', session.user.id)
-      .single()
-
-    if (patient) {
-      setPatientId(patient.id)
-
-      const { data: membership } = await supabase
-        .from('subscriptions')
-        .select('status')
-        .eq('patient_id', patient.id)
-        .eq('plan_type', 'membership')
-        .eq('status', 'active')
-        .limit(1)
-        .maybeSingle()
-
-      setIsMember(!!membership)
-
-      // Proximity check — determine whether to offer in-person option
-      await checkNearbyClinic(patient.id)
-    } else {
+    // Fetch patient data from RDS via API (all app tables are in RDS, not Supabase)
+    const meRes = await fetch('/api/patient/me')
+    if (!meRes.ok) {
+      // Not a patient account or error — fall back to select-type
       setStep('select-type')
+      setLoading(false)
+      return
     }
+
+    const me = await meRes.json()
+    setPatientName(me.name || 'Patient')
+    setPatientEmail(me.email || session.user.email || '')
+    setPatientId(me.patientId)
+    setIsMember(me.isMember ?? false)
+
+    // Proximity check — determine whether to offer in-person option
+    await checkNearbyClinic(me.patientId)
     setLoading(false)
   }
 
