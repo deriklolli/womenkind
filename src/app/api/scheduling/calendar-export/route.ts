@@ -31,6 +31,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
     }
 
+    if (session.role === 'patient' && appointment.patient_id !== session.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const typeName = appointment.appointment_types?.name || 'Appointment'
     const videoUrl = appointment.video_room_url
 
