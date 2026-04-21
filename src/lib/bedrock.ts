@@ -46,5 +46,7 @@ export async function invokeModel({
   if (body.stop_reason === 'max_tokens') {
     throw new Error('Bedrock response truncated: max_tokens reached. Increase maxTokens.')
   }
-  return (body.content as Array<{ text?: string }>)?.[0]?.text || ''
+  const text = (body.content as Array<{ text?: string }>)?.[0]?.text
+  if (!text) throw new Error('Bedrock returned an empty or unexpected content structure')
+  return text
 }

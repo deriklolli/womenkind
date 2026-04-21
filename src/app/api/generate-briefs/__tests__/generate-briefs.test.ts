@@ -102,6 +102,7 @@ function mockBedrockFailure() {
 describe('POST /api/generate-briefs', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.GENERATE_BRIEFS_SECRET = 'womenkind-seed-2026'
     // Default: no intakes pending
     mockFrom.mockReturnValue(makeChain({ data: [], error: null }))
     mockBedrockSuccess()

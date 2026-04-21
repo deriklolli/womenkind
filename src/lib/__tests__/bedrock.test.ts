@@ -45,16 +45,13 @@ describe('invokeModel', () => {
     expect(body.system).toBe('You are a doctor.')
   })
 
-  it('returns empty string when content is missing', async () => {
+  it('throws when content is empty or missing', async () => {
     const fakeBody = JSON.stringify({ content: [] })
     mockSend.mockResolvedValueOnce({ body: new TextEncoder().encode(fakeBody) })
 
-    const result = await invokeModel({
-      messages: [{ role: 'user', content: 'Hi' }],
-      maxTokens: 50,
-    })
-
-    expect(result).toBe('')
+    await expect(
+      invokeModel({ messages: [{ role: 'user', content: 'Hi' }], maxTokens: 50 })
+    ).rejects.toThrow('empty or unexpected')
   })
 
   it('throws when stop_reason is max_tokens', async () => {

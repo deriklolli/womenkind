@@ -17,7 +17,14 @@ function getSupabase() {
 export async function POST(req: NextRequest) {
   try {
     const { secret } = await req.json()
-    if (secret !== 'womenkind-seed-2026') {
+    const expected = process.env.GENERATE_BRIEFS_SECRET
+    if (!expected || !secret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const { timingSafeEqual } = await import('crypto')
+    const secretBuf = Buffer.from(secret)
+    const expectedBuf = Buffer.from(expected)
+    if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
