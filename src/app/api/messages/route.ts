@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { messages, notifications, patients, providers, profiles } from '@/lib/db/schema'
+import { eq, and, or, isNull, asc, desc, inArray } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 
@@ -13,69 +15,65 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const supabase = getServiceSupabase()
     const patientId = req.nextUrl.searchParams.get('patientId')
     const providerId = req.nextUrl.searchParams.get('providerId')
     const threadId = req.nextUrl.searchParams.get('threadId')
 
     if (threadId) {
       // Get all messages in a thread
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('thread_id', threadId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
+      const data = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.thread_id, threadId))
+        .orderBy(asc(messages.created_at))
 
       // Look up names for all patient senders in this thread
       // sender_id on messages is patients.id (not the auth user id), so join through patients table
       const patientSenderIds = Array.from(new Set(
-        (data || []).filter(m => m.sender_type === 'patient').map(m => m.sender_id)
+        data.filter(m => m.sender_type === 'patient').map(m => m.sender_id)
       ))
       const nameMap = new Map<string, string>()
       if (patientSenderIds.length > 0) {
-        const { data: patientRows } = await supabase
-          .from('patients')
-          .select('id, profiles ( first_name, last_name )')
-          .in('id', patientSenderIds)
-        for (const p of patientRows || []) {
-          const prof = p.profiles as any
-          nameMap.set(p.id, `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim() || 'Patient')
+        const patientRows = await db
+          .select({ id: patients.id, first_name: profiles.first_name, last_name: profiles.last_name })
+          .from(patients)
+          .innerJoin(profiles, eq(patients.profile_id, profiles.id))
+          .where(inArray(patients.id, patientSenderIds))
+        for (const p of patientRows) {
+          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Patient')
         }
       }
 
-      const messages = (data || []).map(msg => ({
+      const msgList = data.map(msg => ({
         ...msg,
         senderName: msg.sender_type === 'patient' ? (nameMap.get(msg.sender_id) || 'Patient') : null,
       }))
 
-      return NextResponse.json({ messages })
+      return NextResponse.json({ messages: msgList })
     }
 
     // Get thread summaries (latest message per thread)
-    let query = supabase
-      .from('messages')
-      .select('*')
-      .order('created_at', { ascending: false })
-
+    let conditions: ReturnType<typeof or>[] = []
     if (patientId) {
-      query = query.or(`sender_id.eq.${patientId},recipient_id.eq.${patientId}`)
+      conditions.push(or(eq(messages.sender_id, patientId), eq(messages.recipient_id, patientId))!)
     }
     if (providerId) {
-      query = query.or(`sender_id.eq.${providerId},recipient_id.eq.${providerId}`)
+      conditions.push(or(eq(messages.sender_id, providerId), eq(messages.recipient_id, providerId))!)
     }
 
-    const { data, error } = await query
-    if (error) throw error
+    const data = await db
+      .select()
+      .from(messages)
+      .where(conditions.length > 0 ? conditions[0] : undefined)
+      .orderBy(desc(messages.created_at))
 
     // Group by thread_id and take the latest message per thread
     // Also track the original patient sender per thread (independent of who sent last)
-    const threadMap = new Map<string, any>()
+    const threadMap = new Map<string, typeof data[0]>()
     const unreadCounts = new Map<string, number>()
     const threadPatientSenderId = new Map<string, string>()
 
-    for (const msg of data || []) {
+    for (const msg of data) {
       if (!threadMap.has(msg.thread_id)) {
         threadMap.set(msg.thread_id, msg)
         unreadCounts.set(msg.thread_id, 0)
@@ -102,22 +100,22 @@ export async function GET(req: NextRequest) {
     // (not the latest message sender — doctor replies would otherwise lose the name)
     if (providerId) {
       const allPatientIds = Array.from(new Set(
-        threads.map(t => t.patientSenderId).filter(Boolean)
+        threads.map(t => t.patientSenderId).filter(Boolean) as string[]
       ))
       if (allPatientIds.length > 0) {
         // sender_id on messages is patients.id (not the auth user id), so join through patients table
-        const { data: patientRows } = await supabase
-          .from('patients')
-          .select('id, profiles ( first_name, last_name )')
-          .in('id', allPatientIds)
+        const patientRows = await db
+          .select({ id: patients.id, first_name: profiles.first_name, last_name: profiles.last_name })
+          .from(patients)
+          .innerJoin(profiles, eq(patients.profile_id, profiles.id))
+          .where(inArray(patients.id, allPatientIds))
         const nameMap = new Map<string, string>()
-        for (const p of patientRows || []) {
-          const prof = p.profiles as any
-          nameMap.set(p.id, `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim() || 'Patient')
+        for (const p of patientRows) {
+          nameMap.set(p.id, `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Patient')
         }
         threads.forEach(t => {
           if (t.patientSenderId) {
-            t.senderName = nameMap.get(t.patientSenderId) || 'Patient'
+            (t as any).senderName = nameMap.get(t.patientSenderId) || 'Patient'
           }
         })
       }
@@ -143,7 +141,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const supabase = getServiceSupabase()
     const { recipientId, subject, body, threadId } = await req.json()
 
     const senderId = session.role === 'provider' ? session.providerId! : session.patientId!
@@ -158,9 +155,9 @@ export async function POST(req: NextRequest) {
 
     const actualThreadId = threadId || crypto.randomUUID()
 
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
+    const [data] = await db
+      .insert(messages)
+      .values({
         thread_id: actualThreadId,
         sender_type: senderType,
         sender_id: senderId,
@@ -168,27 +165,27 @@ export async function POST(req: NextRequest) {
         subject: subject || null,
         body,
       })
-      .select()
-      .single()
+      .returning()
 
-    if (error) throw error
+    if (!data) throw new Error('Failed to insert message')
 
     // Create a notification for the recipient when a provider sends a message
     if (senderType === 'provider') {
       // Look up the provider's name for a personalised notification title
       let senderName = 'Dr. Urban'
-      const { data: providerRow } = await supabase
-        .from('providers')
-        .select('profiles ( first_name, last_name )')
-        .eq('id', senderId)
-        .single()
-      if (providerRow) {
-        const prof = (providerRow as any).profiles
-        const fullName = `${prof?.first_name || ''} ${prof?.last_name || ''}`.trim()
-        if (fullName) senderName = `Dr. ${prof?.last_name || fullName}`
+      const providerRow = await db
+        .select({ first_name: profiles.first_name, last_name: profiles.last_name })
+        .from(providers)
+        .innerJoin(profiles, eq(providers.profile_id, profiles.id))
+        .where(eq(providers.id, senderId))
+        .limit(1)
+      if (providerRow[0]) {
+        const { first_name, last_name } = providerRow[0]
+        const fullName = `${first_name || ''} ${last_name || ''}`.trim()
+        if (fullName) senderName = `Dr. ${last_name || fullName}`
       }
 
-      await supabase.from('notifications').insert({
+      await db.insert(notifications).values({
         patient_id: recipientId,
         type: 'new_message',
         title: `New message from ${senderName}`,
@@ -220,21 +217,20 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const supabase = getServiceSupabase()
     const { threadId, readerId } = await req.json()
 
     if (!threadId || !readerId) {
       return NextResponse.json({ error: 'threadId and readerId are required' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('thread_id', threadId)
-      .eq('recipient_id', readerId)
-      .is('read_at', null)
-
-    if (error) throw error
+    await db
+      .update(messages)
+      .set({ read_at: new Date() })
+      .where(and(
+        eq(messages.thread_id, threadId),
+        eq(messages.recipient_id, readerId),
+        isNull(messages.read_at),
+      ))
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
