@@ -71,10 +71,15 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.is_read === 'boolean') updates.is_read = body.is_read
     if (typeof body.dismissed === 'boolean') updates.dismissed = body.dismissed
 
-    await db
-      .update(notifications)
-      .set(updates)
-      .where(eq(notifications.id, body.id))
+    if (session.role === 'patient') {
+      await db.update(notifications)
+        .set({ read_at: new Date() })
+        .where(and(eq(notifications.id, body.id), eq(notifications.patient_id, session.patientId!)))
+    } else {
+      await db.update(notifications)
+        .set(updates)
+        .where(eq(notifications.id, body.id))
+    }
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

@@ -19,6 +19,10 @@ export async function GET(req: NextRequest) {
     const providerId = req.nextUrl.searchParams.get('providerId')
     const threadId = req.nextUrl.searchParams.get('threadId')
 
+    if (session.role === 'patient' && patientId && patientId !== session.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     if (threadId) {
       // Get all messages in a thread
       const data = await db
@@ -26,6 +30,14 @@ export async function GET(req: NextRequest) {
         .from(messages)
         .where(eq(messages.thread_id, threadId))
         .orderBy(asc(messages.created_at))
+
+      const isParticipant =
+        session.role === 'provider' ||
+        data.some(m =>
+          session.role === 'patient' &&
+          (m.sender_id === session.patientId || m.recipient_id === session.patientId)
+        )
+      if (!isParticipant) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
       // Look up names for all patient senders in this thread
       // sender_id on messages is patients.id (not the auth user id), so join through patients table
@@ -172,7 +184,7 @@ export async function POST(req: NextRequest) {
     // Create a notification for the recipient when a provider sends a message
     if (senderType === 'provider') {
       // Look up the provider's name for a personalised notification title
-      let senderName = 'Dr. Urban'
+      let senderName = 'Your provider'
       const providerRow = await db
         .select({ first_name: profiles.first_name, last_name: profiles.last_name })
         .from(providers)
@@ -217,7 +229,8 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { threadId, readerId } = await req.json()
+    const { threadId } = await req.json()
+    const readerId = session.role === 'provider' ? session.providerId! : session.patientId!
 
     if (!threadId || !readerId) {
       return NextResponse.json({ error: 'threadId and readerId are required' }, { status: 400 })

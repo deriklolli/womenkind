@@ -18,7 +18,7 @@
  *   - DB error → 500
  *
  * PATCH:
- *   - Missing threadId or readerId → 400
+ *   - Missing threadId → 400 (readerId is derived from session)
  *   - Marks unread messages as read and returns { success: true }
  *
  * GET:
@@ -398,10 +398,12 @@ describe('/api/messages', () => {
       expect(res.status).toBe(400)
     })
 
-    it('returns 400 when readerId is missing', async () => {
+    it('derives readerId from session (no readerId in body needed)', async () => {
+      mockDbUpdate.mockReturnValue(makeUpdateChain())
       const { PATCH } = await import('../route')
+      // readerId is now derived from session, not the request body
       const res = await PATCH(makePatchRequest({ threadId: 'thread-uuid-abc' }))
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(200)
     })
 
     it('returns { success: true } when messages are marked read', async () => {
