@@ -30,10 +30,11 @@ const hasProviderCreds = !!(PROVIDER_EMAIL && PROVIDER_PASSWORD)
 
 async function loginAsProvider(page: import('@playwright/test').Page) {
   await page.goto('/provider/login')
-  await page.getByLabel(/email/i).fill(PROVIDER_EMAIL)
-  await page.getByLabel(/password/i).fill(PROVIDER_PASSWORD)
-  await page.getByRole('button', { name: /sign in|log in/i }).click()
-  await page.waitForURL('**/provider/**', { timeout: 10_000 })
+  // The login form uses bare <label> elements without for/htmlFor, so target by input type
+  await page.locator('input[type="email"]').fill(PROVIDER_EMAIL)
+  await page.locator('input[type="password"]').fill(PROVIDER_PASSWORD)
+  await page.getByRole('button', { name: /sign in/i }).click()
+  await page.waitForURL('**/provider/**', { timeout: 15_000 })
 }
 
 // ── Tier 1: No credentials required ─────────────────────────────────────────
