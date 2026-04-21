@@ -1,6 +1,4 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
-import { NodeHttpHandler } from '@smithy/node-http-handler'
-import { Agent as HttpsAgent } from 'https'
 
 let _client: BedrockRuntimeClient | null = null
 
@@ -12,11 +10,6 @@ function getClient(): BedrockRuntimeClient {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       },
-      requestHandler: new NodeHttpHandler({
-        httpsAgent: new HttpsAgent({ keepAlive: true }),
-        connectionTimeout: 10_000,
-        requestTimeout: 55_000,
-      }),
     })
   }
   return _client
@@ -32,7 +25,7 @@ export async function invokeModel({
   maxTokens?: number
 }): Promise<string> {
   const client = getClient()
-  const modelId = process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-sonnet-4-5-20250514-v1:0'
+  const modelId = process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-sonnet-4-6'
 
   const payload: Record<string, unknown> = {
     anthropic_version: 'bedrock-2023-05-31',
