@@ -1001,7 +1001,7 @@ export default function PatientDashboardPage() {
             )}
 
             {/* Schedule view — inline 3-step booking flow */}
-            {activeView === 'schedule' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'schedule' && (
               <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                 {/* Header */}
                 <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
@@ -1232,7 +1232,7 @@ export default function PatientDashboardPage() {
             )}
 
             {/* Rx Refill view */}
-            {activeView === 'refill' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'refill' && (
               <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                 <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-2">
                   Your Prescriptions
@@ -1245,7 +1245,7 @@ export default function PatientDashboardPage() {
             )}
 
             {/* Message view */}
-            {activeView === 'message' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'message' && (
               <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                 <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-2">
                   Message Dr. Urban
@@ -1258,22 +1258,22 @@ export default function PatientDashboardPage() {
             )}
 
             {/* Wearables / Health Trends view */}
-            {activeView === 'wearables' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'wearables' && (
               <WearableTrends patientId={patient.patientId} onGoToSettings={() => router.push('/patient/settings')} />
             )}
 
             {/* Health Blueprint view */}
-            {activeView === 'blueprint' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'blueprint' && (
               <HealthBlueprintList patientId={patient.patientId} />
             )}
 
             {/* Lab Results view */}
-            {activeView === 'lab-results' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'lab-results' && (
               <PatientLabResults patientId={patient.patientId} />
             )}
 
             {/* Intake Summary view */}
-            {activeView === 'intake-summary' && dashboardPhase === 'care_plan_viewed' && (
+            {activeView === 'intake-summary' && (
               patient.intakeSummary ? (
                 <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
                   <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
