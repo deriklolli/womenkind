@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { patients, intakes, visits, wearable_metrics } from '@/lib/db/schema'
-import { eq, gte, desc } from 'drizzle-orm'
+import { eq, gte, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { getComponent } from '@/lib/presentation-components'
 import { invokeModel } from '@/lib/bedrock'
@@ -54,7 +54,10 @@ export async function POST(req: Request) {
         })
         .from(wearable_metrics)
         .where(
-          eq(wearable_metrics.patient_id, patientId)
+          and(
+            eq(wearable_metrics.patient_id, patientId),
+            gte(wearable_metrics.metric_date, thirtyDaysAgo)
+          )
         )
         .orderBy(desc(wearable_metrics.metric_date)),
     ])

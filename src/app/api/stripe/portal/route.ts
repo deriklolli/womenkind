@@ -3,6 +3,7 @@ import { getStripe } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { patients, profiles, subscriptions } from '@/lib/db/schema'
 import { eq, isNotNull, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/stripe/portal
@@ -14,11 +15,18 @@ import { eq, isNotNull, and } from 'drizzle-orm'
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const stripe = getStripe()
     const { patientId } = await req.json()
 
     if (!patientId) {
       return NextResponse.json({ error: 'patientId is required' }, { status: 400 })
+    }
+
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Look up the Stripe customer ID from subscriptions

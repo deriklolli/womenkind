@@ -11,8 +11,13 @@
  */
 
 import type { NextRequest } from 'next/server'
+import { getServerSession } from '@/lib/getServerSession'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
+
+jest.mock('@/lib/getServerSession', () => ({
+  getServerSession: jest.fn(),
+}))
 
 const mockSessionCreate = jest.fn()
 
@@ -66,6 +71,14 @@ function makeRequest(body: unknown) {
 describe('POST /api/stripe/checkout', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+
+    // Default: authenticated as a provider
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      userId: 'user-test-123',
+      patientId: null,
+      providerId: 'provider-test-123',
+      role: 'provider',
+    })
 
     // Default: DB lookups return nothing
     mockFindFirst.mockResolvedValue(null)

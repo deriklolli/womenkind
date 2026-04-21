@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { lab_orders } from '@/lib/db/schema'
 import { sendLabOrder } from '@/lib/canvas-client'
+import { getServerSession } from '@/lib/getServerSession'
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession()
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const body = await request.json()
     const {
       patientId,

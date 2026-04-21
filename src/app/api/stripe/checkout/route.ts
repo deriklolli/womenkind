@@ -3,6 +3,7 @@ import { getStripe, STRIPE_PRICES } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { intakes, subscriptions } from '@/lib/db/schema'
 import { eq, isNotNull, and } from 'drizzle-orm'
+import { getServerSession } from '@/lib/getServerSession'
 
 /**
  * POST /api/stripe/checkout
@@ -14,6 +15,9 @@ import { eq, isNotNull, and } from 'drizzle-orm'
  */
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await getServerSession()
+    if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const stripe = getStripe()
     const { intakeId, patientEmail, addMembership } = await req.json()
 
@@ -32,6 +36,11 @@ export async function POST(req: NextRequest) {
     const intake = await db.query.intakes.findFirst({
       where: eq(intakes.id, intakeId),
     })
+
+    const patientId = intake?.patient_id || null
+    if (authSession.role === 'patient' && authSession.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Determine patient email from intake answers or parameter
     const email =
