@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointments } from '@/lib/db/schema'
+import { eq, and, gte, lte, ne, asc } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 
 /**
@@ -10,7 +12,6 @@ import { getServerSession } from '@/lib/getServerSession'
  */
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
     const providerId = req.nextUrl.searchParams.get('providerId')
     const patientId = req.nextUrl.searchParams.get('patientId')
     const startDate = req.nextUrl.searchParams.get('startDate')
@@ -27,45 +28,44 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    let query = supabase
-      .from('appointments')
-      .select(`
-        *,
-        appointment_types(name, duration_minutes, price_cents, color),
-        patients(
-          id,
-          profiles(first_name, last_name, email),
-          subscriptions(status, plan_type)
-        )
-      `)
-      .order('starts_at', { ascending: true })
+    const conditions = []
 
     if (providerId) {
-      query = query.eq('provider_id', providerId)
+      conditions.push(eq(appointments.provider_id, providerId))
     }
 
     if (patientId) {
-      query = query.eq('patient_id', patientId)
+      conditions.push(eq(appointments.patient_id, patientId))
     }
 
     if (startDate) {
-      query = query.gte('starts_at', `${startDate}T00:00:00`)
+      conditions.push(gte(appointments.starts_at, new Date(`${startDate}T00:00:00`)))
     }
 
     if (endDate) {
-      query = query.lte('starts_at', `${endDate}T23:59:59`)
+      conditions.push(lte(appointments.starts_at, new Date(`${endDate}T23:59:59`)))
     }
 
     if (status) {
-      query = query.eq('status', status)
+      conditions.push(eq(appointments.status, status))
     } else {
       // By default, exclude canceled
-      query = query.neq('status', 'canceled')
+      conditions.push(ne(appointments.status, 'canceled'))
     }
 
-    const { data, error } = await query
-
-    if (error) throw error
+    const data = await db.query.appointments.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      with: {
+        appointment_types: true,
+        patients: {
+          with: {
+            profiles: true,
+            subscriptions: true,
+          },
+        },
+      },
+      orderBy: [asc(appointments.starts_at)],
+    })
 
     return NextResponse.json({ appointments: data })
   } catch (err: any) {
@@ -88,22 +88,21 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden — provider only' }, { status: 403 })
     }
 
-    const supabase = getServiceSupabase()
     const { appointmentId, status, providerNotes } = await req.json()
 
     if (!appointmentId) {
       return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
     }
 
-    const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+    const updates: Record<string, any> = { updated_at: new Date() }
 
     if (status) {
       updates.status = status
       if (status === 'completed') {
-        updates.completed_at = new Date().toISOString()
+        updates.completed_at = new Date()
       }
       if (status === 'canceled') {
-        updates.canceled_at = new Date().toISOString()
+        updates.canceled_at = new Date()
       }
     }
 
@@ -111,14 +110,15 @@ export async function PATCH(req: NextRequest) {
       updates.provider_notes = providerNotes
     }
 
-    const { data, error } = await supabase
-      .from('appointments')
-      .update(updates)
-      .eq('id', appointmentId)
-      .select()
-      .single()
+    const [data] = await db
+      .update(appointments)
+      .set(updates)
+      .where(eq(appointments.id, appointmentId))
+      .returning()
 
-    if (error) throw error
+    if (!data) {
+      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+    }
 
     return NextResponse.json({ appointment: data })
   } catch (err: any) {

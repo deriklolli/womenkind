@@ -29,12 +29,41 @@ jest.mock('@/lib/scheduling', () => ({
   PROVIDER_TIMEZONE: 'America/Denver',
 }))
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
+// ── Drizzle db mock ───────────────────────────────────────────────────────────
 
-const mockSupabaseFrom = jest.fn()
+const mockDbQuery = {
+  appointment_types: { findFirst: jest.fn() },
+  provider_availability: { findMany: jest.fn() },
+  appointments: { findMany: jest.fn() },
+  subscriptions: { findFirst: jest.fn() },
+  patients: { findFirst: jest.fn() },
+}
 
-jest.mock('@/lib/supabase-server', () => ({
-  getServiceSupabase: jest.fn(() => ({ from: mockSupabaseFrom })),
+// Drizzle update/insert chain mock
+function makeUpdateChain(resolveWith: unknown = null) {
+  const chain: any = {}
+  chain.set = jest.fn().mockReturnValue(chain)
+  chain.where = jest.fn().mockReturnValue(chain)
+  chain.returning = jest.fn().mockResolvedValue(resolveWith ? [resolveWith] : [])
+  return chain
+}
+
+function makeInsertChain(resolveWith: unknown = null) {
+  const chain: any = {}
+  chain.values = jest.fn().mockReturnValue(chain)
+  chain.returning = jest.fn().mockResolvedValue(resolveWith ? [resolveWith] : [])
+  return chain
+}
+
+const mockDbUpdate = jest.fn()
+const mockDbInsert = jest.fn()
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    query: mockDbQuery,
+    update: (...args: unknown[]) => mockDbUpdate(...args),
+    insert: (...args: unknown[]) => mockDbInsert(...args),
+  },
 }))
 
 // ── Stripe mock ───────────────────────────────────────────────────────────────
@@ -73,31 +102,6 @@ jest.mock('resend', () => ({
   })),
 }))
 
-// ── Chain factory ─────────────────────────────────────────────────────────────
-
-/**
- * Returns a chainable Supabase query builder that is also directly awaitable.
- * This covers both:
- *   await supabase.from('x').select('*').eq(...)          (direct await)
- *   await supabase.from('x').select('*').eq(...).single() (via .single())
- */
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const resolved = Promise.resolve(resolveWith)
-  const chain: any = {
-    // Thenable — allows `const { data } = await supabase.from(...).select(...)`
-    then: resolved.then.bind(resolved),
-    catch: resolved.catch.bind(resolved),
-  }
-  ;['select', 'eq', 'neq', 'not', 'gte', 'lte', 'limit', 'update'].forEach(
-    m => { chain[m] = jest.fn().mockReturnValue(chain) }
-  )
-  // insert returns a new chain so .select().single() works
-  chain.insert = jest.fn().mockReturnValue(chain)
-  chain.single = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  return chain
-}
-
 // ── Fixture data ──────────────────────────────────────────────────────────────
 
 const APPOINTMENT_TYPE = {
@@ -117,53 +121,51 @@ const NEW_APPOINTMENT = {
   provider_id: 'provider-uuid-456',
   patient_id: 'patient-uuid-123',
   appointment_type_id: 'appt-type-uuid-789',
-  starts_at: '2026-04-21T15:00:00.000Z',
-  ends_at: '2026-04-21T16:00:00.000Z',
+  starts_at: new Date('2026-04-21T15:00:00.000Z'),
+  ends_at: new Date('2026-04-21T16:00:00.000Z'),
   status: 'confirmed',
   is_paid: true,
   amount_cents: 0,
 }
 
-// ── Per-table from() factory ──────────────────────────────────────────────────
+// ── Setup helpers ─────────────────────────────────────────────────────────────
 
 /**
- * Sets up mockSupabaseFrom to route each table to its own response.
- * Tables can be called multiple times; pass an array to vary responses per call.
+ * Configure the db mock for a typical booking scenario.
+ * subscriptionsResponses: array of values returned per successive findFirst call.
  */
-function setupTables(
-  tableMap: Record<string, unknown | unknown[]>,
-  appointmentInsertResult: unknown = { data: NEW_APPOINTMENT, error: null }
-) {
-  const callCounts: Record<string, number> = {}
+function setupDb({
+  appointmentType = APPOINTMENT_TYPE,
+  providerAvailability = [{ start_time: '08:00', end_time: '18:00' }],
+  bookedAppointments = [],
+  subscriptionsResponses = [null, null] as (unknown | null)[],
+  patient = PATIENT,
+  insertResult = NEW_APPOINTMENT,
+}: {
+  appointmentType?: unknown
+  providerAvailability?: unknown[]
+  bookedAppointments?: unknown[]
+  subscriptionsResponses?: (unknown | null)[]
+  patient?: unknown
+  insertResult?: unknown
+} = {}) {
+  mockDbQuery.appointment_types.findFirst.mockResolvedValue(appointmentType)
+  mockDbQuery.provider_availability.findMany.mockResolvedValue(providerAvailability)
+  mockDbQuery.appointments.findMany.mockResolvedValue(bookedAppointments)
 
-  mockSupabaseFrom.mockImplementation((table: string) => {
-    callCounts[table] = (callCounts[table] ?? 0)
-
-    // appointments is called up to 3 times:
-    //   [0] booked-slots availability check → empty array
-    //   [1] insert new appointment → NEW_APPOINTMENT
-    //   [2+] update (video url, stripe session id, etc.) → no-op
-    if (table === 'appointments') {
-      const idx = callCounts[table]++
-      if (idx === 0) return makeChain({ data: [], error: null })          // availability check
-      if (idx === 1) return makeChain(appointmentInsertResult)             // insert
-      return makeChain({ data: null, error: null })                        // updates
-    }
-
-    // subscriptions is called twice for non-members:
-    //   [0] membership check → null (non-member) or active (member)
-    //   [1] stripe customer lookup → null
-    if (table === 'subscriptions') {
-      const idx = callCounts[table]++
-      const entry = tableMap[table]
-      const responses = Array.isArray(entry) ? entry : [entry, { data: null, error: null }]
-      return makeChain(responses[idx] ?? { data: null, error: null })
-    }
-
-    callCounts[table]++
-    const entry = tableMap[table] ?? { data: null, error: null }
-    return makeChain(entry)
+  let subCallCount = 0
+  mockDbQuery.subscriptions.findFirst.mockImplementation(() => {
+    const val = subscriptionsResponses[subCallCount] ?? null
+    subCallCount++
+    return Promise.resolve(val)
   })
+
+  mockDbQuery.patients.findFirst.mockResolvedValue(patient)
+
+  // insert returns the new appointment
+  mockDbInsert.mockReturnValue(makeInsertChain(insertResult))
+  // update is a no-op (video url, stripe session id, calendar event id)
+  mockDbUpdate.mockReturnValue(makeUpdateChain(null))
 }
 
 // ── Request helpers ───────────────────────────────────────────────────────────
@@ -243,9 +245,7 @@ describe('POST /api/scheduling/book', () => {
   // ── Not found (404) ─────────────────────────────────────────────────────────
 
   it('returns 404 when appointment type does not exist', async () => {
-    mockSupabaseFrom.mockReturnValue(
-      makeChain({ data: null, error: { message: 'not found' } })
-    )
+    mockDbQuery.appointment_types.findFirst.mockResolvedValue(null)
     const { POST } = await import('../book/route')
     const res = await POST(makeRequest(validBody()))
     expect(res.status).toBe(404)
@@ -255,12 +255,7 @@ describe('POST /api/scheduling/book', () => {
 
   it('returns 409 when the requested slot is no longer available', async () => {
     mockIsSlotAvailable.mockReturnValue(false)
-    setupTables({
-      appointment_types: { data: APPOINTMENT_TYPE, error: null },
-      provider_availability: { data: [], error: null },
-      subscriptions: { data: null, error: null },
-      patients: { data: PATIENT, error: null },
-    })
+    setupDb()
     const { POST } = await import('../book/route')
     const res = await POST(makeRequest(validBody()))
     expect(res.status).toBe(409)
@@ -272,14 +267,8 @@ describe('POST /api/scheduling/book', () => {
 
   describe('member patient (active membership)', () => {
     beforeEach(() => {
-      setupTables({
-        appointment_types: { data: APPOINTMENT_TYPE, error: null },
-        provider_availability: { data: [{ start_time: '08:00', end_time: '18:00' }], error: null },
-        // First subscriptions call → active membership
-        subscriptions: [
-          { data: { status: 'active' }, error: null },
-        ],
-        patients: { data: PATIENT, error: null },
+      setupDb({
+        subscriptionsResponses: [{ status: 'active' }],
       })
     })
 
@@ -319,15 +308,9 @@ describe('POST /api/scheduling/book', () => {
 
   describe('non-member patient (no active membership)', () => {
     beforeEach(() => {
-      setupTables({
-        appointment_types: { data: APPOINTMENT_TYPE, error: null },
-        provider_availability: { data: [{ start_time: '08:00', end_time: '18:00' }], error: null },
-        // First subscriptions call → no membership; second → no stripe customer
-        subscriptions: [
-          { data: null, error: null },
-          { data: null, error: null },
-        ],
-        patients: { data: PATIENT, error: null },
+      setupDb({
+        subscriptionsResponses: [null, null],
+        insertResult: { ...NEW_APPOINTMENT, status: 'pending_payment', is_paid: false, amount_cents: 65000 },
       })
     })
 

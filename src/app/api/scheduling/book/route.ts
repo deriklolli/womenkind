@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { appointments, appointment_types, provider_availability, subscriptions, patients } from '@/lib/db/schema'
+import { eq, and, gte, lte, ne, isNotNull } from 'drizzle-orm'
 import { getStripe } from '@/lib/stripe'
 import { isSlotAvailable, getDayOfWeek } from '@/lib/scheduling'
 import { createCalendarEvent } from '@/lib/google-calendar'
@@ -287,7 +289,6 @@ async function sendProviderBookingNotification({
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase()
     const { patientId, providerId, appointmentTypeId, startsAt, patientNotes } = await req.json()
 
     if (!patientId || !providerId || !appointmentTypeId || !startsAt) {
@@ -298,13 +299,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Get appointment type details
-    const { data: appointmentType, error: typeError } = await supabase
-      .from('appointment_types')
-      .select('*')
-      .eq('id', appointmentTypeId)
-      .single()
+    const appointmentType = await db.query.appointment_types.findFirst({
+      where: eq(appointment_types.id, appointmentTypeId),
+    })
 
-    if (typeError || !appointmentType) {
+    if (!appointmentType) {
       return NextResponse.json({ error: 'Appointment type not found' }, { status: 404 })
     }
 
@@ -317,70 +316,72 @@ export async function POST(req: NextRequest) {
     const date = startsAt.split('T')[0]
     const dayOfWeek = getDayOfWeek(date)
 
-    const { data: availability } = await supabase
-      .from('provider_availability')
-      .select('start_time, end_time')
-      .eq('provider_id', providerId)
-      .eq('day_of_week', dayOfWeek)
-      .eq('is_active', true)
+    const availability = await db.query.provider_availability.findMany({
+      where: and(
+        eq(provider_availability.provider_id, providerId),
+        eq(provider_availability.day_of_week, dayOfWeek),
+        eq(provider_availability.is_active, true)
+      ),
+    })
 
-    const { data: bookedAppointments } = await supabase
-      .from('appointments')
-      .select('starts_at, ends_at')
-      .eq('provider_id', providerId)
-      .neq('status', 'canceled')
-      .gte('starts_at', `${date}T00:00:00`)
-      .lte('starts_at', `${date}T23:59:59`)
+    const bookedAppointments = await db.query.appointments.findMany({
+      where: and(
+        eq(appointments.provider_id, providerId),
+        ne(appointments.status, 'canceled'),
+        gte(appointments.starts_at, new Date(`${date}T00:00:00`)),
+        lte(appointments.starts_at, new Date(`${date}T23:59:59`))
+      ),
+    })
 
     const windows = availability?.map(a => ({ start_time: a.start_time, end_time: a.end_time })) || []
-    const bookedSlots = bookedAppointments?.map(a => ({ starts_at: a.starts_at, ends_at: a.ends_at })) || []
+    const bookedSlots = bookedAppointments?.map(a => ({
+      starts_at: a.starts_at.toISOString(),
+      ends_at: a.ends_at.toISOString(),
+    })) || []
 
     if (!isSlotAvailable({ startsAt, endsAt, availabilityWindows: windows, bookedSlots, date })) {
       return NextResponse.json({ error: 'This time slot is no longer available' }, { status: 409 })
     }
 
     // 4. Check membership status
-    const { data: membership } = await supabase
-      .from('subscriptions')
-      .select('status')
-      .eq('patient_id', patientId)
-      .eq('plan_type', 'membership')
-      .eq('status', 'active')
-      .limit(1)
-      .maybeSingle()
+    const membership = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.patient_id, patientId),
+        eq(subscriptions.plan_type, 'membership'),
+        eq(subscriptions.status, 'active')
+      ),
+    })
 
     const isMember = !!membership
 
     // 5. Get patient info for Stripe / calendar
-    const { data: patient } = await supabase
-      .from('patients')
-      .select('id, profiles(first_name, last_name, email)')
-      .eq('id', patientId)
-      .single()
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.id, patientId),
+      with: { profiles: true },
+    })
 
-    const profile = (patient as any)?.profiles
+    const profile = patient?.profiles
     const patientName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Patient'
-    const patientEmail = profile?.email
+    const patientEmail = profile?.email ?? undefined
 
     if (isMember) {
       // 6a. Member: book directly
-      const { data: appointment, error: insertError } = await supabase
-        .from('appointments')
-        .insert({
+      const [appointment] = await db
+        .insert(appointments)
+        .values({
           provider_id: providerId,
           patient_id: patientId,
           appointment_type_id: appointmentTypeId,
-          starts_at: startsAt,
-          ends_at: endsAt,
+          starts_at: new Date(startsAt),
+          ends_at: new Date(endsAt),
           status: 'confirmed',
           is_paid: true,
           amount_cents: 0,
           patient_notes: patientNotes || null,
         })
-        .select()
-        .single()
+        .returning()
 
-      if (insertError) throw insertError
+      if (!appointment) throw new Error('Failed to insert appointment')
 
       // Create video room synchronously so the URL is available in the response
       let videoRoom: { url: string; roomName: string } | null = null
@@ -393,10 +394,10 @@ export async function POST(req: NextRequest) {
         })
 
         if (videoRoom) {
-          await supabase
-            .from('appointments')
-            .update({ video_room_url: videoRoom.url, video_room_name: videoRoom.roomName })
-            .eq('id', appointment.id)
+          await db
+            .update(appointments)
+            .set({ video_room_url: videoRoom.url, video_room_name: videoRoom.roomName })
+            .where(eq(appointments.id, appointment.id))
 
           // Auto-start cloud recording — stops automatically when all participants leave.
           // Recording consent is captured during pre-visit check-in (Build 14).
@@ -422,15 +423,15 @@ export async function POST(req: NextRequest) {
           })
 
           if (calendarEventId) {
-            await supabase
-              .from('appointments')
-              .update({ google_calendar_event_id: calendarEventId })
-              .eq('id', appointment.id)
+            await db
+              .update(appointments)
+              .set({ google_calendar_event_id: calendarEventId })
+              .where(eq(appointments.id, appointment.id))
           }
 
           await sendBookingConfirmationEmail({
             appointmentId: appointment.id,
-            patientEmail,
+            patientEmail: patientEmail ?? '',
             patientName,
             appointmentName: appointmentType.name,
             durationMinutes: appointmentType.duration_minutes,
@@ -468,23 +469,22 @@ export async function POST(req: NextRequest) {
       })
     } else {
       // 6b. Non-member: create pending appointment + Stripe checkout
-      const { data: appointment, error: insertError } = await supabase
-        .from('appointments')
-        .insert({
+      const [appointment] = await db
+        .insert(appointments)
+        .values({
           provider_id: providerId,
           patient_id: patientId,
           appointment_type_id: appointmentTypeId,
-          starts_at: startsAt,
-          ends_at: endsAt,
+          starts_at: new Date(startsAt),
+          ends_at: new Date(endsAt),
           status: 'pending_payment',
           is_paid: false,
           amount_cents: appointmentType.price_cents,
           patient_notes: patientNotes || null,
         })
-        .select()
-        .single()
+        .returning()
 
-      if (insertError) throw insertError
+      if (!appointment) throw new Error('Failed to insert appointment')
 
       // Create Stripe Checkout session
       const stripe = getStripe()
@@ -492,19 +492,18 @@ export async function POST(req: NextRequest) {
 
       // Check for existing Stripe customer
       let customerId: string | undefined
-      const { data: existingSub } = await supabase
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('patient_id', patientId)
-        .not('stripe_customer_id', 'is', null)
-        .limit(1)
-        .maybeSingle()
+      const existingSub = await db.query.subscriptions.findFirst({
+        where: and(
+          eq(subscriptions.patient_id, patientId),
+          isNotNull(subscriptions.stripe_customer_id)
+        ),
+      })
 
       if (existingSub?.stripe_customer_id) {
         customerId = existingSub.stripe_customer_id
       }
 
-      const session = await stripe.checkout.sessions.create({
+      const stripeSession = await stripe.checkout.sessions.create({
         mode: 'payment',
         ...(customerId ? { customer: customerId } : { customer_email: patientEmail }),
         line_items: [
@@ -531,15 +530,15 @@ export async function POST(req: NextRequest) {
       })
 
       // Store the Stripe session ID on the appointment
-      await supabase
-        .from('appointments')
-        .update({ stripe_session_id: session.id })
-        .eq('id', appointment.id)
+      await db
+        .update(appointments)
+        .set({ stripe_session_id: stripeSession.id })
+        .where(eq(appointments.id, appointment.id))
 
       return NextResponse.json({
         appointment,
         status: 'pending_payment',
-        checkoutUrl: session.url,
+        checkoutUrl: stripeSession.url,
       })
     }
   } catch (err: any) {
