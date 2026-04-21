@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { patients } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * POST /api/auth/create-patient
@@ -20,7 +15,6 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const supabase = getSupabase()
     const { userId } = await req.json()
 
     if (!userId) {
@@ -33,24 +27,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if patient record already exists
-    const { data: existing } = await supabase
-      .from('patients')
-      .select('id')
-      .eq('profile_id', userId)
-      .maybeSingle()
+    const existing = await db.query.patients.findFirst({
+      where: eq(patients.profile_id, userId),
+    })
 
     if (existing) {
       return NextResponse.json({ patientId: existing.id })
     }
 
     // Create patient record
-    const { data: patient, error } = await supabase
-      .from('patients')
-      .insert({ profile_id: userId })
-      .select('id')
-      .single()
-
-    if (error) throw error
+    const [patient] = await db
+      .insert(patients)
+      .values({ profile_id: userId })
+      .returning({ id: patients.id })
 
     return NextResponse.json({ patientId: patient.id })
   } catch (err: any) {
