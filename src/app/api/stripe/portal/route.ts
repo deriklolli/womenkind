@@ -15,8 +15,8 @@ import { getServerSession } from '@/lib/getServerSession'
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authSession = await getServerSession()
+    if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const stripe = getStripe()
     const { patientId } = await req.json()
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'patientId is required' }, { status: 400 })
     }
 
-    if (session.role === 'patient' && session.patientId !== patientId) {
+    if (authSession.role === 'patient' && authSession.patientId !== patientId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
