@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     )
 
     return NextResponse.json({
-      clinics: (rows.rows || []) as NearbyClinic[],
+      clinics: Array.from(rows) as NearbyClinic[],
       hasLocation: true,
     })
   } catch (err: any) {
