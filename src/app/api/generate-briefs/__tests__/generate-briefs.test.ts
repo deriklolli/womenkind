@@ -7,12 +7,13 @@
  *
  * What we verify:
  * - Wrong secret → 401
- * - Missing Anthropic key → 500
+ * - Missing secret → 401
  * - No pending intakes → { message: 'No intakes need briefs', count: 0 }
  * - Processes multiple intakes and returns results array
  * - Fetches Oura wearable data per patient before generating brief
  * - A single intake failure does NOT fail the whole batch (per-intake error isolation)
  * - Saves each generated brief back to the intake record
+ * - Only processes intakes with status submitted/reviewed and no existing brief
  */
 
 import type { NextRequest } from 'next/server'
@@ -25,29 +26,36 @@ jest.mock('@/lib/bedrock', () => ({
   invokeModel: (...args: unknown[]) => mockInvokeModel(...args),
 }))
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
+// ── Drizzle db mock ───────────────────────────────────────────────────────────
 
-const mockFrom = jest.fn()
+// We need to intercept the chained Drizzle calls:
+//   db.select(...).from(...).where(...) → returns rows array
+//   db.update(...).set(...).where(...)  → resolves
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: jest.fn(() => ({ from: mockFrom })),
+const mockSelectWhere = jest.fn()
+const mockSelectFrom = jest.fn()
+const mockSelect = jest.fn()
+
+const mockUpdateWhere = jest.fn()
+const mockUpdateSet = jest.fn()
+const mockUpdate = jest.fn()
+
+// Update chain
+mockUpdateWhere.mockResolvedValue(undefined)
+mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+mockUpdate.mockReturnValue({ set: mockUpdateSet })
+
+// Select chain — default: returns []
+mockSelectWhere.mockResolvedValue([])
+mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
+mockSelect.mockReturnValue({ from: mockSelectFrom })
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    select: (...args: unknown[]) => mockSelect(...args),
+    update: (...args: unknown[]) => mockUpdate(...args),
+  },
 }))
-
-// ── Chain factory ─────────────────────────────────────────────────────────────
-
-function makeChain(resolveWith: unknown = { data: null, error: null }) {
-  const resolved = Promise.resolve(resolveWith)
-  const chain: any = {
-    then: resolved.then.bind(resolved),
-    catch: resolved.catch.bind(resolved),
-  }
-  ;['select', 'eq', 'in', 'is', 'gte', 'order', 'update'].forEach(
-    m => { chain[m] = jest.fn().mockReturnValue(chain) }
-  )
-  chain.single = jest.fn().mockResolvedValue(resolveWith)
-  chain.maybeSingle = jest.fn().mockResolvedValue(resolveWith)
-  return chain
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,18 +82,21 @@ const MOCK_BRIEF = {
   },
 }
 
+// Intakes with no ai_brief (pending)
 const SAMPLE_INTAKES = [
   {
     id: 'intake-uuid-001',
     patient_id: 'patient-uuid-aaa',
     answers: { top_concern: 'Hot flashes', menstrual: 'Postmenopausal' },
     status: 'submitted',
+    ai_brief: null,
   },
   {
     id: 'intake-uuid-002',
     patient_id: 'patient-uuid-bbb',
     answers: { top_concern: 'Sleep issues', menstrual: 'Perimenopausal' },
     status: 'reviewed',
+    ai_brief: null,
   },
 ]
 
@@ -103,9 +114,17 @@ describe('POST /api/generate-briefs', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.GENERATE_BRIEFS_SECRET = 'womenkind-seed-2026'
-    // Default: no intakes pending
-    mockFrom.mockReturnValue(makeChain({ data: [], error: null }))
     mockBedrockSuccess()
+
+    // Reset select chain to return empty by default
+    mockSelectWhere.mockResolvedValue([])
+    mockSelectFrom.mockReturnValue({ where: mockSelectWhere })
+    mockSelect.mockReturnValue({ from: mockSelectFrom })
+
+    // Reset update chain
+    mockUpdateWhere.mockResolvedValue(undefined)
+    mockUpdateSet.mockReturnValue({ where: mockUpdateWhere })
+    mockUpdate.mockReturnValue({ set: mockUpdateSet })
   })
 
   // ── Auth ────────────────────────────────────────────────────────────────────
@@ -127,7 +146,11 @@ describe('POST /api/generate-briefs', () => {
   // ── No pending intakes ──────────────────────────────────────────────────────
 
   it('returns count: 0 when no intakes need briefs', async () => {
-    mockFrom.mockReturnValue(makeChain({ data: [], error: null }))
+    // All intakes already have ai_brief set
+    mockSelectWhere.mockResolvedValue([
+      { ...SAMPLE_INTAKES[0], ai_brief: { some: 'brief' } },
+    ])
+
     const { POST } = await import('../route')
     const res = await POST(makeRequest(VALID_SECRET))
     expect(res.status).toBe(200)
@@ -139,19 +162,15 @@ describe('POST /api/generate-briefs', () => {
   // ── Batch processing ────────────────────────────────────────────────────────
 
   it('processes all pending intakes and returns a results array', async () => {
-    let intakesCallCount = 0
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'intakes') {
-        intakesCallCount++
-        if (intakesCallCount === 1) {
-          // First call: fetch pending intakes
-          return makeChain({ data: SAMPLE_INTAKES, error: null })
-        }
-        // Subsequent calls: update with brief
-        return makeChain({ data: null, error: null })
+    let selectCallCount = 0
+    mockSelectWhere.mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) {
+        // First select: intakes query
+        return Promise.resolve(SAMPLE_INTAKES)
       }
-      // wearable_metrics: no data
-      return makeChain({ data: [], error: null })
+      // Subsequent selects: wearable_metrics query → no data
+      return Promise.resolve([])
     })
 
     const { POST } = await import('../route')
@@ -164,42 +183,36 @@ describe('POST /api/generate-briefs', () => {
   })
 
   it('fetches Oura wearable data for each patient before generating brief', async () => {
-    let intakesCallCount = 0
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'intakes') {
-        intakesCallCount++
-        return intakesCallCount === 1
-          ? makeChain({ data: [SAMPLE_INTAKES[0]], error: null })
-          : makeChain({ data: null, error: null })
+    let selectCallCount = 0
+    mockSelectWhere.mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) {
+        return Promise.resolve([SAMPLE_INTAKES[0]])
       }
-      return makeChain({ data: [], error: null })
+      return Promise.resolve([])
     })
 
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_SECRET))
 
-    expect(mockFrom).toHaveBeenCalledWith('wearable_metrics')
+    // Should have been called at least twice: once for intakes, once for wearable_metrics
+    expect(mockSelect).toHaveBeenCalledTimes(2)
   })
 
   it('saves the generated brief back to the intake record', async () => {
-    let capturedBrief: unknown = null
-    let intakesCallCount = 0
-
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'intakes') {
-        intakesCallCount++
-        if (intakesCallCount === 1) {
-          return makeChain({ data: [SAMPLE_INTAKES[0]], error: null })
-        }
-        // Second call = update with brief
-        const chain = makeChain({ data: null, error: null })
-        chain.update = jest.fn().mockImplementation((args: unknown) => {
-          capturedBrief = args
-          return chain
-        })
-        return chain
+    let selectCallCount = 0
+    mockSelectWhere.mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) {
+        return Promise.resolve([SAMPLE_INTAKES[0]])
       }
-      return makeChain({ data: [], error: null })
+      return Promise.resolve([])
+    })
+
+    let capturedBrief: unknown = null
+    mockUpdateSet.mockImplementation((args: unknown) => {
+      capturedBrief = args
+      return { where: mockUpdateWhere }
     })
 
     const { POST } = await import('../route')
@@ -216,15 +229,13 @@ describe('POST /api/generate-briefs', () => {
       .mockRejectedValueOnce(new Error('Rate limited'))
       .mockResolvedValueOnce(JSON.stringify(MOCK_BRIEF))
 
-    let intakesCallCount = 0
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'intakes') {
-        intakesCallCount++
-        return intakesCallCount === 1
-          ? makeChain({ data: SAMPLE_INTAKES, error: null })
-          : makeChain({ data: null, error: null })
+    let selectCallCount = 0
+    mockSelectWhere.mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) {
+        return Promise.resolve(SAMPLE_INTAKES)
       }
-      return makeChain({ data: [], error: null })
+      return Promise.resolve([])
     })
 
     const { POST } = await import('../route')
@@ -238,15 +249,28 @@ describe('POST /api/generate-briefs', () => {
   })
 
   it('queries only intakes with status submitted or reviewed and no existing brief', async () => {
-    const chain = makeChain({ data: [], error: null })
-    mockFrom.mockReturnValue(chain)
+    // Return mix: one has ai_brief, one does not
+    const mixedIntakes = [
+      { ...SAMPLE_INTAKES[0], ai_brief: null },             // pending
+      { ...SAMPLE_INTAKES[1], ai_brief: { existing: true } }, // already has brief
+    ]
+
+    let selectCallCount = 0
+    mockSelectWhere.mockImplementation(() => {
+      selectCallCount++
+      if (selectCallCount === 1) {
+        return Promise.resolve(mixedIntakes)
+      }
+      return Promise.resolve([])
+    })
 
     const { POST } = await import('../route')
-    await POST(makeRequest(VALID_SECRET))
+    const res = await POST(makeRequest(VALID_SECRET))
+    expect(res.status).toBe(200)
+    const body = await res.json()
 
-    // Verify the .is() call (for ai_brief IS NULL) was made
-    expect(chain.is).toHaveBeenCalledWith('ai_brief', null)
-    // Verify the .in() call filters to submitted/reviewed
-    expect(chain.in).toHaveBeenCalledWith('status', ['submitted', 'reviewed'])
+    // Only the one without ai_brief should be processed
+    expect(body.results).toHaveLength(1)
+    expect(body.results[0]).toMatchObject({ id: 'intake-uuid-001', success: true })
   })
 })

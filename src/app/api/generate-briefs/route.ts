@@ -1,13 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { invokeModel } from '@/lib/bedrock'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { db } from '@/lib/db'
+import { intakes, wearable_metrics } from '@/lib/db/schema'
+import { eq, inArray } from 'drizzle-orm'
 
 /**
  * POST /api/generate-briefs
@@ -28,46 +23,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = getSupabase()
-
     // Find all submitted intakes without briefs (include patient_id for wearable lookup)
-    const { data: intakes, error: fetchError } = await supabase
-      .from('intakes')
-      .select('id, patient_id, answers, status')
-      .in('status', ['submitted', 'reviewed'])
-      .is('ai_brief', null)
+    const allIntakeRows = await db
+      .select({
+        id: intakes.id,
+        patient_id: intakes.patient_id,
+        answers: intakes.answers,
+        status: intakes.status,
+        ai_brief: intakes.ai_brief,
+      })
+      .from(intakes)
+      .where(inArray(intakes.status, ['submitted', 'reviewed']))
 
-    if (fetchError) throw fetchError
+    const pendingIntakes = allIntakeRows.filter(r => r.ai_brief === null)
 
-    if (!intakes || intakes.length === 0) {
+    if (pendingIntakes.length === 0) {
       return NextResponse.json({ message: 'No intakes need briefs', count: 0 })
     }
 
     const results: { id: string; success: boolean; error?: string }[] = []
 
-    for (const intake of intakes) {
+    for (const intake of pendingIntakes) {
       try {
         // Fetch any available Oura data for this patient (last 30 days)
-        let wearableMetrics: { metric_type: string; value: number; metric_date: string }[] = []
+        let wearableMetricsList: { metric_type: string; value: number; metric_date: string }[] = []
         if (intake.patient_id) {
           const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
-          const { data: metrics } = await supabase
-            .from('wearable_metrics')
-            .select('metric_type, value, metric_date')
-            .eq('patient_id', intake.patient_id)
-            .gte('metric_date', thirtyDaysAgo)
-            .order('metric_date', { ascending: false })
-          wearableMetrics = metrics || []
+          wearableMetricsList = await db
+            .select({
+              metric_type: wearable_metrics.metric_type,
+              value: wearable_metrics.value,
+              metric_date: wearable_metrics.metric_date,
+            })
+            .from(wearable_metrics)
+            .where(
+              eq(wearable_metrics.patient_id, intake.patient_id)
+            )
+            .then(rows => rows.filter(r => r.metric_date >= thirtyDaysAgo))
+            .then(rows => rows.sort((a, b) => b.metric_date.localeCompare(a.metric_date)))
         }
 
-        const brief = await generateClinicalBrief(intake.answers, wearableMetrics)
+        const brief = await generateClinicalBrief(intake.answers as Record<string, any>, wearableMetricsList)
 
-        const { error: updateError } = await supabase
-          .from('intakes')
-          .update({ ai_brief: brief })
-          .eq('id', intake.id)
-
-        if (updateError) throw updateError
+        await db
+          .update(intakes)
+          .set({ ai_brief: brief })
+          .where(eq(intakes.id, intake.id))
 
         results.push({ id: intake.id, success: true })
       } catch (err: any) {
