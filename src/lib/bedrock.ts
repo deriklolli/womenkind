@@ -1,7 +1,12 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 
-function getClient() {
-  return new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us-west-2' })
+let _client: BedrockRuntimeClient | null = null
+
+function getClient(): BedrockRuntimeClient {
+  if (!_client) {
+    _client = new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us-west-2' })
+  }
+  return _client
 }
 
 export async function invokeModel({
@@ -32,6 +37,14 @@ export async function invokeModel({
     })
   )
 
-  const body = JSON.parse(new TextDecoder().decode(response.body))
-  return body.content?.[0]?.text || ''
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(new TextDecoder().decode(response.body))
+  } catch {
+    throw new Error('Bedrock returned a non-JSON response body')
+  }
+  if (body.stop_reason === 'max_tokens') {
+    throw new Error('Bedrock response truncated: max_tokens reached. Increase maxTokens.')
+  }
+  return (body.content as Array<{ text?: string }>)?.[0]?.text || ''
 }

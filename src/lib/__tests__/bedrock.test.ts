@@ -56,4 +56,16 @@ describe('invokeModel', () => {
 
     expect(result).toBe('')
   })
+
+  it('throws when stop_reason is max_tokens', async () => {
+    const fakeBody = JSON.stringify({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: 'partial...' }],
+    })
+    mockSend.mockResolvedValueOnce({ body: new TextEncoder().encode(fakeBody) })
+
+    await expect(
+      invokeModel({ messages: [{ role: 'user', content: 'Hi' }], maxTokens: 10 })
+    ).rejects.toThrow('max_tokens')
+  })
 })
