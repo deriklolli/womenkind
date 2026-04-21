@@ -99,28 +99,30 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
         <button
           key={type.id}
           onClick={() => onSelect(type)}
-          className="bg-white rounded-card border border-aubergine/10 shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all duration-200 group flex flex-col"
+          className="bg-white rounded-card border border-aubergine/10 shadow-sm shadow-aubergine/5 p-6 text-left hover:border-violet/30 hover:shadow-lg hover:shadow-violet/5 transition-all duration-200 group flex flex-col min-h-[160px]"
         >
-          {/* Icon + Duration row */}
-          <div className="flex items-start justify-between mb-5">
+          {/* Title (top-left) + Icon (top-right) */}
+          <div className="flex items-start justify-between mb-3">
+            <h3 className="text-base font-sans font-semibold text-aubergine group-hover:text-violet transition-colors duration-200 pr-3">
+              {type.name}
+            </h3>
             <div className="w-10 h-10 rounded-brand bg-violet/8 flex items-center justify-center shrink-0">
               <AppointmentTypeIcon
                 name={type.name}
                 className="w-5 h-5 text-violet/70 group-hover:text-violet transition-colors duration-200"
               />
             </div>
-            <span className="flex items-center gap-1 text-xs font-sans text-aubergine/40 mt-0.5">
+          </div>
+
+          {/* Duration pill below title */}
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-aubergine/5 border border-aubergine/10 rounded-pill text-xs font-sans text-aubergine/50">
               <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {type.duration_minutes} min
             </span>
           </div>
-
-          {/* Name */}
-          <h3 className="text-base font-sans font-semibold text-aubergine mb-1.5 group-hover:text-violet transition-colors duration-200">
-            {type.name}
-          </h3>
 
           {/* Description */}
           {type.description && (
