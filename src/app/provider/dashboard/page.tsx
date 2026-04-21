@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav'
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import { useChatContext } from '@/lib/chat-context'
 import { getProviderSession } from '@/lib/getProviderSession'
+import { signOutProvider } from '@/lib/signOut'
 
 type DashboardTab = ProviderTab
 
@@ -123,14 +123,10 @@ export default function ProviderDashboard() {
   const loadIntakes = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('intakes')
-        .select('id, status, answers, submitted_at, reviewed_at, ai_brief, patients(subscriptions(status, plan_type))')
-        .in('status', ['submitted', 'reviewed', 'care_plan_sent'])
-        .order('submitted_at', { ascending: false })
-
-      if (error) throw error
-      setIntakes((data as unknown as Intake[]) || [])
+      const res = await fetch('/api/provider/intakes')
+      if (!res.ok) throw new Error('Failed to fetch intakes')
+      const data = await res.json()
+      setIntakes(data.intakes || [])
     } catch (err) {
       console.error('Failed to load intakes:', err)
     } finally {
@@ -140,32 +136,17 @@ export default function ProviderDashboard() {
 
   const loadPatients = async () => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select(`
-          id,
-          profile_id,
-          date_of_birth,
-          phone,
-          state,
-          profiles ( first_name, last_name, email ),
-          intakes ( id, status, ai_brief, submitted_at ),
-          visits ( id, visit_type, visit_date ),
-          subscriptions ( status, plan_type )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setPatients((data as unknown as DirectoryPatient[]) || [])
+      const res = await fetch('/api/provider/patients')
+      if (!res.ok) throw new Error('Failed to fetch patients')
+      const data = await res.json()
+      setPatients(data.patients || [])
     } catch (err) {
       console.error('Failed to load patients:', err)
     }
   }
 
   const handleSignOut = () => {
-    localStorage.removeItem('womenkind_demo_provider')
-    supabase.auth.signOut()
-    router.push('/provider/login')
+    signOutProvider()
   }
 
   const filteredIntakes = filter === 'all'
