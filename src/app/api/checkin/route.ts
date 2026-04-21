@@ -124,6 +124,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'appointmentId is required' }, { status: 400 })
     }
 
+    const appt = await db.query.appointments.findFirst({
+      where: eq(appointments.id, appointmentId),
+      columns: { patient_id: true, provider_id: true },
+    })
+    if (!appt) return NextResponse.json({ checkedIn: false, visit: null })
+
+    if (session.role === 'patient' && appt.patient_id !== session.patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (session.role === 'provider' && appt.provider_id !== session.providerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const visit = await db.query.visits.findFirst({
       where: eq(visits.appointment_id, appointmentId),
       columns: { id: true, checked_in_at: true, symptom_scores: true },

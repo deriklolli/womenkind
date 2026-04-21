@@ -46,6 +46,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
   }
 
+  if (appointment.provider_id !== session.providerId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const patientId = appointment.patient_id
 
   // ── 2. Find last completed visit (anchor for "since last visit") ──
