@@ -51,6 +51,7 @@ export default function PatientSchedulePage() {
   const [step, setStep] = useState<BookingStep>('select-type') // overwritten in checkAuth
   const [loading, setLoading] = useState(true)
   const [isMember, setIsMember] = useState(false)
+  const [isNewPatient, setIsNewPatient] = useState(false)
   const [patientId, setPatientId] = useState(DEMO_PATIENT_ID)
   const [providerId, setProviderId] = useState('')
   const [patientName, setPatientName] = useState('Sarah Mitchell')
@@ -137,6 +138,20 @@ export default function PatientSchedulePage() {
     setPatientId(me.patientId)
     setProviderId(me.providerId || '')
     setIsMember(me.isMember ?? false)
+
+    // Determine if this is a new patient (no prior confirmed/completed appointments)
+    try {
+      const aptsRes = await fetch(`/api/scheduling/appointments?patientId=${me.patientId}`)
+      if (aptsRes.ok) {
+        const aptsData = await aptsRes.json()
+        const hasPrior = (aptsData.appointments || []).some(
+          (a: any) => a.status === 'confirmed' || a.status === 'completed'
+        )
+        setIsNewPatient(!hasPrior)
+      }
+    } catch {
+      // Default to showing all types if check fails
+    }
 
     // Proximity check — determine whether to offer in-person option
     await checkNearbyClinic(me.patientId)
@@ -612,11 +627,16 @@ export default function PatientSchedulePage() {
         {step === 'select-type' && (
           <div>
             <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">Book an Appointment</h1>
-            <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">Select the type of appointment you&apos;d like to schedule with Dr. Urban.</p>
+            <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">
+              {isNewPatient
+                ? 'Schedule your initial consultation with Dr. Urban to get started.'
+                : 'Select the type of appointment you\u2019d like to schedule with Dr. Urban.'}
+            </p>
             <AppointmentTypeSelector
               providerId={providerId}
               isMember={isMember}
               onSelect={handleSelectType}
+              onlyInitial={isNewPatient}
             />
           </div>
         )}

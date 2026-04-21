@@ -16,9 +16,10 @@ interface Props {
   isMember: boolean
   onSelect: (type: AppointmentType) => void
   excludeNames?: string[]
+  onlyInitial?: boolean
 }
 
-export default function AppointmentTypeSelector({ providerId, isMember, onSelect, excludeNames }: Props) {
+export default function AppointmentTypeSelector({ providerId, isMember, onSelect, excludeNames, onlyInitial }: Props) {
   const [types, setTypes] = useState<AppointmentType[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -27,11 +28,13 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
       try {
         const res = await fetch(`/api/scheduling/appointment-types?providerId=${providerId}`)
         const data = await res.json()
-        const all = data.appointmentTypes || []
-        setTypes(excludeNames?.length
-          ? all.filter((t: AppointmentType) => !excludeNames.some(name => t.name.toLowerCase().includes(name.toLowerCase())))
-          : all
-        )
+        let all: AppointmentType[] = data.appointmentTypes || []
+        if (onlyInitial) {
+          all = all.filter(t => t.name.toLowerCase().includes('initial'))
+        } else if (excludeNames?.length) {
+          all = all.filter(t => !excludeNames.some(name => t.name.toLowerCase().includes(name.toLowerCase())))
+        }
+        setTypes(all)
       } catch (err) {
         console.error('Failed to fetch types:', err)
       } finally {
