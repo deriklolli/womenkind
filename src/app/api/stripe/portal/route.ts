@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { patients, profiles, subscriptions } from '@/lib/db/schema'
+import { eq, isNotNull, and } from 'drizzle-orm'
 
 /**
  * POST /api/stripe/portal
@@ -13,7 +15,6 @@ import { getServiceSupabase } from '@/lib/supabase-server'
 export async function POST(req: NextRequest) {
   try {
     const stripe = getStripe()
-    const supabase = getServiceSupabase()
     const { patientId } = await req.json()
 
     if (!patientId) {
@@ -21,15 +22,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Look up the Stripe customer ID from subscriptions
-    const { data: subscription, error } = await supabase
-      .from('subscriptions')
-      .select('stripe_customer_id')
-      .eq('patient_id', patientId)
-      .not('stripe_customer_id', 'is', null)
-      .limit(1)
-      .single()
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.patient_id, patientId),
+        isNotNull(subscriptions.stripe_customer_id)
+      ),
+    })
 
-    if (error || !subscription?.stripe_customer_id) {
+    if (!subscription?.stripe_customer_id) {
       return NextResponse.json(
         { error: 'No Stripe customer found for this patient' },
         { status: 404 }
@@ -44,13 +44,12 @@ export async function POST(req: NextRequest) {
       await stripe.customers.retrieve(customerId)
     } catch {
       // Customer doesn't exist in Stripe — create one and update the DB
-      const { data: profile } = await supabase
-        .from('patients')
-        .select('profiles ( first_name, last_name, email )')
-        .eq('id', patientId)
-        .single()
+      const patient = await db.query.patients.findFirst({
+        where: eq(patients.id, patientId),
+        with: { profiles: true },
+      })
 
-      const p = (profile as any)?.profiles
+      const p = patient?.profiles
       const customer = await stripe.customers.create({
         email: p?.email || undefined,
         name: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : undefined,
@@ -60,11 +59,15 @@ export async function POST(req: NextRequest) {
       resolvedCustomerId = customer.id
 
       // Update the subscription record with the real Stripe customer ID
-      await supabase
-        .from('subscriptions')
-        .update({ stripe_customer_id: resolvedCustomerId })
-        .eq('patient_id', patientId)
-        .eq('stripe_customer_id', customerId)
+      await db
+        .update(subscriptions)
+        .set({ stripe_customer_id: resolvedCustomerId })
+        .where(
+          and(
+            eq(subscriptions.patient_id, patientId),
+            eq(subscriptions.stripe_customer_id, customerId)
+          )
+        )
     }
 
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

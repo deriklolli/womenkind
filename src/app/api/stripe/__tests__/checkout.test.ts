@@ -1,7 +1,7 @@
 /**
  * Tests for POST /api/stripe/checkout
  *
- * Strategy: mock @/lib/stripe and @/lib/supabase-server so the route runs
+ * Strategy: mock @/lib/stripe and @/lib/db so the route runs
  * in isolation without real credentials.
  *
  * What we verify:
@@ -15,7 +15,6 @@ import type { NextRequest } from 'next/server'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockSessionCreate = jest.fn()
-const mockSupabaseFrom = jest.fn()
 
 jest.mock('@/lib/stripe', () => ({
   getStripe: jest.fn(() => ({
@@ -35,10 +34,21 @@ jest.mock('@/lib/stripe', () => ({
   },
 }))
 
-jest.mock('@/lib/supabase-server', () => ({
-  getServiceSupabase: jest.fn(() => ({
-    from: mockSupabaseFrom,
-  })),
+// Mock Drizzle db
+const mockFindFirst = jest.fn()
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    query: {
+      intakes: { findFirst: mockFindFirst },
+      subscriptions: { findFirst: mockFindFirst },
+    },
+  },
+}))
+
+jest.mock('@/lib/db/schema', () => ({
+  intakes: {},
+  subscriptions: {},
 }))
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,15 +67,8 @@ describe('POST /api/stripe/checkout', () => {
   beforeEach(() => {
     jest.clearAllMocks()
 
-    // Default: intake lookup returns nothing (no patient_id)
-    mockSupabaseFrom.mockReturnValue({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      not: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
-      single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    })
+    // Default: DB lookups return nothing
+    mockFindFirst.mockResolvedValue(null)
 
     mockSessionCreate.mockResolvedValue({
       id: 'cs_test_abc123',

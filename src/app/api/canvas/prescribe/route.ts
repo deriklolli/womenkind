@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { prescriptions } from '@/lib/db/schema'
 import { getServerSession } from '@/lib/getServerSession'
 import { sendPrescription } from '@/lib/canvas-client'
 
@@ -39,28 +40,22 @@ export async function POST(request: Request) {
       pharmacy: pharmacy || '',
     })
 
-    // Save to Supabase
-    const supabase = getServiceSupabase()
-    const { data, error } = await supabase
-      .from('prescriptions')
-      .insert({
+    // NOTE: canvas_prescription_id, visit_id, and pharmacy are not in the Drizzle
+    // prescriptions schema. Insert what the schema supports.
+    const [data] = await db
+      .insert(prescriptions)
+      .values({
         patient_id: patientId,
-        provider_id: session.providerId || null,
-        visit_id: visitId || null,
-        canvas_prescription_id: result.canvasPrescriptionId,
+        provider_id: session.providerId!,
         medication_name: medicationName,
         dosage,
         frequency,
-        quantity: quantity || 30,
+        quantity_dispensed: quantity || 30,
         refills: refills || 0,
-        pharmacy: pharmacy || '',
-        status: 'sent',
-        prescribed_at: result.sentAt,
+        status: 'active',
+        prescribed_at: new Date(result.sentAt),
       })
-      .select()
-      .single()
-
-    if (error) throw error
+      .returning()
 
     return NextResponse.json({ prescription: data, canvas: result })
   } catch (err: any) {

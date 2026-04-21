@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { wearable_metrics } from '@/lib/db/schema'
+import { eq, and, gte, lte } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 
 /**
@@ -25,22 +27,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const supabase = getServiceSupabase()
-    let query = supabase
-      .from('wearable_metrics')
-      .select('metric_date, metric_type, value, synced_at')
-      .eq('patient_id', patientId)
-      .order('metric_date', { ascending: true })
+    const conditions = [eq(wearable_metrics.patient_id, patientId)]
+    if (startDate) conditions.push(gte(wearable_metrics.metric_date, startDate))
+    if (endDate) conditions.push(lte(wearable_metrics.metric_date, endDate))
+    if (metricType) conditions.push(eq(wearable_metrics.metric_type, metricType))
 
-    if (startDate) query = query.gte('metric_date', startDate)
-    if (endDate) query = query.lte('metric_date', endDate)
-    if (metricType) query = query.eq('metric_type', metricType)
+    const data = await db
+      .select({
+        metric_date: wearable_metrics.metric_date,
+        metric_type: wearable_metrics.metric_type,
+        value: wearable_metrics.value,
+        synced_at: wearable_metrics.synced_at,
+      })
+      .from(wearable_metrics)
+      .where(and(...conditions))
+      .orderBy(wearable_metrics.metric_date)
 
-    const { data, error } = await query
-
-    if (error) throw error
-
-    return NextResponse.json({ metrics: data || [] })
+    return NextResponse.json({ metrics: data })
   } catch (err: any) {
     console.error('Wearable metrics error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

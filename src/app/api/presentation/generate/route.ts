@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { intakes, patients, care_presentations } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { Resend } from 'resend'
 
@@ -28,32 +30,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = getServiceSupabase()
-
     // Get the latest intake for this patient (optional link)
-    const { data: latestIntake } = await supabase
-      .from('intakes')
-      .select('id')
-      .eq('patient_id', patientId)
-      .order('submitted_at', { ascending: false })
-      .limit(1)
-      .single()
+    const latestIntake = await db.query.intakes.findFirst({
+      where: eq(intakes.patient_id, patientId),
+      orderBy: (intakes, { desc }) => [desc(intakes.submitted_at)],
+    })
 
     // Get patient email for sending
-    const { data: patient } = await supabase
-      .from('patients')
-      .select('profiles ( first_name, last_name, email )')
-      .eq('id', patientId)
-      .single()
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.id, patientId),
+      with: { profiles: true },
+    })
 
-    const patientProfile = (patient as any)?.profiles
+    const patientProfile = patient?.profiles
     const patientEmail = patientProfile?.email
     const patientFirstName = patientProfile?.first_name || 'there'
 
     // Create the presentation record
-    const { data: presentation, error } = await supabase
-      .from('care_presentations')
-      .insert({
+    const [presentation] = await db
+      .insert(care_presentations)
+      .values({
         patient_id: patientId,
         provider_id: providerId,
         intake_id: latestIntake?.id || null,
@@ -62,12 +58,12 @@ export async function POST(req: Request) {
         welcome_message: welcomeMessage,
         closing_message: closingMessage,
         status: 'sent',
-        sent_at: new Date().toISOString(),
       })
-      .select('id')
-      .single()
+      .returning({ id: care_presentations.id })
 
-    if (error) throw error
+    if (!presentation) {
+      throw new Error('Failed to create presentation')
+    }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const presentationUrl = `${appUrl}/presentation/${presentation.id}`

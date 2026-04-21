@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { lab_orders } from '@/lib/db/schema'
 import { sendLabOrder } from '@/lib/canvas-client'
 
 export async function POST(request: Request) {
@@ -27,11 +28,9 @@ export async function POST(request: Request) {
       clinicalIndication: clinicalIndication || '',
     })
 
-    // Save to Supabase
-    const supabase = getServiceSupabase()
-    const { data, error } = await supabase
-      .from('lab_orders')
-      .insert({
+    const [data] = await db
+      .insert(lab_orders)
+      .values({
         patient_id: patientId,
         provider_id: providerId || null,
         visit_id: visitId || null,
@@ -42,10 +41,7 @@ export async function POST(request: Request) {
         status: 'sent',
         ordered_at: result.sentAt,
       })
-      .select()
-      .single()
-
-    if (error) throw error
+      .returning()
 
     return NextResponse.json({ labOrder: data, canvas: result })
   } catch (err: any) {

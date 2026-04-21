@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe, STRIPE_PRICES } from '@/lib/stripe'
-import { getServiceSupabase } from '@/lib/supabase-server'
+import { db } from '@/lib/db'
+import { subscriptions } from '@/lib/db/schema'
+import { eq, isNotNull, and } from 'drizzle-orm'
 
 /**
  * POST /api/stripe/membership
@@ -13,7 +15,6 @@ import { getServiceSupabase } from '@/lib/supabase-server'
 export async function POST(req: NextRequest) {
   try {
     const stripe = getStripe()
-    const supabase = getServiceSupabase()
     const { intakeId, stripeCustomerId } = await req.json()
 
     if (!STRIPE_PRICES.membership) {
@@ -27,13 +28,12 @@ export async function POST(req: NextRequest) {
     let customerId = stripeCustomerId
 
     if (!customerId && intakeId) {
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('intake_id', intakeId)
-        .not('stripe_customer_id', 'is', null)
-        .limit(1)
-        .maybeSingle()
+      const sub = await db.query.subscriptions.findFirst({
+        where: and(
+          eq(subscriptions.intake_id, intakeId),
+          isNotNull(subscriptions.stripe_customer_id)
+        ),
+      })
 
       customerId = sub?.stripe_customer_id
     }
