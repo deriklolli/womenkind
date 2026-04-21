@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
 import { useChatContext } from '@/lib/chat-context'
 
@@ -39,17 +38,14 @@ export default function BriefViewerPage() {
   const loadIntake = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('intakes')
-        .select('*')
-        .eq('id', intakeId)
-        .single()
+      const res = await fetch(`/api/provider/intakes/${intakeId}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const { intake: data, isMember: member } = await res.json()
 
-      if (error) throw error
       setIntake(data)
       setNotes(data.provider_notes || '')
+      setIsMember(member)
 
-      // Set chat context for AI assistant
       setPageContext({
         page: 'brief',
         patientId: data.patient_id,
@@ -58,27 +54,12 @@ export default function BriefViewerPage() {
         intakeStatus: data.status,
       })
 
-      // Check membership status
-      if (data.patient_id) {
-        const { data: subs } = await supabase
-          .from('subscriptions')
-          .select('status, plan_type')
-          .eq('patient_id', data.patient_id)
-          .eq('plan_type', 'membership')
-          .eq('status', 'active')
-          .limit(1)
-        setIsMember((subs?.length || 0) > 0)
-      }
-
-      // Mark as reviewed if currently submitted
       if (data.status === 'submitted') {
-        await supabase
-          .from('intakes')
-          .update({
-            status: 'reviewed',
-            reviewed_at: new Date().toISOString(),
-          })
-          .eq('id', intakeId)
+        await fetch(`/api/provider/intakes/${intakeId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'reviewed' }),
+        })
       }
     } catch (err) {
       console.error('Failed to load intake:', err)
@@ -91,10 +72,11 @@ export default function BriefViewerPage() {
     if (!intake) return
     setSaving(true)
     try {
-      await supabase
-        .from('intakes')
-        .update({ provider_notes: notes })
-        .eq('id', intake.id)
+      await fetch(`/api/provider/intakes/${intake.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider_notes: notes }),
+      })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {

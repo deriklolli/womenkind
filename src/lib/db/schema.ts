@@ -140,6 +140,8 @@ export const intakes = pgTable('intakes', {
   stripe_session_id: text('stripe_session_id'),
   started_at:       timestamp('started_at', { withTimezone: true }).defaultNow(),
   created_at:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  provider_notes:   text('provider_notes'),
+  reviewed_at:      timestamp('reviewed_at', { withTimezone: true }),
 })
 
 // ── Prescriptions ─────────────────────────────────────────────────────────────
