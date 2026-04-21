@@ -433,6 +433,7 @@ export default function PatientDashboardPage() {
 
   const loadPatientData = async () => {
     try {
+      // Check Supabase auth session (Auth only — no app table queries)
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -454,133 +455,39 @@ export default function PatientDashboardPage() {
         return
       }
 
-      const userId = session.user.id
+      // Fetch all patient data from RDS via API (all app tables live in RDS, not Supabase)
+      const meRes = await fetch('/api/patient/me')
 
-      // Get profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('id', userId)
-        .single()
-
-      // Get patient record
-      const { data: patientRecord } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('profile_id', userId)
-        .maybeSingle()
-
-      // Get latest intake (by patient_id, or fallback to email match in answers)
-      let intakeData = null
-      if (patientRecord) {
-        const { data: intake } = await supabase
-          .from('intakes')
-          .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
-          .eq('patient_id', patientRecord.id)
-          .neq('status', 'draft')
-          .order('submitted_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        intakeData = intake
-      }
-
-      // Fallback: find intake by email if not linked by patient_id
-      if (!intakeData && profile?.email) {
-        const { data: intakeByEmail } = await supabase
-          .from('intakes')
-          .select('id, status, submitted_at, reviewed_at, ai_brief, answers')
-          .neq('status', 'draft')
-          .order('started_at', { ascending: false })
-          .limit(10)
-
-        if (intakeByEmail) {
-          intakeData = intakeByEmail.find(
-            (i: any) => i.answers?.email?.toLowerCase() === profile.email.toLowerCase()
-          ) || null
-
-          // Link the intake to the patient record if found
-          if (intakeData && patientRecord) {
-            await supabase
-              .from('intakes')
-              .update({ patient_id: patientRecord.id })
-              .eq('id', intakeData.id)
-          }
+      if (!meRes.ok) {
+        if (meRes.status === 403) {
+          // Logged in but not a patient — redirect to intake
+          router.replace('/intake')
+          return
         }
+        throw new Error(`/api/patient/me returned ${meRes.status}`)
       }
 
-      // Gate: if user has a patient record but no submitted intake, redirect to intake
-      if (patientRecord && (!intakeData || intakeData.status === 'draft')) {
+      const me = await meRes.json()
+
+      // Gate: no submitted intake → send to intake flow
+      if (!me.intakeStatus || me.intakeStatus === 'draft') {
         router.replace('/intake')
         return
       }
 
-      // Get membership
-      let membershipStatus: MembershipStatus = 'none'
-      let membershipRenewal: string | null = null
-      if (patientRecord) {
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('status, current_period_end')
-          .eq('patient_id', patientRecord.id)
-          .eq('plan_type', 'membership')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-
-        if (sub) {
-          membershipStatus = sub.status as MembershipStatus
-          membershipRenewal = sub.current_period_end
-        }
-      }
-
-      // Build intake summary from AI brief
-      let intakeSummary = null
-      if (intakeData?.ai_brief) {
-        const brief = intakeData.ai_brief
-        intakeSummary = {
-          topConcern:
-            intakeData.answers?.top_concern ||
-            brief.symptom_summary?.overview ||
-            '',
-          domains:
-            brief.symptom_summary?.domains?.map((d: any) => ({
-              domain: d.domain,
-              severity: d.severity,
-            })) || [],
-          menopausalStage: brief.metadata?.menopausal_stage || 'Unknown',
-          symptomBurden: brief.metadata?.symptom_burden || 'unknown',
-        }
-      }
-
-      // Check for care presentation
-      let presentationId: string | null = null
-      let presentationStatus: 'sent' | 'viewed' | null = null
-      if (patientRecord) {
-        const { data: presData } = await supabase
-          .from('care_presentations')
-          .select('id, status')
-          .eq('patient_id', patientRecord.id)
-          .in('status', ['sent', 'viewed'])
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        presentationId = presData?.id || null
-        presentationStatus = (presData?.status as 'sent' | 'viewed') || null
-      }
-
       setPatient({
-        patientId: patientRecord?.id || '',
-        name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Patient',
-        email: profile?.email || session.user.email || '',
-        intakeStatus: intakeData?.status || null,
-        intakeSubmittedAt: intakeData?.submitted_at || null,
-        intakeReviewedAt: intakeData?.reviewed_at || null,
-        membershipStatus,
-        membershipRenewal,
-        intakeSummary,
-        presentationId,
-        presentationStatus,
-        intakeId: intakeData?.id || null,
+        patientId: me.patientId,
+        name: me.name,
+        email: me.email,
+        intakeStatus: me.intakeStatus,
+        intakeSubmittedAt: me.intakeSubmittedAt,
+        intakeReviewedAt: me.intakeReviewedAt,
+        membershipStatus: me.membershipStatus ?? 'none',
+        membershipRenewal: me.membershipRenewal,
+        intakeSummary: me.intakeSummary,
+        presentationId: me.presentationId,
+        presentationStatus: me.presentationStatus,
+        intakeId: me.intakeId,
       })
     } catch (err) {
       console.error('Error loading patient data:', err)

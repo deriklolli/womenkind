@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 
 interface Visit {
   id: string
@@ -127,12 +126,10 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
   }, [patientId])
 
   const fetchEncounters = async () => {
-    const { data } = await supabase
-      .from('encounter_notes')
-      .select('id, source, status, chief_complaint, hpi, ros, assessment, plan, transcript, signed_at, created_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-    const list = (data || []) as EncounterNote[]
+    const res = await fetch(`/api/provider/encounter-notes?patientId=${patientId}`)
+    if (!res.ok) return
+    const data = await res.json()
+    const list = (data.notes || []) as EncounterNote[]
     setEncounters(list)
     // Auto-expand first draft
     const firstDraft = list.find(n => n.status === 'draft')
@@ -146,11 +143,16 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
     if (!content.trim()) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('provider_notes').insert({
-        patient_id: patientId, provider_id: providerId,
-        title: title.trim() || null, content: content.trim(), note_type: noteType,
+      const res = await fetch('/api/provider/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientId,
+          content: content.trim(),
+          note_type: noteType,
+        }),
       })
-      if (error) throw error
+      if (!res.ok) throw new Error('Failed to save note')
       setSaved(true)
       setTimeout(() => {
         setSaved(false); setShowForm(false)
@@ -179,8 +181,12 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
   const saveEdits = async (noteId: string) => {
     setEditSaving(true)
     try {
-      const { error } = await supabase.from('encounter_notes').update(edits).eq('id', noteId)
-      if (error) throw error
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(edits),
+      })
+      if (!res.ok) throw new Error('Failed to save edits')
       setEncounters(prev => prev.map(n => n.id === noteId ? { ...n, ...edits } : n))
       setEditingId(null)
     } catch (err) {
@@ -194,9 +200,12 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
     setSigning(true)
     try {
       const signedAt = new Date().toISOString()
-      const { error } = await supabase.from('encounter_notes')
-        .update({ status: 'signed', signed_at: signedAt }).eq('id', noteId)
-      if (error) throw error
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'signed' }),
+      })
+      if (!res.ok) throw new Error('Failed to sign note')
       setEncounters(prev => prev.map(n =>
         n.id === noteId ? { ...n, status: 'signed', signed_at: signedAt } : n
       ))
@@ -211,8 +220,10 @@ export default function NotesPanel({ patientId, providerId, visits, providerNote
   const deleteEncounter = async (noteId: string) => {
     setDeleting(true)
     try {
-      const { error } = await supabase.from('encounter_notes').delete().eq('id', noteId)
-      if (error) throw error
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete note')
       setEncounters(prev => prev.filter(n => n.id !== noteId))
       setConfirmDeleteId(null)
       if (expandedId === noteId) setExpandedId(null)

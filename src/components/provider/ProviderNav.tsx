@@ -68,7 +68,7 @@ export default function ProviderNav({
         const [refillRes, msgRes, intakeRes] = await Promise.all([
           fetch(`/api/refill-requests?providerId=${resolvedProviderId}&status=pending`),
           fetch(`/api/messages?providerId=${resolvedProviderId}`),
-          supabase.from('intakes').select('id').eq('status', 'submitted'),
+          fetch('/api/provider/pending-intakes'),
         ])
         const refillData = await refillRes.json()
         setSelfRefillCount((refillData.refillRequests || []).length)
@@ -77,8 +77,8 @@ export default function ProviderNav({
         const unread = (msgData.threads || []).reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
         setSelfMessageCount(unread)
 
-        const intakeData = intakeRes.data || []
-        setSelfIntakeCount(intakeData.length)
+        const intakeData = await intakeRes.json()
+        setSelfIntakeCount(intakeData.count ?? 0)
       } catch {}
     }
     load()
