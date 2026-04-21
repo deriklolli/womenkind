@@ -17,3 +17,9 @@
 [ 3096509ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
 [ 3328201ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
 [ 3341588ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://womenkind.vercel.app/api/debug/whoami:0
+[ 3990103ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
+[ 4155014ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://womenkind.vercel.app/provider/login?reason=idle:0
+[ 4815095ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
+[ 4822627ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
+[ 4929517ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/intake/regenerate-brief:0
+[ 5213785ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://womenkind.vercel.app/api/debug/invoke-test:0
