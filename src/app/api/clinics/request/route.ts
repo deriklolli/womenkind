@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    if (session.role === 'patient' && session.patientId !== patientId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // Save the request
     const [requestRow] = await db
       .insert(clinic_appointment_requests)
