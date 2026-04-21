@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles, intakes, subscriptions, care_presentations } from '@/lib/db/schema'
+import { profiles, intakes, subscriptions, care_presentations, providers } from '@/lib/db/schema'
 import { eq, and, ne, desc } from 'drizzle-orm'
 
 /**
@@ -101,8 +101,15 @@ export async function GET() {
     }
   }
 
+  // Active provider (there is only one — Dr. Urban)
+  const provider = await db.query.providers.findFirst({
+    where: eq(providers.is_active, true),
+    columns: { id: true },
+  })
+
   return NextResponse.json({
     patientId,
+    providerId: provider?.id ?? null,
     name,
     email,
     isMember,
