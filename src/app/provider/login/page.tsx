@@ -48,14 +48,9 @@ export default function ProviderLoginPage() {
 
       if (authError) throw authError
 
-      // Check if user has provider role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single()
-
-      if (profile?.role !== 'provider') {
+      // Check if user has provider role from auth metadata
+      const role = data.user.user_metadata?.role
+      if (role !== 'provider') {
         await supabase.auth.signOut()
         throw new Error('This account does not have provider access.')
       }

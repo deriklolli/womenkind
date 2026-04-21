@@ -7,6 +7,11 @@ import { ChatContextProvider, useChatContext } from '@/lib/chat-context'
 import { RecordingProvider } from '@/lib/recording-context'
 import ChatWidget from '@/components/provider/ChatWidget'
 import RecordingBar from '@/components/provider/RecordingBar'
+import { useIdleTimeout } from '@/hooks/useIdleTimeout'
+import { signOutProvider } from '@/lib/signOut'
+
+// HIPAA §164.312(a)(2)(iii) automatic logoff — 20 min of inactivity.
+const IDLE_TIMEOUT_MS = 20 * 60 * 1000
 
 function ChatWidgetWithContext() {
   const { pageContext } = useChatContext()
@@ -34,13 +39,9 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_provider')
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
+        const role = session.user.user_metadata?.role
 
-        if (profile?.role === 'provider') {
+        if (role === 'provider') {
           setAuthorized(true)
           setChecking(false)
           return
@@ -65,6 +66,12 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
 
     checkAccess()
   }, [pathname, router])
+
+  useIdleTimeout({
+    timeoutMs: IDLE_TIMEOUT_MS,
+    onTimeout: () => signOutProvider('idle'),
+    enabled: authorized && pathname !== '/provider/login',
+  })
 
   if (checking && pathname !== '/provider/login') {
     return (
