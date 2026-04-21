@@ -614,19 +614,16 @@ export async function POST(req: Request) {
 
       // 6. Generate AI brief via the same function used in submit
       let briefGenerated = false
-      const anthropicKey = process.env.ANTHROPIC_API_KEY
-      if (anthropicKey) {
-        try {
-          const briefResponse = await fetch(`${getAppUrl(req)}/api/intake/submit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ intakeId: intake.id, answers: persona.answers }),
-          })
-          briefGenerated = briefResponse.ok
-        } catch (e) {
-          // If calling the submit endpoint fails, try generating directly
-          console.error(`Brief generation failed for ${persona.first_name}:`, e)
-        }
+      try {
+        const briefResponse = await fetch(`${getAppUrl(req)}/api/intake/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intakeId: intake.id, answers: persona.answers }),
+        })
+        briefGenerated = briefResponse.ok
+      } catch (e) {
+        // If calling the submit endpoint fails, log and continue
+        console.error(`Brief generation failed for ${persona.first_name}:`, e)
       }
 
       results.push({
