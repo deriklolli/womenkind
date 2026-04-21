@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 
 interface Presentation {
   id: string
   selected_components: string[]
   welcome_message: string | null
   status: 'sent' | 'viewed'
-  sent_at: string | null
   viewed_at: string | null
   created_at: string
 }
@@ -39,20 +37,21 @@ export default function HealthBlueprintList({ patientId }: HealthBlueprintListPr
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetch() {
-      const { data, error } = await supabase
-        .from('care_presentations')
-        .select('id, selected_components, welcome_message, status, sent_at, viewed_at, created_at')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
-
-      if (!error && data) {
-        setPresentations(data as Presentation[])
+    async function loadPresentations() {
+      try {
+        const res = await fetch('/api/patient/presentations')
+        if (res.ok) {
+          const { presentations } = await res.json()
+          setPresentations(presentations as Presentation[])
+        }
+      } catch (err) {
+        console.error('Failed to load presentations:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
-    fetch()
-  }, [patientId])
+    loadPresentations()
+  }, [])
 
   if (loading) {
     return (
@@ -84,7 +83,7 @@ export default function HealthBlueprintList({ patientId }: HealthBlueprintListPr
     <div className="space-y-4">
       {presentations.map((p, index) => {
         const isNew = p.status === 'sent'
-        const date = p.sent_at || p.created_at
+        const date = p.created_at
         const formattedDate = new Date(date).toLocaleDateString('en-US', {
           month: 'long',
           day: 'numeric',

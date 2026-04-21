@@ -47,46 +47,24 @@ export default function SettingsPage() {
         return
       }
 
-      // Real auth
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/patient/login'); return }
+      // Real auth — fetch from RDS via API
+      const res = await fetch('/api/patient/settings')
+      if (!res.ok) { router.push('/patient/login'); return }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('id', session.user.id)
-        .single()
-
-      const { data: patientRow } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('profile_id', session.user.id)
-        .maybeSingle()
-
-      if (!patientRow) { router.push('/patient/login'); return }
-
-      // Stripe subscription data lives in the subscriptions table
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('patient_id', patientRow.id)
-        .eq('plan_type', 'membership')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const data = await res.json()
 
       const membershipStatus: MembershipStatus =
-        subscription?.status === 'active' ? 'active'
-        : subscription?.status === 'canceled' ? 'canceled'
-        : subscription?.status === 'past_due' ? 'past_due'
+        data.subscription?.status === 'active' ? 'active'
+        : data.subscription?.status === 'canceled' ? 'canceled'
+        : data.subscription?.status === 'past_due' ? 'past_due'
         : 'none'
 
       setPatient({
-        patientId: patientRow.id,
-        name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : session.user.email || '',
-        email: profile?.email || session.user.email || '',
+        patientId: data.patientId,
+        name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.email || '',
+        email: data.email || '',
         membershipStatus,
-        membershipRenewal: subscription?.current_period_end || null,
+        membershipRenewal: data.subscription?.current_period_end ?? null,
       })
     } catch (err) {
       console.error('Error loading patient data:', err)

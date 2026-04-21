@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 
 interface AvailabilitySlot {
   id: string
@@ -51,13 +50,9 @@ export default function AvailabilityEditor({ providerId }: Props) {
 
   const fetchAvailability = async () => {
     try {
-      const { data, error } = await supabase
-        .from('provider_availability')
-        .select('*')
-        .eq('provider_id', providerId)
-        .order('day_of_week')
-
-      if (error) throw error
+      const res = await fetch('/api/provider/availability')
+      if (!res.ok) throw new Error('Failed to fetch')
+      const { slots: data } = await res.json()
       setSlots(data || [])
     } catch (err) {
       console.error('Failed to fetch availability:', err)
@@ -73,25 +68,25 @@ export default function AvailabilityEditor({ providerId }: Props) {
     try {
       if (existing) {
         // Toggle is_active
-        const { error } = await supabase
-          .from('provider_availability')
-          .update({ is_active: !existing.is_active })
-          .eq('id', existing.id)
-
-        if (error) throw error
+        const res = await fetch(`/api/provider/availability/${existing.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field: 'is_active', value: !existing.is_active }),
+        })
+        if (!res.ok) throw new Error('Failed to toggle')
       } else {
         // Create new slot with default hours
-        const { error } = await supabase
-          .from('provider_availability')
-          .insert({
-            provider_id: providerId,
+        const res = await fetch('/api/provider/availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             day_of_week: dayOfWeek,
             start_time: '09:00',
             end_time: '17:00',
             is_active: true,
-          })
-
-        if (error) throw error
+          }),
+        })
+        if (!res.ok) throw new Error('Failed to create slot')
       }
       fetchAvailability()
     } catch (err) {
@@ -103,12 +98,12 @@ export default function AvailabilityEditor({ providerId }: Props) {
 
   const updateTime = async (slotId: string, field: 'start_time' | 'end_time', value: string) => {
     try {
-      const { error } = await supabase
-        .from('provider_availability')
-        .update({ [field]: value })
-        .eq('id', slotId)
-
-      if (error) throw error
+      const res = await fetch(`/api/provider/availability/${slotId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, value }),
+      })
+      if (!res.ok) throw new Error('Failed to update time')
       fetchAvailability()
     } catch (err) {
       console.error('Failed to update time:', err)

@@ -1,0 +1,167 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/getServerSession'
+import { db } from '@/lib/db'
+import {
+  patients, intakes, visits, subscriptions,
+  prescriptions, lab_orders, provider_notes, encounter_notes,
+} from '@/lib/db/schema'
+import { eq, desc, ne, and, sql } from 'drizzle-orm'
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const session = await getServerSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const patientId = params.id
+
+  // Fetch patient + profile via relation
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    columns: {
+      id: true,
+      profile_id: true,
+      date_of_birth: true,
+      phone: true,
+      state: true,
+    },
+    with: {
+      profiles: {
+        columns: {
+          first_name: true,
+          last_name: true,
+          email: true,
+        },
+      },
+    },
+  })
+
+  if (!patient) {
+    return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+  }
+
+  const [
+    intakesRows,
+    visitsRows,
+    subscriptionsRows,
+    prescriptionsRows,
+    labOrdersRows,
+    providerNotesRows,
+    encounterNotesCount,
+    latestEncounterNote,
+  ] = await Promise.all([
+    db.query.intakes.findMany({
+      where: eq(intakes.patient_id, patientId),
+      columns: {
+        id: true,
+        status: true,
+        answers: true,
+        ai_brief: true,
+        provider_notes: true,
+        submitted_at: true,
+        reviewed_at: true,
+      },
+      orderBy: [desc(intakes.submitted_at)],
+    }),
+
+    db.query.visits.findMany({
+      where: eq(visits.patient_id, patientId),
+      columns: {
+        id: true,
+        visit_type: true,
+        visit_date: true,
+        symptom_scores: true,
+      },
+      orderBy: [desc(visits.visit_date)],
+    }),
+
+    db.query.subscriptions.findMany({
+      where: eq(subscriptions.patient_id, patientId),
+      columns: {
+        id: true,
+        status: true,
+        plan_type: true,
+        current_period_end: true,
+      },
+    }),
+
+    db.query.prescriptions.findMany({
+      where: eq(prescriptions.patient_id, patientId),
+      columns: {
+        id: true,
+        medication_name: true,
+        dosage: true,
+        frequency: true,
+        quantity_dispensed: true,
+        refills: true,
+        status: true,
+        prescribed_at: true,
+        created_at: true,
+      },
+      orderBy: [desc(prescriptions.created_at)],
+    }),
+
+    db.query.lab_orders.findMany({
+      where: eq(lab_orders.patient_id, patientId),
+      columns: {
+        id: true,
+        lab_partner: true,
+        tests: true,
+        clinical_indication: true,
+        status: true,
+        ordered_at: true,
+        created_at: true,
+      },
+      orderBy: [desc(lab_orders.created_at)],
+    }),
+
+    db.query.provider_notes.findMany({
+      where: eq(provider_notes.patient_id, patientId),
+      columns: {
+        id: true,
+        content: true,
+        note_type: true,
+        created_at: true,
+        updated_at: true,
+      },
+      orderBy: [desc(provider_notes.created_at)],
+    }),
+
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(encounter_notes)
+      .where(
+        and(
+          eq(encounter_notes.patient_id, patientId),
+          ne(encounter_notes.status, 'failed'),
+        ),
+      )
+      .then((rows) => rows[0]?.count ?? 0),
+
+    db.query.encounter_notes.findFirst({
+      where: and(
+        eq(encounter_notes.patient_id, patientId),
+        eq(encounter_notes.status, 'signed'),
+      ),
+      columns: {
+        assessment: true,
+        plan: true,
+      },
+      orderBy: [desc(encounter_notes.created_at)],
+    }),
+  ])
+
+  return NextResponse.json({
+    patient,
+    intakes: intakesRows,
+    visits: visitsRows,
+    subscriptions: subscriptionsRows,
+    prescriptions: prescriptionsRows,
+    labOrders: labOrdersRows,
+    providerNotes: providerNotesRows,
+    encounterNotesCount,
+    latestEncounterNote: latestEncounterNote ?? null,
+  })
+}

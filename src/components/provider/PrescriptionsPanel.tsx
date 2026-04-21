@@ -8,9 +8,8 @@ interface Prescription {
   medication_name: string
   dosage: string
   frequency: string
-  quantity: number
+  quantity_dispensed: number | null
   refills: number
-  pharmacy: string
   status: string
   prescribed_at: string | null
   created_at: string
@@ -300,9 +299,8 @@ export default function PrescriptionsPanel({
                       {rx.dosage} — {rx.frequency}
                     </p>
                     <div className="flex items-center gap-4 mt-1.5 text-xs font-sans text-aubergine/30">
-                      <span>Qty: {rx.quantity}</span>
+                      {rx.quantity_dispensed != null && <span>Qty: {rx.quantity_dispensed}</span>}
                       <span>Refills: {rx.refills}</span>
-                      {rx.pharmacy && <span>{rx.pharmacy}</span>}
                       {rx.prescribed_at && (
                         <span>
                           {new Date(rx.prescribed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

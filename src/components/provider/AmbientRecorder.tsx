@@ -46,30 +46,20 @@ export default function AmbientRecorder({ providerId }: Props) {
   }, [])
 
   const loadPatients = async () => {
-    // Get all patients this provider has appointments with
-    const { data } = await supabase
-      .from('appointments')
-      .select('patient_id, patients(id, profiles(first_name, last_name))')
-      .eq('provider_id', providerId)
-      .order('starts_at', { ascending: false })
-
-    if (!data) return
-
-    // Deduplicate by patient_id
-    const seen = new Set<string>()
-    const list: Patient[] = []
-    for (const row of data) {
-      const pid = row.patient_id
-      if (seen.has(pid)) continue
-      seen.add(pid)
-      const p = (row as any).patients
-      const profile = p?.profiles
-      const name = profile
-        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-        : 'Unknown'
-      list.push({ id: pid, name })
+    try {
+      const res = await fetch('/api/provider/ambient-roster')
+      if (!res.ok) return
+      const { roster } = await res.json()
+      const list: Patient[] = (roster || []).map(
+        (r: { patientId: string; patientName: string }) => ({
+          id: r.patientId,
+          name: r.patientName,
+        })
+      )
+      setPatients(list)
+    } catch (err) {
+      console.error('[AmbientRecorder] loadPatients error:', err)
     }
-    setPatients(list)
   }
 
   const startTimer = () => {

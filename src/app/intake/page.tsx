@@ -14,7 +14,6 @@ import Image from 'next/image'
 import IntakeQuestionLight from '@/components/IntakeQuestionLight'
 import IntakeProgressLight from '@/components/IntakeProgressLight'
 import SectionIntroLight from '@/components/SectionIntroLight'
-import { supabase } from '@/lib/supabase-browser'
 
 type Screen =
   | { type: 'welcome' }
@@ -43,51 +42,37 @@ export default function IntakePage() {
   useEffect(() => {
     const checkAuthAndResume = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) return
+        const res = await fetch('/api/patient/intake-init')
+        if (!res.ok) return
 
-        const meta = session.user.user_metadata
-        const firstName = (meta?.first_name || '').split(' ')[0]
-        const fullName = `${firstName} ${meta?.last_name || ''}`.trim()
-        const email = session.user.email || ''
+        const data = await res.json()
+
+        // Fetch name/email from session for pre-population via /api/patient/me
+        const meRes = await fetch('/api/patient/me')
+        const meData = meRes.ok ? await meRes.json() : null
+
+        const firstName = meData?.name?.split(' ')[0] || ''
+        const email = meData?.email || ''
+        const fullName = meData?.name || ''
 
         if (firstName) setUserFirstName(firstName)
 
-        // Pre-populate known fields and mark as authenticated
         const prePopulated: Record<string, any> = { _authenticated: true }
         if (fullName) prePopulated.full_name = fullName
         if (email) prePopulated.email = email
 
-        // Check for patient record
-        const { data: patientRecord } = await supabase
-          .from('patients')
-          .select('id')
-          .eq('profile_id', session.user.id)
-          .maybeSingle()
+        if (data.patientId) {
+          setPatientId(data.patientId)
+        }
 
-        if (patientRecord) {
-          setPatientId(patientRecord.id)
-
-          // Check for existing draft intake to resume
-          const { data: existingIntake } = await supabase
-            .from('intakes')
-            .select('id, answers')
-            .eq('patient_id', patientRecord.id)
-            .eq('status', 'draft')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-
-          if (existingIntake) {
-            setIntakeId(existingIntake.id)
-            const savedAnswers = existingIntake.answers || {}
-            setAnswers({ ...prePopulated, ...savedAnswers })
-            // If the patient left mid-intake, resume at the question they were on
-            if (typeof savedAnswers._resume_index === 'number') {
-              setPendingResumeIndex(savedAnswers._resume_index)
-            }
-            return
+        if (data.draftIntakeId) {
+          setIntakeId(data.draftIntakeId)
+          const savedAnswers = data.draftAnswers || {}
+          setAnswers({ ...prePopulated, ...savedAnswers })
+          if (typeof savedAnswers._resume_index === 'number') {
+            setPendingResumeIndex(savedAnswers._resume_index)
           }
+          return
         }
 
         setAnswers((prev) => ({ ...prePopulated, ...prev }))

@@ -74,14 +74,10 @@ function UpdatePasswordForm() {
     if (updateError) {
       setError(updateError.message)
     } else {
-      // Determine user type from DB rather than URL param
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: providerRow } = await supabase
-        .from('providers')
-        .select('id')
-        .eq('profile_id', user?.id)
-        .maybeSingle()
-      const loginPath = providerRow ? '/provider/login' : '/patient/login'
+      // Determine user type from RDS session
+      const meRes = await fetch('/api/auth/me')
+      const { role } = meRes.ok ? await meRes.json() : { role: 'patient' }
+      const loginPath = role === 'provider' ? '/provider/login' : '/patient/login'
       router.push(`${loginPath}?reset=success`)
     }
   }

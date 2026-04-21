@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import ProviderNav from '@/components/provider/ProviderNav'
 import SymptomTrendChart from '@/components/provider/SymptomTrendChart'
 import VisitTimeline from '@/components/provider/VisitTimeline'
@@ -60,9 +59,8 @@ interface Prescription {
   medication_name: string
   dosage: string
   frequency: string
-  quantity: number
+  quantity_dispensed: number | null
   refills: number
-  pharmacy: string
   status: string
   prescribed_at: string | null
   created_at: string
@@ -81,8 +79,6 @@ interface LabOrder {
 
 interface ProviderNote {
   id: string
-  visit_id: string | null
-  title: string | null
   content: string
   note_type: string
   created_at: string
@@ -133,15 +129,13 @@ export default function PatientProfilePage() {
       setNotesRefreshing(true)
     }
     if (recordingState === 'done') {
-      supabase
-        .from('encounter_notes')
-        .select('id', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .neq('status', 'failed')
-        .then(({ count }) => {
-          setEncounterNotesCount(count ?? 0)
+      fetch(`/api/provider/patients/${patientId}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setEncounterNotesCount(data.encounterNotesCount ?? 0)
           setNotesRefreshing(false)
         })
+        .catch(() => setNotesRefreshing(false))
     }
   }, [recordingState, patientId])
 
@@ -157,67 +151,20 @@ export default function PatientProfilePage() {
   const loadPatientData = async () => {
     setLoading(true)
     try {
-      const [patientRes, intakesRes, visitsRes, subsRes, rxRes, labRes, notesRes, encounterRes, latestEncounterRes] = await Promise.all([
-        supabase
-          .from('patients')
-          .select('id, profile_id, date_of_birth, phone, state, profiles ( first_name, last_name, email )')
-          .eq('id', patientId)
-          .single(),
-        supabase
-          .from('intakes')
-          .select('id, status, answers, ai_brief, provider_notes, submitted_at, reviewed_at')
-          .eq('patient_id', patientId)
-          .order('submitted_at', { ascending: false }),
-        supabase
-          .from('visits')
-          .select('id, intake_id, visit_type, visit_date, symptom_scores, provider_notes, treatment_updates')
-          .eq('patient_id', patientId)
-          .order('visit_date', { ascending: false }),
-        supabase
-          .from('subscriptions')
-          .select('id, status, plan_type, current_period_end')
-          .eq('patient_id', patientId),
-        supabase
-          .from('prescriptions')
-          .select('id, medication_name, dosage, frequency, quantity, refills, pharmacy, status, prescribed_at, created_at')
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('lab_orders')
-          .select('id, lab_partner, tests, clinical_indication, status, results, ordered_at, created_at')
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('provider_notes')
-          .select('id, visit_id, title, content, note_type, created_at, updated_at')
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('encounter_notes')
-          .select('id', { count: 'exact', head: true })
-          .eq('patient_id', patientId)
-          .neq('status', 'failed'),
-        supabase
-          .from('encounter_notes')
-          .select('assessment, plan')
-          .eq('patient_id', patientId)
-          .eq('status', 'signed')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ])
+      const res = await fetch(`/api/provider/patients/${patientId}`)
+      if (!res.ok) throw new Error(`Failed to load patient: ${res.status}`)
+      const data = await res.json()
 
-      if (patientRes.error) throw patientRes.error
-      const patientData = patientRes.data as unknown as PatientProfile
+      const patientData = data.patient as PatientProfile
       setPatient(patientData)
-      setIntakes(intakesRes.data || [])
-      setVisits((visitsRes.data || []) as Visit[])
-      setSubscriptions(subsRes.data || [])
-      setPrescriptions((rxRes.data || []) as Prescription[])
-      setLabOrders((labRes.data || []) as LabOrder[])
-      setProviderNotes((notesRes.data || []) as ProviderNote[])
-      setEncounterNotesCount(encounterRes.count ?? 0)
-      setLatestEncounterNote(latestEncounterRes.data ?? null)
+      setIntakes(data.intakes || [])
+      setVisits(data.visits || [])
+      setSubscriptions(data.subscriptions || [])
+      setPrescriptions(data.prescriptions || [])
+      setLabOrders(data.labOrders || [])
+      setProviderNotes(data.providerNotes || [])
+      setEncounterNotesCount(data.encounterNotesCount ?? 0)
+      setLatestEncounterNote(data.latestEncounterNote ?? null)
 
       // Fetch message thread count
       try {
@@ -227,7 +174,7 @@ export default function PatientProfilePage() {
       } catch {}
 
       // Set chat context for AI assistant
-      const latestIntake = (intakesRes.data || [])[0]
+      const latestIntake = (data.intakes || [])[0]
       setPageContext({
         page: 'patient-profile',
         patientId,
@@ -243,30 +190,27 @@ export default function PatientProfilePage() {
   }
 
   const reloadPrescriptions = async () => {
-    const { data } = await supabase
-      .from('prescriptions')
-      .select('id, medication_name, dosage, frequency, quantity, refills, pharmacy, status, prescribed_at, created_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-    setPrescriptions((data || []) as Prescription[])
+    const res = await fetch(`/api/provider/patients/${patientId}`)
+    if (res.ok) {
+      const data = await res.json()
+      setPrescriptions(data.prescriptions || [])
+    }
   }
 
   const reloadProviderNotes = async () => {
-    const { data } = await supabase
-      .from('provider_notes')
-      .select('id, visit_id, title, content, note_type, created_at, updated_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-    setProviderNotes((data || []) as ProviderNote[])
+    const res = await fetch(`/api/provider/patients/${patientId}`)
+    if (res.ok) {
+      const data = await res.json()
+      setProviderNotes(data.providerNotes || [])
+    }
   }
 
   const reloadLabOrders = async () => {
-    const { data } = await supabase
-      .from('lab_orders')
-      .select('id, lab_partner, tests, clinical_indication, status, results, ordered_at, created_at')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-    setLabOrders((data || []) as LabOrder[])
+    const res = await fetch(`/api/provider/patients/${patientId}`)
+    if (res.ok) {
+      const data = await res.json()
+      setLabOrders(data.labOrders || [])
+    }
   }
 
   const getAge = () => {

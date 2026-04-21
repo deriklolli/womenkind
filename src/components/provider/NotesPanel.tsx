@@ -11,8 +11,6 @@ interface Visit {
 
 interface ProviderNote {
   id: string
-  visit_id: string | null
-  title: string | null
   content: string
   note_type: string
   created_at: string
@@ -90,7 +88,7 @@ function buildTimeline(
 
   for (const n of notes) {
     items.push({ kind: 'manual', id: n.id, date: n.created_at,
-      title: n.title || NOTE_TYPES.find(t => t.value === n.note_type)?.label || 'Note',
+      title: NOTE_TYPES.find(t => t.value === n.note_type)?.label || 'Note',
       content: n.content, noteType: n.note_type })
   }
 

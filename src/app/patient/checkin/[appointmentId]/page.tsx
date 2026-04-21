@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
-
 const QUESTIONS = [
   {
     domain: 'vasomotor',
@@ -81,26 +79,21 @@ export default function CheckInPage() {
         }
 
         // Fetch appointment info for display
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
+        const meRes = await fetch('/api/patient/me')
+        if (!meRes.ok) {
           router.replace('/patient/login')
           return
         }
+        const meData = await meRes.json()
 
-        const { data: patientRow } = await supabase
-          .from('patients')
-          .select('id')
-          .eq('profile_id', session.user.id)
-          .single()
-
-        if (!patientRow) {
+        if (!meData.patientId) {
           setError('Could not find your patient record.')
           setLoading(false)
           return
         }
 
         const aptFetchRes = await fetch(
-          `/api/scheduling/appointments?patientId=${patientRow.id}`
+          `/api/scheduling/appointments?patientId=${meData.patientId}`
         )
         const aptFetchData = await aptFetchRes.json()
         const found = (aptFetchData.appointments || []).find(

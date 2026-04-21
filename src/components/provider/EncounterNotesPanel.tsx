@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 
 interface EncounterNote {
   id: string
@@ -58,15 +57,13 @@ export default function EncounterNotesPanel({ patientId, providerId }: Props) {
   const fetchNotes = async () => {
     setLoading(true)
     try {
-      const { data } = await supabase
-        .from('encounter_notes')
-        .select('id, source, status, chief_complaint, hpi, ros, assessment, plan, transcript, signed_at, created_at, appointment_id')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
+      const res = await fetch(`/api/provider/encounter-notes?patientId=${encodeURIComponent(patientId)}`)
+      if (!res.ok) throw new Error('Failed to fetch')
+      const { notes: data } = await res.json()
       setNotes(data || [])
 
       // Auto-expand the first draft note
-      const firstDraft = (data || []).find(n => n.status === 'draft')
+      const firstDraft = (data || []).find((n: EncounterNote) => n.status === 'draft')
       if (firstDraft) setExpandedId(firstDraft.id)
     } catch (err) {
       console.error('Failed to fetch encounter notes:', err)
@@ -89,11 +86,12 @@ export default function EncounterNotesPanel({ patientId, providerId }: Props) {
   const saveEdits = async (noteId: string) => {
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('encounter_notes')
-        .update(edits)
-        .eq('id', noteId)
-      if (error) throw error
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(edits),
+      })
+      if (!res.ok) throw new Error('Failed to save')
       setNotes(prev => prev.map(n => n.id === noteId ? { ...n, ...edits } : n))
       setEditingId(null)
     } catch (err) {
@@ -106,11 +104,10 @@ export default function EncounterNotesPanel({ patientId, providerId }: Props) {
   const deleteNote = async (noteId: string) => {
     setDeleting(true)
     try {
-      const { error } = await supabase
-        .from('encounter_notes')
-        .delete()
-        .eq('id', noteId)
-      if (error) throw error
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete')
       setNotes(prev => prev.filter(n => n.id !== noteId))
       setConfirmDeleteId(null)
       if (expandedId === noteId) setExpandedId(null)
@@ -124,12 +121,13 @@ export default function EncounterNotesPanel({ patientId, providerId }: Props) {
   const signNote = async (noteId: string) => {
     setSigning(true)
     try {
+      const res = await fetch(`/api/provider/encounter-notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sign: true }),
+      })
+      if (!res.ok) throw new Error('Failed to sign')
       const signedAt = new Date().toISOString()
-      const { error } = await supabase
-        .from('encounter_notes')
-        .update({ status: 'signed', signed_at: signedAt })
-        .eq('id', noteId)
-      if (error) throw error
       setNotes(prev => prev.map(n =>
         n.id === noteId ? { ...n, status: 'signed', signed_at: signedAt } : n
       ))

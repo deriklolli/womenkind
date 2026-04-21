@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { supabase } from '@/lib/supabase-browser'
 import { getComponents, type PresentationComponent } from '@/lib/presentation-components'
 import ComponentSection from '@/components/presentation/ComponentSection'
 
@@ -20,16 +19,12 @@ interface Presentation {
   created_at: string
 }
 
-interface PatientInfo {
-  profiles: { first_name: string | null; last_name: string | null }
-}
-
 export default function PresentationViewerPage() {
   const params = useParams()
   const presentationId = params.id as string
 
   const [presentation, setPresentation] = useState<Presentation | null>(null)
-  const [patient, setPatient] = useState<PatientInfo | null>(null)
+  const [firstName, setFirstName] = useState<string>('there')
   const [components, setComponents] = useState<PresentationComponent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -40,27 +35,16 @@ export default function PresentationViewerPage() {
 
   const loadPresentation = async () => {
     try {
-      const { data: pres, error: presError } = await supabase
-        .from('care_presentations')
-        .select('*')
-        .eq('id', presentationId)
-        .single()
-
-      if (presError || !pres) {
+      const res = await fetch(`/api/presentations/${presentationId}`)
+      if (!res.ok) {
         setError('Presentation not found')
         return
       }
 
+      const { presentation: pres, patientName } = await res.json()
+
       setPresentation(pres as Presentation)
-
-      // Load patient info
-      const { data: patientData } = await supabase
-        .from('patients')
-        .select('profiles ( first_name, last_name )')
-        .eq('id', pres.patient_id)
-        .single()
-
-      setPatient(patientData as unknown as PatientInfo)
+      setFirstName(patientName || 'there')
 
       // Resolve components
       const comps = getComponents(pres.selected_components)
@@ -68,10 +52,11 @@ export default function PresentationViewerPage() {
 
       // Mark as viewed if status is 'sent'
       if (pres.status === 'sent') {
-        await supabase
-          .from('care_presentations')
-          .update({ status: 'viewed', viewed_at: new Date().toISOString() })
-          .eq('id', presentationId)
+        await fetch(`/api/presentations/${presentationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'viewed', viewed_at: new Date().toISOString() }),
+        })
       }
     } catch (err) {
       console.error('Failed to load presentation:', err)
@@ -80,8 +65,6 @@ export default function PresentationViewerPage() {
       setLoading(false)
     }
   }
-
-  const firstName = patient?.profiles?.first_name || 'there'
 
   if (loading) {
     return (

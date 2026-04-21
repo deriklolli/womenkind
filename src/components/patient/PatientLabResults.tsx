@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 import LabResultsVisual from './LabResultsVisual'
 
 interface LabResultItem {
@@ -47,13 +46,9 @@ export default function PatientLabResults({ patientId }: PatientLabResultsProps)
 
   useEffect(() => {
     async function fetchLabs() {
-      const { data, error } = await supabase
-        .from('lab_orders')
-        .select('id, lab_partner, tests, clinical_indication, status, results, ordered_at, created_at')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
-
-      if (!error && data) {
+      const res = await fetch(`/api/patient/labs?patientId=${patientId}`)
+      if (res.ok) {
+        const { labOrders: data } = await res.json()
         setLabOrders(data as LabOrder[])
         // Auto-expand the first order with results
         const firstWithResults = data.find((o: any) => o.status === 'results_available' && o.results)
