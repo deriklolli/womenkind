@@ -1,48 +1,64 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles } from '@/lib/db/schema'
+import { profiles, providers } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function GET() {
-  const session = await getServerSession()
-  if (!session || session.role !== 'provider' || !session.providerId) {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll() {},
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const meta = user.user_metadata || {}
+  if (meta.role !== 'provider') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Try to get name from RDS profiles table
-  const profile = await db.query.profiles.findFirst({
-    where: eq(profiles.id, session.userId),
-    columns: { first_name: true, last_name: true },
+  // Ensure profiles record exists in RDS
+  const existingProfile = await db.query.profiles.findFirst({
+    where: eq(profiles.id, user.id),
   })
-
-  // Fall back to Supabase auth metadata for name
-  let providerName = ''
-  if (profile?.first_name || profile?.last_name) {
-    providerName = `Dr. ${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-  } else {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll() {},
-        },
-      }
-    )
-    const { data: { user } } = await supabase.auth.getUser()
-    const meta = user?.user_metadata || {}
-    if (meta.first_name || meta.last_name) {
-      providerName = `Dr. ${meta.first_name || ''} ${meta.last_name || ''}`.trim()
-    }
+  if (!existingProfile) {
+    await db.insert(profiles).values({
+      id: user.id,
+      first_name: meta.first_name || null,
+      last_name: meta.last_name || null,
+      email: user.email || null,
+    }).onConflictDoNothing()
   }
 
-  return NextResponse.json({
-    providerId: session.providerId,
-    providerName: providerName || 'Dr. Urban',
+  // Ensure providers record exists in RDS (idempotent)
+  let provider = await db.query.providers.findFirst({
+    where: eq(providers.profile_id, user.id),
+    columns: { id: true },
   })
+  if (!provider) {
+    const [created] = await db.insert(providers)
+      .values({ profile_id: user.id })
+      .onConflictDoNothing()
+      .returning({ id: providers.id })
+    provider = created
+  }
+
+  if (!provider) return NextResponse.json({ error: 'Failed to resolve provider' }, { status: 500 })
+
+  const firstName = existingProfile?.first_name || meta.first_name || ''
+  const lastName = existingProfile?.last_name || meta.last_name || ''
+  const providerName = (firstName || lastName)
+    ? `Dr. ${firstName} ${lastName}`.trim()
+    : 'Dr. Urban'
+
+  return NextResponse.json({ providerId: provider.id, providerName })
 }
