@@ -1240,7 +1240,7 @@ export default function PatientDashboardPage() {
                 <p className="text-sm font-sans text-aubergine/40 mb-6">
                   Submit a refill request and Dr. Urban&apos;s team will review it within 1-2 business days.
                 </p>
-                <PrescriptionList patientId={patient.patientId} />
+                <PrescriptionList patientId={patient.patientId} providerId={patient.providerId ?? ''} />
               </div>
             )}
 
@@ -1253,7 +1253,7 @@ export default function PatientDashboardPage() {
                 <p className="text-sm font-sans text-aubergine/40 mb-6">
                   Send a secure message to Dr. Urban&apos;s care team. You&apos;ll receive a response within 1-2 business days.
                 </p>
-                <PatientMessages patientId={patient.patientId} />
+                <PatientMessages patientId={patient.patientId} providerId={patient.providerId ?? ''} />
               </div>
             )}
 

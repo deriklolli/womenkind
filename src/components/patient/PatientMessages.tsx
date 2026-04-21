@@ -27,11 +27,10 @@ interface Thread {
 
 interface Props {
   patientId: string
+  providerId: string
 }
 
-const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
-
-export default function PatientMessages({ patientId }: Props) {
+export default function PatientMessages({ patientId, providerId }: Props) {
   const [threadId, setThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,7 +94,7 @@ export default function PatientMessages({ patientId }: Props) {
         body: JSON.stringify({
           senderId: patientId,
           senderType: 'patient',
-          recipientId: PROVIDER_ID,
+          recipientId: providerId,
           body: replyBody.trim(),
           threadId: threadId ?? undefined,
         }),
