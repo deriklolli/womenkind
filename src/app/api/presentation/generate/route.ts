@@ -19,14 +19,13 @@ export async function POST(req: Request) {
 
     const {
       patientId,
-      providerId,
       selectedComponents,
       componentNotes,
       welcomeMessage,
       closingMessage,
     } = await req.json()
 
-    if (!patientId || !providerId || !selectedComponents?.length) {
+    if (!patientId || !selectedComponents?.length) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -51,7 +50,7 @@ export async function POST(req: Request) {
       .insert(care_presentations)
       .values({
         patient_id: patientId,
-        provider_id: providerId,
+        provider_id: session.providerId!,
         intake_id: latestIntake?.id || null,
         selected_components: selectedComponents,
         component_notes: componentNotes,

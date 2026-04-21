@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { prescriptions } from '@/lib/db/schema'
+import { prescriptions, appointments } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { sendPrescription } from '@/lib/canvas-client'
 
@@ -26,6 +27,22 @@ export async function POST(request: Request) {
 
     if (!patientId || !medicationName || !dosage || !frequency) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Verify the provider has a care relationship with this patient
+    const [relationship] = await db
+      .select({ id: appointments.id })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.provider_id, session.providerId!),
+          eq(appointments.patient_id, patientId)
+        )
+      )
+      .limit(1)
+
+    if (!relationship) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Send via Canvas (mocked)

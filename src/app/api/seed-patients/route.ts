@@ -502,14 +502,15 @@ const PERSONAS = [
 ]
 
 export async function POST(req: Request) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.VERCEL_ENV === 'production') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
   // Simple auth check — require a secret or just check for dev/preview
   const { secret } = await req.json().catch(() => ({ secret: '' }))
-  if (secret !== 'womenkind-seed-2026') {
-    return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
+  const seedSecret = process.env.SEED_SECRET
+  if (!seedSecret || secret !== seedSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Supabase client used only for Auth Admin API (user creation/lookup)

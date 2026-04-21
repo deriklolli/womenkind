@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles } from '@/lib/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles, appointments } from '@/lib/db/schema'
+import { eq, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
 
@@ -93,7 +93,7 @@ async function getPatientContext(patientId: string) {
   }
 }
 
-async function executeAction(action: string, params: Record<string, any>) {
+async function executeAction(action: string, params: Record<string, any>, context: ChatContext | undefined, sessionProviderId: string | null) {
   try {
     switch (action) {
       case 'add_risk_flag': {
@@ -141,11 +141,16 @@ async function executeAction(action: string, params: Record<string, any>) {
       }
 
       case 'add_provider_note': {
-        const { patientId, providerId, noteType, content } = params
+        const { patientId, noteType, content } = params
+
+        if (patientId !== context?.patientId) {
+          console.warn('add_provider_note: params.patientId does not match context.patientId — skipping action')
+          return { success: false, error: 'Patient ID mismatch' }
+        }
 
         await db.insert(provider_notes).values({
           patient_id: patientId,
-          provider_id: providerId || 'b0000000-0000-0000-0000-000000000001',
+          provider_id: sessionProviderId!,
           note_type: noteType || 'general',
           content,
         })
@@ -197,8 +202,20 @@ export async function POST(req: Request) {
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
-      if (context?.patientId && session.patientId && session.patientId !== context.patientId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      if (session.providerId) {
+        const relationship = await db
+          .select({ id: appointments.id })
+          .from(appointments)
+          .where(
+            and(
+              eq(appointments.provider_id, session.providerId),
+              eq(appointments.patient_id, context.patientId)
+            )
+          )
+          .limit(1)
+        if (relationship.length === 0) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
       }
       const data = await getPatientContext(context.patientId)
       patientContext = `
@@ -287,7 +304,7 @@ RULES:
     if (actionMatch) {
       try {
         const actionData = JSON.parse(actionMatch[1])
-        const result = await executeAction(actionData.action, actionData.params)
+        const result = await executeAction(actionData.action, actionData.params, context, session.providerId ?? null)
 
         // Remove the action block from the displayed response
         responseText = responseText.replace(/```action\n[\s\S]*?\n```/, '').trim()

@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest) {
     const [data] = await db
       .update(appointments)
       .set(updates)
-      .where(eq(appointments.id, appointmentId))
+      .where(and(eq(appointments.id, appointmentId), eq(appointments.provider_id, session.providerId!)))
       .returning()
 
     if (!data) {
