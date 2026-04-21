@@ -1,13 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { patient_wearable_connections, wearable_metrics, wearable_sync_log } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { encrypt, decrypt } from './encryption'
-
-// ── Supabase (service role) ──────────────────────────────────────────
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -120,35 +114,33 @@ async function refreshOuraToken(refreshTokenEncrypted: string): Promise<OuraToke
 
 /** Get a valid Oura access token, auto-refreshing if expired (5-min buffer). */
 export async function getValidOuraToken(connectionId: string): Promise<string> {
-  const supabase = getSupabase()
+  const conn = await db.query.patient_wearable_connections.findFirst({
+    where: and(
+      eq(patient_wearable_connections.id, connectionId),
+      eq(patient_wearable_connections.is_active, true)
+    ),
+  })
 
-  const { data: conn, error } = await supabase
-    .from('patient_wearable_connections')
-    .select('*')
-    .eq('id', connectionId)
-    .eq('is_active', true)
-    .single()
-
-  if (error || !conn) throw new Error('No active Oura connection found')
+  if (!conn) throw new Error('No active Oura connection found')
 
   // If token is still valid (with 5-minute buffer), return it
   if (new Date(conn.token_expires_at) > new Date(Date.now() + 5 * 60 * 1000)) {
-    return decrypt(conn.access_token_encrypted)
+    return decrypt(conn.access_token_encrypted!)
   }
 
   // Refresh the token
-  const tokens = await refreshOuraToken(conn.refresh_token_encrypted)
+  const tokens = await refreshOuraToken(conn.refresh_token_encrypted!)
 
   // Update stored tokens
-  await supabase
-    .from('patient_wearable_connections')
-    .update({
+  await db
+    .update(patient_wearable_connections)
+    .set({
       access_token_encrypted: encrypt(tokens.access_token),
       refresh_token_encrypted: encrypt(tokens.refresh_token),
-      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
+      updated_at: new Date(),
     })
-    .eq('id', conn.id)
+    .where(eq(patient_wearable_connections.id, conn.id))
 
   return tokens.access_token
 }
@@ -160,53 +152,75 @@ export async function saveOuraConnection(
   patientId: string,
   tokens: OuraTokenResponse
 ): Promise<string> {
-  const supabase = getSupabase()
-
-  const { data, error } = await supabase
-    .from('patient_wearable_connections')
-    .upsert({
+  const rows = await db
+    .insert(patient_wearable_connections)
+    .values({
       patient_id: patientId,
       provider: 'oura',
       access_token_encrypted: encrypt(tokens.access_token),
       refresh_token_encrypted: encrypt(tokens.refresh_token),
-      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
       is_active: true,
-      connected_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'patient_id,provider' })
-    .select('id')
-    .single()
+      connected_at: new Date(),
+      updated_at: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [patient_wearable_connections.patient_id, patient_wearable_connections.provider],
+      set: {
+        access_token_encrypted: encrypt(tokens.access_token),
+        refresh_token_encrypted: encrypt(tokens.refresh_token),
+        token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
+        is_active: true,
+        updated_at: new Date(),
+      },
+    })
+    .returning({ id: patient_wearable_connections.id })
 
-  if (error) throw error
-  return data.id
+  return rows[0].id
 }
 
 /** Check if a patient has an active Oura connection. */
 export async function getOuraConnection(patientId: string): Promise<WearableConnection | null> {
-  const supabase = getSupabase()
-  const { data } = await supabase
-    .from('patient_wearable_connections')
-    .select('*')
-    .eq('patient_id', patientId)
-    .eq('provider', 'oura')
-    .eq('is_active', true)
-    .maybeSingle()
-  return data
+  const conn = await db.query.patient_wearable_connections.findFirst({
+    where: and(
+      eq(patient_wearable_connections.patient_id, patientId),
+      eq(patient_wearable_connections.provider, 'oura'),
+      eq(patient_wearable_connections.is_active, true)
+    ),
+  })
+
+  if (!conn) return null
+
+  return {
+    id: conn.id,
+    patient_id: conn.patient_id,
+    provider: conn.provider,
+    access_token_encrypted: conn.access_token_encrypted ?? '',
+    refresh_token_encrypted: conn.refresh_token_encrypted ?? '',
+    token_expires_at: conn.token_expires_at.toISOString(),
+    device_user_id: conn.device_user_id,
+    connected_at: conn.connected_at.toISOString(),
+    last_synced_at: conn.last_synced_at ? conn.last_synced_at.toISOString() : null,
+    is_active: conn.is_active,
+  }
 }
 
 /** Disconnect a patient's Oura ring. */
 export async function disconnectOura(patientId: string): Promise<void> {
-  const supabase = getSupabase()
-  await supabase
-    .from('patient_wearable_connections')
-    .update({
+  await db
+    .update(patient_wearable_connections)
+    .set({
       is_active: false,
       access_token_encrypted: null,
       refresh_token_encrypted: null,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date(),
     })
-    .eq('patient_id', patientId)
-    .eq('provider', 'oura')
+    .where(
+      and(
+        eq(patient_wearable_connections.patient_id, patientId),
+        eq(patient_wearable_connections.provider, 'oura')
+      )
+    )
 }
 
 // ── Data Fetching & Normalization ────────────────────────────────────
@@ -350,8 +364,6 @@ export async function syncOuraData(
   patientId: string,
   days: number = 7
 ): Promise<{ synced: number; status: string }> {
-  const supabase = getSupabase()
-
   const endDate = new Date().toISOString().split('T')[0]
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
@@ -376,24 +388,34 @@ export async function syncOuraData(
         metric_date: m.metric_date,
         metric_type: m.metric_type,
         value: m.value,
-        synced_at: new Date().toISOString(),
+        synced_at: new Date(),
       }))
 
-      const { error } = await supabase
-        .from('wearable_metrics')
-        .upsert(rows, { onConflict: 'patient_id,metric_date,metric_type' })
-
-      if (error) throw error
+      await db
+        .insert(wearable_metrics)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: [
+            wearable_metrics.patient_id,
+            wearable_metrics.metric_date,
+            wearable_metrics.metric_type,
+          ],
+          set: {
+            value: wearable_metrics.value,
+            connection_id: wearable_metrics.connection_id,
+            synced_at: new Date(),
+          },
+        })
     }
 
     // Update last_synced_at
-    await supabase
-      .from('patient_wearable_connections')
-      .update({ last_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', connectionId)
+    await db
+      .update(patient_wearable_connections)
+      .set({ last_synced_at: new Date(), updated_at: new Date() })
+      .where(eq(patient_wearable_connections.id, connectionId))
 
     // Log success
-    await supabase.from('wearable_sync_log').insert({
+    await db.insert(wearable_sync_log).values({
       connection_id: connectionId,
       records_fetched: metrics.length,
       status: 'success',
@@ -404,14 +426,15 @@ export async function syncOuraData(
     console.error('[OURA SYNC ERROR] connectionId:', connectionId, '| message:', err.message, '| stack:', err.stack)
 
     // Log error
-    const { error: logError } = await supabase.from('wearable_sync_log').insert({
-      connection_id: connectionId,
-      records_fetched: 0,
-      status: 'error',
-      error_message: err.message,
-    })
-    if (logError) {
-      console.error('[OURA SYNC] Failed to write sync log:', logError.message)
+    try {
+      await db.insert(wearable_sync_log).values({
+        connection_id: connectionId,
+        records_fetched: 0,
+        status: 'error',
+        error_message: err.message,
+      })
+    } catch (logErr: any) {
+      console.error('[OURA SYNC] Failed to write sync log:', logErr.message)
     }
 
     return { synced: 0, status: 'error' }

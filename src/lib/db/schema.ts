@@ -335,6 +335,34 @@ export const wearable_sync_log = pgTable('wearable_sync_log', {
   created_at:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// ── Provider Calendar Connections ─────────────────────────────────────────────
+export const provider_calendar_connections = pgTable('provider_calendar_connections', {
+  id:                      uuid('id').primaryKey().defaultRandom(),
+  provider_id:             uuid('provider_id').notNull().references(() => providers.id),
+  google_email:            text('google_email'),
+  google_calendar_id:      text('google_calendar_id').notNull().default('primary'),
+  access_token_encrypted:  text('access_token_encrypted').notNull(),
+  refresh_token_encrypted: text('refresh_token_encrypted').notNull(),
+  token_expires_at:        timestamp('token_expires_at', { withTimezone: true }).notNull(),
+  timezone:                text('timezone').notNull().default('America/Denver'),
+  is_active:               boolean('is_active').notNull().default(true),
+  synced_at:               timestamp('synced_at', { withTimezone: true }),
+  created_at:              timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at:              timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniq: unique().on(t.provider_id),
+}))
+
+// ── Calendar Event Logs ───────────────────────────────────────────────────────
+export const calendar_event_logs = pgTable('calendar_event_logs', {
+  id:             uuid('id').primaryKey().defaultRandom(),
+  provider_id:    uuid('provider_id').notNull().references(() => providers.id),
+  google_event_id: text('google_event_id'),
+  action:         text('action').notNull(),
+  error_message:  text('error_message'),
+  created_at:     timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ── Care Presentations ────────────────────────────────────────────────────────
 export const care_presentations = pgTable('care_presentations', {
   id:                  uuid('id').primaryKey().defaultRandom(),

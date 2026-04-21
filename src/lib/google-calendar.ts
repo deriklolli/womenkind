@@ -1,13 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { db } from '@/lib/db'
+import { provider_calendar_connections, calendar_event_logs } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { encrypt, decrypt } from './encryption'
-
-// ── Supabase (service role) ──────────────────────────────────────────
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 // ── Types ────────────────────────────────────────────────────────────
 export interface BusyTime {
@@ -110,16 +104,14 @@ async function refreshAccessToken(refreshTokenEncrypted: string): Promise<TokenR
 
 /** Get a valid access token for a provider, auto-refreshing if expired. */
 export async function getValidAccessToken(providerId: string): Promise<string> {
-  const supabase = getSupabase()
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+  })
 
-  const { data: conn, error } = await supabase
-    .from('provider_calendar_connections')
-    .select('*')
-    .eq('provider_id', providerId)
-    .eq('is_active', true)
-    .single()
-
-  if (error || !conn) throw new Error('No active calendar connection for this provider')
+  if (!conn) throw new Error('No active calendar connection for this provider')
 
   // If token is still valid (with 5-minute buffer), return it
   if (new Date(conn.token_expires_at) > new Date(Date.now() + 5 * 60 * 1000)) {
@@ -130,14 +122,14 @@ export async function getValidAccessToken(providerId: string): Promise<string> {
   const tokens = await refreshAccessToken(conn.refresh_token_encrypted)
 
   // Update stored tokens
-  await supabase
-    .from('provider_calendar_connections')
-    .update({
+  await db
+    .update(provider_calendar_connections)
+    .set({
       access_token_encrypted: encrypt(tokens.access_token),
-      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
+      updated_at: new Date(),
     })
-    .eq('id', conn.id)
+    .where(eq(provider_calendar_connections.id, conn.id))
 
   return tokens.access_token
 }
@@ -161,48 +153,64 @@ export async function saveCalendarConnection(
   googleEmail: string,
   timezone: string = 'America/Denver'
 ) {
-  const supabase = getSupabase()
-
-  const { error } = await supabase
-    .from('provider_calendar_connections')
-    .upsert({
+  await db
+    .insert(provider_calendar_connections)
+    .values({
       provider_id: providerId,
       google_email: googleEmail,
       google_calendar_id: 'primary',
       access_token_encrypted: encrypt(tokens.access_token),
       refresh_token_encrypted: encrypt(tokens.refresh_token!),
-      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+      token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
       timezone,
       is_active: true,
-      synced_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'provider_id' })
-
-  if (error) throw error
+      synced_at: new Date(),
+      updated_at: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: provider_calendar_connections.provider_id,
+      set: {
+        google_email: googleEmail,
+        google_calendar_id: 'primary',
+        access_token_encrypted: encrypt(tokens.access_token),
+        refresh_token_encrypted: encrypt(tokens.refresh_token!),
+        token_expires_at: new Date(Date.now() + tokens.expires_in * 1000),
+        timezone,
+        is_active: true,
+        synced_at: new Date(),
+        updated_at: new Date(),
+      },
+    })
 }
 
 /** Check if Google Calendar is connected for a provider. */
 export async function isGoogleCalendarConnected(providerId: string): Promise<boolean> {
-  const supabase = getSupabase()
-  const { data } = await supabase
-    .from('provider_calendar_connections')
-    .select('id')
-    .eq('provider_id', providerId)
-    .eq('is_active', true)
-    .maybeSingle()
-  return !!data
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+    columns: { id: true },
+  })
+  return !!conn
 }
 
 /** Get connection info (non-sensitive) for display. */
 export async function getCalendarConnectionInfo(providerId: string) {
-  const supabase = getSupabase()
-  const { data } = await supabase
-    .from('provider_calendar_connections')
-    .select('google_email, timezone, synced_at, is_active, created_at')
-    .eq('provider_id', providerId)
-    .eq('is_active', true)
-    .maybeSingle()
-  return data
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+    columns: {
+      google_email: true,
+      timezone: true,
+      synced_at: true,
+      is_active: true,
+      created_at: true,
+    },
+  })
+  return conn ?? null
 }
 
 /** Fetch busy times from a provider's Google Calendar. */
@@ -219,13 +227,13 @@ export async function getProviderBusyTimes(
     return [] // No calendar connected — graceful degradation
   }
 
-  const supabase = getSupabase()
-  const { data: conn } = await supabase
-    .from('provider_calendar_connections')
-    .select('google_calendar_id')
-    .eq('provider_id', providerId)
-    .eq('is_active', true)
-    .single()
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+    columns: { google_calendar_id: true },
+  })
 
   const calendarId = conn?.google_calendar_id || 'primary'
 
@@ -246,7 +254,7 @@ export async function getProviderBusyTimes(
   if (!res.ok) {
     const text = await res.text()
     console.error('Google Calendar freeBusy error:', text)
-    await supabase.from('calendar_event_logs').insert({
+    await db.insert(calendar_event_logs).values({
       provider_id: providerId,
       action: 'sync_error',
       error_message: `freeBusy failed: ${res.status} — ${text}`,
@@ -257,10 +265,10 @@ export async function getProviderBusyTimes(
   const data = await res.json()
   const busySlots = data.calendars?.[calendarId]?.busy || []
 
-  await supabase
-    .from('provider_calendar_connections')
-    .update({ synced_at: new Date().toISOString() })
-    .eq('provider_id', providerId)
+  await db
+    .update(provider_calendar_connections)
+    .set({ synced_at: new Date() })
+    .where(eq(provider_calendar_connections.provider_id, providerId))
 
   return busySlots.map((slot: { start: string; end: string }) => ({
     starts_at: slot.start,
@@ -277,8 +285,6 @@ export async function createCalendarEvent(event: {
   endTime: string
   patientEmail?: string
 }): Promise<string> {
-  const supabase = getSupabase()
-
   let accessToken: string
   try {
     accessToken = await getValidAccessToken(event.providerId)
@@ -288,12 +294,13 @@ export async function createCalendarEvent(event: {
     return `local_${Date.now()}`
   }
 
-  const { data: conn } = await supabase
-    .from('provider_calendar_connections')
-    .select('google_calendar_id, timezone')
-    .eq('provider_id', event.providerId)
-    .eq('is_active', true)
-    .single()
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, event.providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+    columns: { google_calendar_id: true, timezone: true },
+  })
 
   const calendarId = conn?.google_calendar_id || 'primary'
   const tz = conn?.timezone || 'America/Denver'
@@ -322,7 +329,7 @@ export async function createCalendarEvent(event: {
   if (!res.ok) {
     const text = await res.text()
     console.error('Google Calendar create event error:', text)
-    await supabase.from('calendar_event_logs').insert({
+    await db.insert(calendar_event_logs).values({
       provider_id: event.providerId,
       action: 'sync_error',
       error_message: `create failed: ${res.status} — ${text}`,
@@ -332,7 +339,7 @@ export async function createCalendarEvent(event: {
 
   const created = await res.json()
 
-  await supabase.from('calendar_event_logs').insert({
+  await db.insert(calendar_event_logs).values({
     provider_id: event.providerId,
     google_event_id: created.id,
     action: 'created',
@@ -348,8 +355,6 @@ export async function cancelCalendarEvent(
 ): Promise<void> {
   if (googleEventId.startsWith('local_')) return // Not a real Google event
 
-  const supabase = getSupabase()
-
   let accessToken: string
   try {
     accessToken = await getValidAccessToken(providerId)
@@ -357,12 +362,13 @@ export async function cancelCalendarEvent(
     return // Can't cancel if no connection
   }
 
-  const { data: conn } = await supabase
-    .from('provider_calendar_connections')
-    .select('google_calendar_id')
-    .eq('provider_id', providerId)
-    .eq('is_active', true)
-    .single()
+  const conn = await db.query.provider_calendar_connections.findFirst({
+    where: and(
+      eq(provider_calendar_connections.provider_id, providerId),
+      eq(provider_calendar_connections.is_active, true)
+    ),
+    columns: { google_calendar_id: true },
+  })
 
   const calendarId = conn?.google_calendar_id || 'primary'
 
@@ -375,7 +381,7 @@ export async function cancelCalendarEvent(
   )
 
   if (res.ok || res.status === 410) {
-    await supabase.from('calendar_event_logs').insert({
+    await db.insert(calendar_event_logs).values({
       provider_id: providerId,
       google_event_id: googleEventId,
       action: 'deleted',
@@ -383,7 +389,7 @@ export async function cancelCalendarEvent(
   } else {
     const text = await res.text()
     console.error('Google Calendar delete error:', text)
-    await supabase.from('calendar_event_logs').insert({
+    await db.insert(calendar_event_logs).values({
       provider_id: providerId,
       google_event_id: googleEventId,
       action: 'sync_error',
@@ -394,8 +400,6 @@ export async function cancelCalendarEvent(
 
 /** Disconnect a provider's Google Calendar. */
 export async function disconnectCalendar(providerId: string): Promise<void> {
-  const supabase = getSupabase()
-
   try {
     const accessToken = await getValidAccessToken(providerId)
     await fetch(`https://oauth2.googleapis.com/revoke?token=${accessToken}`, {
@@ -406,8 +410,8 @@ export async function disconnectCalendar(providerId: string): Promise<void> {
     // Token may already be invalid — fine
   }
 
-  await supabase
-    .from('provider_calendar_connections')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('provider_id', providerId)
+  await db
+    .update(provider_calendar_connections)
+    .set({ is_active: false, updated_at: new Date() })
+    .where(eq(provider_calendar_connections.provider_id, providerId))
 }

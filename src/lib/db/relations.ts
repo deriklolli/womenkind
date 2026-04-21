@@ -7,6 +7,7 @@ import {
   phi_access_log, lab_orders, provider_notes,
   patient_wearable_connections, wearable_metrics, wearable_sync_log,
   care_presentations,
+  provider_calendar_connections, calendar_event_logs,
 } from './schema'
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -38,6 +39,8 @@ export const providersRelations = relations(providers, ({ one, many }) => ({
   provider_availability: many(provider_availability),
   availability_overrides: many(availability_overrides),
   clinic_providers: many(clinic_providers),
+  provider_calendar_connections: many(provider_calendar_connections),
+  calendar_event_logs: many(calendar_event_logs),
 }))
 
 export const appointmentTypesRelations = relations(appointment_types, ({ one, many }) => ({
@@ -141,4 +144,13 @@ export const carePresentationsRelations = relations(care_presentations, ({ one }
   patients: one(patients, { fields: [care_presentations.patient_id], references: [patients.id] }),
   providers: one(providers, { fields: [care_presentations.provider_id], references: [providers.id] }),
   intakes: one(intakes, { fields: [care_presentations.intake_id], references: [intakes.id] }),
+}))
+
+export const providerCalendarConnectionsRelations = relations(provider_calendar_connections, ({ one, many }) => ({
+  providers: one(providers, { fields: [provider_calendar_connections.provider_id], references: [providers.id] }),
+  calendar_event_logs: many(calendar_event_logs),
+}))
+
+export const calendarEventLogsRelations = relations(calendar_event_logs, ({ one }) => ({
+  providers: one(providers, { fields: [calendar_event_logs.provider_id], references: [providers.id] }),
 }))
