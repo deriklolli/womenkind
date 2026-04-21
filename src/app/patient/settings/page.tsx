@@ -47,14 +47,9 @@ export default function SettingsPage() {
         return
       }
 
-      // Verify Supabase session before hitting the API
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/patient/login'); return }
-
       const res = await fetch('/api/patient/settings')
       if (!res.ok) {
         if (res.status === 401) { router.push('/patient/login'); return }
-        // 403 or 5xx — still authenticated, stay on page with empty state
         console.error('Settings API returned', res.status)
         return
       }
