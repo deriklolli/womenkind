@@ -20,7 +20,6 @@ type BookingStep =
   | 'inperson-form'    // in-person flow: request form
   | 'inperson-success' // in-person flow: submitted
 
-const DEMO_PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 const DEMO_PATIENT_ID = 'c0000000-0000-0000-0000-000000000001'
 
 interface AppointmentType {
@@ -53,7 +52,7 @@ export default function PatientSchedulePage() {
   const [loading, setLoading] = useState(true)
   const [isMember, setIsMember] = useState(false)
   const [patientId, setPatientId] = useState(DEMO_PATIENT_ID)
-  const [providerId] = useState(DEMO_PROVIDER_ID)
+  const [providerId, setProviderId] = useState('')
   const [patientName, setPatientName] = useState('Sarah Mitchell')
   const [patientEmail, setPatientEmail] = useState('dlolli@gmail.com')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -136,6 +135,7 @@ export default function PatientSchedulePage() {
     setPatientName(me.name || 'Patient')
     setPatientEmail(me.email || session.user.email || '')
     setPatientId(me.patientId)
+    setProviderId(me.providerId || '')
     setIsMember(me.isMember ?? false)
 
     // Proximity check — determine whether to offer in-person option

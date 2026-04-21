@@ -22,6 +22,7 @@ type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
 
 interface PatientData {
   patientId: string
+  providerId: string | null
   name: string
   email: string
   intakeStatus: IntakeStatus | null
@@ -50,6 +51,7 @@ type DashboardPhase = 'intake_done' | 'appointment_booked' | 'care_plan_ready' |
 // Demo data for investor demo
 const DEMO_PATIENT: PatientData = {
   patientId: 'c0000000-0000-0000-0000-000000000001',
+  providerId: 'b0000000-0000-0000-0000-000000000001',
   name: 'Sarah Mitchell',
   email: 'sarah@example.com',
   intakeStatus: 'reviewed',
@@ -278,7 +280,7 @@ export default function PatientDashboardPage() {
   const [patientNotes, setPatientNotes] = useState('')
   const [bookingInProgress, setBookingInProgress] = useState(false)
 
-  const PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
+  const PROVIDER_ID = patient?.providerId || ''
 
   const menuRef = useRef<HTMLDivElement>(null)
   const membershipParam = searchParams.get('membership')
@@ -477,6 +479,7 @@ export default function PatientDashboardPage() {
 
       setPatient({
         patientId: me.patientId,
+        providerId: me.providerId ?? null,
         name: me.name,
         email: me.email,
         intakeStatus: me.intakeStatus,
