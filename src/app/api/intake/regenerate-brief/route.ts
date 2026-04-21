@@ -5,23 +5,27 @@ import { db } from '@/lib/db'
 import { intakes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-/**
- * POST /api/intake/regenerate-brief
- * Provider-only: regenerates the AI clinical brief for a given intake.
- * Used to recover intakes where the brief was missed during submission.
- */
+export const maxDuration = 60
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (session.role !== 'provider' && session.role !== 'patient') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const { intakeId } = await req.json()
   if (!intakeId) return NextResponse.json({ error: 'intakeId required' }, { status: 400 })
 
   const intake = await db.query.intakes.findFirst({
     where: eq(intakes.id, intakeId),
-    columns: { answers: true },
+    columns: { answers: true, patient_id: true },
   })
+
+  // Patients may only regenerate their own intake
+  if (session.role === 'patient' && intake?.patient_id !== session.patientId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   if (!intake?.answers) {
     return NextResponse.json({ error: 'Intake not found or has no answers' }, { status: 404 })
