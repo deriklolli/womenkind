@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
       if (providerRow[0]) {
         const { first_name, last_name } = providerRow[0]
         const fullName = `${first_name || ''} ${last_name || ''}`.trim()
-        if (fullName) senderName = `Dr. ${last_name || fullName}`
+        if (fullName) senderName = `Dr. ${first_name || fullName}`
       }
 
       await db.insert(notifications).values({
