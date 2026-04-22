@@ -641,7 +641,9 @@ export default function PatientSchedulePage() {
         {/* Step content */}
         {step === 'select-type' && (
           <div>
-            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">Book an Appointment</h1>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2 text-center">
+              {isNewPatient ? 'Book Your Initial Consultation' : 'Book an Appointment'}
+            </h1>
             <p className="text-sm font-sans text-aubergine/40 mb-11 text-center">
               {isNewPatient
                 ? 'Schedule your initial consultation with Dr. Urban to get started.'
