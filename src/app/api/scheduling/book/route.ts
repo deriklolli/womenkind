@@ -5,7 +5,7 @@ import { eq, and, gte, lte, ne, isNotNull } from 'drizzle-orm'
 import { getStripe } from '@/lib/stripe'
 import { isSlotAvailable, getDayOfWeek } from '@/lib/scheduling'
 import { createCalendarEvent } from '@/lib/google-calendar'
-import { createVideoRoom, startCloudRecording } from '@/lib/daily-video'
+import { createVideoRoom } from '@/lib/daily-video'
 import { Resend } from 'resend'
 import { getServerSession } from '@/lib/getServerSession'
 
@@ -406,13 +406,10 @@ export async function POST(req: NextRequest) {
             .update(appointments)
             .set({ video_room_url: videoRoom.url, video_room_name: videoRoom.roomName })
             .where(eq(appointments.id, appointment.id))
-
-          // Auto-start cloud recording — stops automatically when all participants leave.
-          // Recording consent is captured during pre-visit check-in (Build 14).
-          // Fire-and-forget: don't block booking response on this.
-          startCloudRecording(videoRoom.roomName).catch(err =>
-            console.error('[DAILY] Recording start error:', err)
-          )
+          // Recording is handled automatically by enable_recording:'cloud' on the room —
+          // Daily starts it when the first participant joins and stops when all leave.
+          // Do NOT call startCloudRecording() here; it runs before anyone is in the room
+          // and conflicts with the auto-recording, causing no recording to be captured.
         }
       } catch (videoErr) {
         console.error('Video room creation failed:', videoErr)
