@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav'
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
+import ProviderCancellationAlerts from '@/components/provider/ProviderCancellationAlerts'
 import { useChatContext } from '@/lib/chat-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { signOutProvider } from '@/lib/signOut'
@@ -233,6 +234,7 @@ export default function ProviderDashboard() {
 
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {providerId && <ProviderCancellationAlerts providerId={providerId} />}
         {activeTab === 'queue' && (
           /* ====== INTAKE QUEUE TAB ====== */
           <>

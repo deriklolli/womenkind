@@ -13,7 +13,7 @@ interface Notification {
   created_at: string
 }
 
-const ALERT_TYPES = ['new_blueprint', 'lab_results_ready'] as const
+const ALERT_TYPES = ['new_blueprint', 'lab_results_ready', 'appointment_canceled'] as const
 
 export default function DashboardAlerts({
   patientId,
@@ -98,6 +98,32 @@ export default function DashboardAlerts({
                     </svg>
                   </span>
                 </div>
+              </div>
+            </div>
+          )
+        }
+
+        if (alert.type === 'appointment_canceled') {
+          return (
+            <div
+              key={alert.id}
+              className="bg-white rounded-card shadow-sm shadow-aubergine/5 border border-rose-200 p-5 flex items-start gap-4 cursor-pointer hover:border-rose-300 transition-colors"
+              onClick={() => {
+                markRead(alert.id)
+                onNavigate(alert.link_view as DashboardView)
+              }}
+            >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-rose-50 text-rose-500">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-sans font-medium text-aubergine">{alert.title}</p>
+                {alert.body && (
+                  <p className="text-xs font-sans text-aubergine/60 mt-1 line-clamp-2">{alert.body}</p>
+                )}
+                <span className="inline-block mt-2 text-xs font-sans font-medium text-violet">Book a new appointment →</span>
               </div>
             </div>
           )

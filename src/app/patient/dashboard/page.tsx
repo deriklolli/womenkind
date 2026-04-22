@@ -118,10 +118,10 @@ function UpcomingAppointments({ patientId }: { patientId: string }) {
     if (!patientId) { setLoading(false); return }
     const fetchAppointments = async () => {
       try {
-        const today = new Date().toISOString().split('T')[0]
-        const res = await fetch(`/api/scheduling/appointments?patientId=${patientId}&startDate=${today}`)
+        const res = await fetch(`/api/scheduling/appointments?patientId=${patientId}`)
         const data = await res.json()
-        setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+        const now = new Date()
+        setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now).slice(0, 3))
       } catch (err) {
         console.error('Failed to fetch appointments:', err)
       } finally {
@@ -229,6 +229,7 @@ export default function PatientDashboardPage() {
   const [membershipLoading, setMembershipLoading] = useState(false)
   const [appointments, setAppointments] = useState<any[]>([])
   const [appointmentsLoading, setAppointmentsLoading] = useState(true)
+  const [hasInitialConsultation, setHasInitialConsultation] = useState(true)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
@@ -306,10 +307,15 @@ export default function PatientDashboardPage() {
   const refreshAppointments = async () => {
     if (!patient?.patientId) return
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&startDate=${today}`)
+      const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}`)
       const data = await res.json()
-      setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+      const now = new Date()
+      const all = data.appointments || []
+      setAppointments(all.filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now).slice(0, 3))
+      const hasInitial = all.some((a: any) =>
+        (a.appointment_types?.name || '').toLowerCase().includes('initial')
+      )
+      setHasInitialConsultation(hasInitial)
     } catch (err) {
       console.error('Failed to refresh appointments:', err)
     }
@@ -382,10 +388,17 @@ export default function PatientDashboardPage() {
     if (!patient?.patientId) { setAppointmentsLoading(false); return }
     const fetchAppointments = async () => {
       try {
-        const today = new Date().toISOString().split('T')[0]
-        const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&startDate=${today}`)
+        const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}`)
         const data = await res.json()
-        setAppointments((data.appointments || []).filter((a: any) => a.status === 'confirmed').slice(0, 3))
+        const now = new Date()
+        const all = data.appointments || []
+        setAppointments(all.filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now).slice(0, 3))
+        // Patient is eligible to rebook Initial Consultation if they have no non-canceled initial in history.
+        // The API already excludes canceled, so any initial here means they've had/are having one.
+        const hasInitial = all.some((a: any) =>
+          (a.appointment_types?.name || '').toLowerCase().includes('initial')
+        )
+        setHasInitialConsultation(hasInitial)
       } catch (err) {
         console.error('Failed to fetch appointments:', err)
       } finally {
@@ -1067,7 +1080,7 @@ export default function PatientDashboardPage() {
                   <AppointmentTypeSelector
                     providerId={PROVIDER_ID}
                     isMember={patient.membershipStatus === 'active'}
-                    excludeNames={['initial consultation']}
+                    excludeNames={hasInitialConsultation ? ['initial consultation'] : []}
                     onSelect={(type) => {
                       setSelectedType(type)
                       setBookingStep('pick-time')

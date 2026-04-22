@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { appointments } from '@/lib/db/schema'
+import { appointments, notifications } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { cancelCalendarEvent } from '@/lib/google-calendar'
 import { Resend } from 'resend'
@@ -186,6 +186,7 @@ export async function POST(req: NextRequest) {
       .set({
         status: 'canceled',
         canceled_at: new Date(),
+        canceled_by: canceledBy === 'provider' ? 'provider' : 'patient',
         provider_notes: reason
           ? `${appointment.provider_notes ? appointment.provider_notes + '\n' : ''}Cancellation reason: ${reason}`
           : appointment.provider_notes,
@@ -219,6 +220,20 @@ export async function POST(req: NextRequest) {
 
     if (canceledBy === 'provider') {
       // Provider canceled — notify the patient
+      const apptDate = new Date(appointment.starts_at).toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Denver',
+      })
+      const apptTime = new Date(appointment.starts_at).toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Denver',
+      })
+      await db.insert(notifications).values({
+        patient_id: appointment.patient_id,
+        type: 'appointment_canceled',
+        title: 'Your appointment was canceled',
+        body: `${providerDisplayName} canceled your ${appointmentTypeName} on ${apptDate} at ${apptTime}. Book a new time when you're ready.`,
+        link_view: 'schedule',
+      })
+
       if (patientEmail) {
         await sendCancellationEmail({
           toEmail: patientEmail,

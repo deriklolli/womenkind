@@ -66,6 +66,7 @@ export const appointments = pgTable('appointments', {
   reminder_sent_at:        timestamp('reminder_sent_at', { withTimezone: true }),
   completed_at:            timestamp('completed_at', { withTimezone: true }),
   canceled_at:             timestamp('canceled_at', { withTimezone: true }),
+  canceled_by:             text('canceled_by'),
   created_at:              timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at:              timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
