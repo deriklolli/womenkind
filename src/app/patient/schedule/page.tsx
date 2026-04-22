@@ -140,11 +140,12 @@ export default function PatientSchedulePage() {
     setIsMember(me.isMember ?? false)
 
     // Determine if this is a new patient (no prior confirmed/completed appointments)
+    let hasPrior = false
     try {
       const aptsRes = await fetch(`/api/scheduling/appointments?patientId=${me.patientId}`)
       if (aptsRes.ok) {
         const aptsData = await aptsRes.json()
-        const hasPrior = (aptsData.appointments || []).some(
+        hasPrior = (aptsData.appointments || []).some(
           (a: any) => a.status === 'confirmed' || a.status === 'completed'
         )
         setIsNewPatient(!hasPrior)
@@ -154,30 +155,44 @@ export default function PatientSchedulePage() {
     }
 
     // Proximity check — determine whether to offer in-person option
-    await checkNearbyClinic(me.patientId)
+    await checkNearbyClinic(me.patientId, me.providerId || '', !hasPrior)
     setLoading(false)
   }
 
-  const checkNearbyClinic = async (pid: string) => {
+  const checkNearbyClinic = async (pid: string, pvid?: string, newPatient?: boolean) => {
     try {
       const res = await fetch(`/api/clinics/nearby?patientId=${pid}`)
       const data = await res.json()
 
       if (!data.hasLocation) {
-        // Patient has no stored coordinates yet — ask for their zip first
         setStep('enter-zip')
         return
       }
 
       if (data.clinics && data.clinics.length > 0) {
-        setNearbyClinic(data.clinics[0]) // closest clinic
+        setNearbyClinic(data.clinics[0])
         setStep('visit-type')
       } else {
-        // No clinics nearby — go straight to video booking
+        // No nearby clinics — new patients go straight to calendar with Initial Consultation auto-selected
+        if (newPatient && pvid) {
+          try {
+            const typesRes = await fetch(`/api/scheduling/appointment-types?providerId=${pvid}`)
+            if (typesRes.ok) {
+              const typesData = await typesRes.json()
+              const initial = (typesData.appointmentTypes || []).find(
+                (t: { name: string }) => t.name.toLowerCase().includes('initial')
+              )
+              if (initial) {
+                setSelectedType(initial)
+                setStep('pick-time')
+                return
+              }
+            }
+          } catch {}
+        }
         setStep('select-type')
       }
     } catch {
-      // On error, silently fall through to video booking
       setStep('select-type')
     }
   }
@@ -202,7 +217,7 @@ export default function PatientSchedulePage() {
         return
       }
       // Coordinates stored — now re-run the proximity check
-      await checkNearbyClinic(patientId)
+      await checkNearbyClinic(patientId, providerId, isNewPatient)
     } catch {
       setZipError('Something went wrong. Please try again.')
     } finally {

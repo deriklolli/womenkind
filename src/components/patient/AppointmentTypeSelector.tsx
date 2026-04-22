@@ -83,7 +83,7 @@ export default function AppointmentTypeSelector({ providerId, isMember, onSelect
             <p className="text-xs font-sans text-aubergine/50 mb-4 line-clamp-2">{type.description}</p>
           )}
 
-          {/* Membership badge — members only, no price shown for non-members */}
+          {/* Membership badge */}
           {isMember && (
             <div className="mt-auto">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
