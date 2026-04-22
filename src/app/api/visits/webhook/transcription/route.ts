@@ -19,20 +19,22 @@ import { eq } from 'drizzle-orm'
  */
 export async function POST(req: NextRequest) {
   try {
-    // Verify webhook secret
-    const secret = req.headers.get('x-webhook-secret')
+    // Verify webhook secret (only enforced when WEBHOOK_SECRET is configured)
     const expected = process.env.WEBHOOK_SECRET
-    if (!expected || !secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    try {
-      const secretBuf = Buffer.from(secret)
-      const expectedBuf = Buffer.from(expected)
-      if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
+    if (expected) {
+      const secret = req.headers.get('x-webhook-secret')
+      if (!secret) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-    } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      try {
+        const secretBuf = Buffer.from(secret)
+        const expectedBuf = Buffer.from(expected)
+        if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
     }
 
     const body = await req.json()
