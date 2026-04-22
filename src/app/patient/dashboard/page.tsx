@@ -417,7 +417,8 @@ export default function PatientDashboardPage() {
   const dashboardPhase: DashboardPhase = (() => {
     if (!patient) return 'intake_done'
     if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
-    if (patient.presentationId) return 'care_plan_ready'
+    // Care plan only surfaces after an appointment has been booked
+    if (patient.presentationId && appointments.length > 0) return 'care_plan_ready'
     if (appointments.length > 0) return 'appointment_booked'
     return 'intake_done'
   })()
@@ -607,10 +608,10 @@ export default function PatientDashboardPage() {
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1">
               <h2 className="font-serif font-normal text-lg text-aubergine mb-1">
-                Begin your health journey
+                Book Your Initial Consultation
               </h2>
               <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
-                Your intake is complete. Schedule your initial consultation with your provider to review your results and start your personalized care plan.
+                Your intake is complete. Book your initial consultation with Dr. Urban to review your results and start your personalized care plan.
               </p>
             </div>
             <button
@@ -620,7 +621,7 @@ export default function PatientDashboardPage() {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Schedule Appointment
+              Book Now
             </button>
           </div>
         )}
