@@ -100,17 +100,19 @@ export default function BookingConfirmation({
         <div className="flex items-center justify-between mb-5 pb-5 border-b border-aubergine/5">
           <span className="text-sm font-sans text-aubergine/60">Total</span>
           {isMember ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-sans text-aubergine/30 line-through">
-                ${(appointmentType.price_cents / 100).toFixed(0)}
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                Free with membership
-              </span>
-            </div>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Free with membership
+            </span>
+          ) : appointmentType.price_cents === 0 ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-pill text-xs font-sans font-medium text-emerald-600">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Covered by intake fee
+            </span>
           ) : (
             <span className="text-lg font-sans font-bold text-aubergine">
               ${(appointmentType.price_cents / 100).toFixed(0)}

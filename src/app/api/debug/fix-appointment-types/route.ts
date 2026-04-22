@@ -29,13 +29,19 @@ export async function POST() {
     const nameLower = t.name.toLowerCase()
 
     if (nameLower.includes('hormone')) {
-      // Replace Hormone Review → Touch Base Call
       const [updated] = await db
         .update(appointment_types)
         .set({ name: 'Touch Base Call', duration_minutes: 15, price_cents: 0 })
         .where(eq(appointment_types.id, t.id))
         .returning()
       results.push({ action: 'renamed', from: t.name, to: updated.name })
+    } else if (nameLower.includes('initial')) {
+      // Initial Consultation is always $0 — covered by the $650 intake fee
+      await db
+        .update(appointment_types)
+        .set({ price_cents: 0 })
+        .where(eq(appointment_types.id, t.id))
+      results.push({ action: 'zeroed', name: t.name })
     } else {
       results.push({ action: 'kept', name: t.name, duration_minutes: t.duration_minutes })
     }
