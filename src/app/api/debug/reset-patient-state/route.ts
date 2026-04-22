@@ -14,10 +14,9 @@ export async function POST() {
   const patient = patientRows[0]
   if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
-  // Reset presentation status so dashboard shows the booking banner
+  // Remove presentation so dashboard shows the booking banner
   await db
-    .update(care_presentations)
-    .set({ status: 'sent' })
+    .delete(care_presentations)
     .where(eq(care_presentations.patient_id, patient.id))
 
   return NextResponse.json({ ok: true, patientId: patient.id })
