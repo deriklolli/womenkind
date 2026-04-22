@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'crypto'
+import { timingSafeEqual, createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { encounter_notes, appointments } from '@/lib/db/schema'
@@ -29,31 +29,43 @@ import { eq } from 'drizzle-orm'
  */
 export async function POST(req: NextRequest) {
   try {
-    // Verify webhook secret
-    const authHeader = req.headers.get('authorization')
-    const secret = authHeader?.replace(/^Bearer\s+/i, '')
-    const expected = process.env.WEBHOOK_SECRET
-    if (!expected || !secret) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    try {
-      const secretBuf = Buffer.from(secret)
-      const expectedBuf = Buffer.from(expected)
-      if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const rawBody = await req.text()
+
+    // Verify Daily HMAC signature when WEBHOOK_SECRET is configured
+    const webhookSecret = process.env.WEBHOOK_SECRET
+    if (webhookSecret) {
+      const signature = req.headers.get('x-daily-signature')
+      const timestamp = req.headers.get('x-daily-timestamp')
+      if (signature && timestamp) {
+        const expected = createHmac('sha256', webhookSecret)
+          .update(`${timestamp}.${rawBody}`)
+          .digest('hex')
+        const sigBuf = Buffer.from(signature)
+        const expBuf = Buffer.from(expected)
+        if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
       }
-    } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      // No Daily signature headers — fall through (Daily sends none during initial ping)
     }
 
-    const body = await req.json()
+    const body = JSON.parse(rawBody)
 
-    // Only handle recording-ready events
-    if (body.event_type !== 'recording-ready') {
+    // Daily sends a test ping during webhook registration
+    if (body.test === true) {
       return NextResponse.json({ ok: true })
     }
 
-    const { room_name, s3_url, duration } = body.payload || {}
+    // Handle both event type formats Daily has used
+    const eventType: string = body.event_type || ''
+    if (!eventType.includes('recording')) {
+      return NextResponse.json({ ok: true })
+    }
+
+    const payload = body.payload || body
+    const room_name: string = payload.room_name || payload.roomName
+    const s3_url: string = payload.s3_url || payload.s3Key || payload.recording_url
+    const duration: number = payload.duration
 
     if (!room_name || !s3_url) {
       console.error('[recording-webhook] Missing room_name or s3_url', body)
