@@ -71,6 +71,7 @@ export default function ProviderDashboard() {
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
   const [loading, setLoading] = useState(true)
+  const [patientsLoading, setPatientsLoading] = useState(true)
   const [providerName, setProviderName] = useState('')
   const [providerId, setProviderId] = useState<string>('')
   const [filter, setFilter] = useState<string>('all')
@@ -135,6 +136,7 @@ export default function ProviderDashboard() {
   }
 
   const loadPatients = async () => {
+    setPatientsLoading(true)
     try {
       const res = await fetch('/api/provider/patients')
       if (!res.ok) throw new Error('Failed to fetch patients')
@@ -142,6 +144,8 @@ export default function ProviderDashboard() {
       setPatients(data.patients || [])
     } catch (err) {
       console.error('Failed to load patients:', err)
+    } finally {
+      setPatientsLoading(false)
     }
   }
 
@@ -383,7 +387,11 @@ export default function ProviderDashboard() {
             </div>
 
             {/* Patient directory list */}
-            {filteredPatients.length === 0 ? (
+            {patientsLoading ? (
+              <div className="text-center py-20">
+                <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin mx-auto" />
+              </div>
+            ) : filteredPatients.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-card shadow-sm">
                 <p className="text-lg font-sans font-semibold text-aubergine/30">
                   {searchQuery ? 'No patients match your search' : 'No patients yet'}
