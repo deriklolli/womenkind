@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { appointments, providers, patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { createVideoRoom, startCloudRecording } from '@/lib/daily-video'
+import { startCloudRecording } from '@/lib/daily-video'
 
 /**
  * POST /api/debug/create-test-video-appointment
@@ -59,13 +59,8 @@ export async function POST(req: NextRequest) {
 
     if (!appt) return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 })
 
-    // Create Daily video room
-    const room = await createVideoRoom({
-      appointmentId: appt.id,
-      appointmentName: 'Test Visit',
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-    })
+    // Create Daily video room (public so both test tabs can join without knocking)
+    const room = await createTestVideoRoom(appt.id, endsAt)
 
     if (!room) return NextResponse.json({ error: 'Failed to create video room — check DAILY_API_KEY' }, { status: 500 })
 
@@ -88,4 +83,22 @@ export async function POST(req: NextRequest) {
     console.error('[create-test-video-appointment]', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
+}
+
+async function createTestVideoRoom(appointmentId: string, endsAt: Date) {
+  const apiKey = process.env.DAILY_API_KEY
+  if (!apiKey) return null
+  const expiresAt = Math.floor(endsAt.getTime() / 1000) + 3600
+  const res = await fetch('https://api.daily.co/v1/rooms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      name: `wk-test-${appointmentId.slice(0, 8)}`,
+      privacy: 'public',
+      properties: { exp: expiresAt, enable_chat: true, enable_recording: 'cloud' },
+    }),
+  })
+  if (!res.ok) return null
+  const room = await res.json()
+  return { url: room.url as string, roomName: room.name as string }
 }
