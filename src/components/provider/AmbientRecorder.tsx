@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
 
 interface Patient {
   id: string
@@ -133,20 +132,26 @@ export default function AmbientRecorder({ providerId }: Props) {
 
     try {
       const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
-      const ext = mimeType.includes('ogg') ? 'ogg' : 'webm'
       const blob = new Blob(chunksRef.current, { type: mimeType })
-      const filename = `ambient/${Date.now()}_${selectedPatient.id}.${ext}`
 
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadErr } = await supabase.storage
-        .from('recordings')
-        .upload(filename, blob, { contentType: mimeType, upsert: false })
+      // Get pre-signed S3 PUT URL from server
+      const urlRes = await fetch('/api/visits/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: selectedPatient.id, contentType: mimeType }),
+      })
+      if (!urlRes.ok) throw new Error('Failed to get upload URL')
+      const { uploadUrl, key: filename } = await urlRes.json()
 
-      if (uploadErr) throw uploadErr
+      // Upload directly to S3 via pre-signed PUT
+      const s3Res = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: blob,
+      })
+      if (!s3Res.ok) throw new Error('S3 upload failed')
 
-      // Create encounter note + trigger transcription via API.
-      // The server generates its own short-lived signed URL using the service role —
-      // no need to create one client-side.
+      // Create encounter note + trigger transcription
       const res = await fetch('/api/visits/ambient-recording', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
