@@ -160,6 +160,24 @@ export default function PatientSchedulePage() {
     setLoading(false)
   }
 
+  const autoSelectInitial = async (pvid: string) => {
+    try {
+      const typesRes = await fetch(`/api/scheduling/appointment-types?providerId=${pvid}`)
+      if (typesRes.ok) {
+        const typesData = await typesRes.json()
+        const initial = (typesData.appointmentTypes || []).find(
+          (t: { name: string }) => t.name.toLowerCase().includes('initial')
+        )
+        if (initial) {
+          setSelectedType(initial)
+          setStep('pick-time')
+          return
+        }
+      }
+    } catch {}
+    setStep('select-type')
+  }
+
   const checkNearbyClinic = async (pid: string, pvid?: string, newPatient?: boolean) => {
     try {
       const res = await fetch(`/api/clinics/nearby?patientId=${pid}`)
@@ -170,27 +188,16 @@ export default function PatientSchedulePage() {
         return
       }
 
+      // New patients always skip visit-type selection — initial consultation is video only
+      if (newPatient && pvid) {
+        await autoSelectInitial(pvid)
+        return
+      }
+
       if (data.clinics && data.clinics.length > 0) {
         setNearbyClinic(data.clinics[0])
         setStep('visit-type')
       } else {
-        // No nearby clinics — new patients go straight to calendar with Initial Consultation auto-selected
-        if (newPatient && pvid) {
-          try {
-            const typesRes = await fetch(`/api/scheduling/appointment-types?providerId=${pvid}`)
-            if (typesRes.ok) {
-              const typesData = await typesRes.json()
-              const initial = (typesData.appointmentTypes || []).find(
-                (t: { name: string }) => t.name.toLowerCase().includes('initial')
-              )
-              if (initial) {
-                setSelectedType(initial)
-                setStep('pick-time')
-                return
-              }
-            }
-          } catch {}
-        }
         setStep('select-type')
       }
     } catch {
@@ -663,6 +670,7 @@ export default function PatientSchedulePage() {
               isMember={isMember}
               onSelect={handleSelectType}
               onlyInitial={isNewPatient}
+              excludeNames={!isNewPatient ? ['initial'] : undefined}
             />
           </div>
         )}
