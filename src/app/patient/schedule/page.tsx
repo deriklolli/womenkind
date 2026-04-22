@@ -8,6 +8,7 @@ import AppointmentTypeSelector from '@/components/patient/AppointmentTypeSelecto
 import TimeSlotPicker from '@/components/patient/TimeSlotPicker'
 import BookingConfirmation from '@/components/patient/BookingConfirmation'
 import InPersonRequestForm from '@/components/patient/InPersonRequestForm'
+import NotificationBell from '@/components/patient/NotificationBell'
 import type { NearbyClinic } from '@/app/api/clinics/nearby/route'
 
 type BookingStep =
@@ -351,6 +352,13 @@ export default function PatientSchedulePage() {
               priority
             />
           </button>
+          <div className="flex items-center gap-2">
+            {patientId !== DEMO_PATIENT_ID && (
+              <NotificationBell
+                patientId={patientId}
+                onNavigate={(view) => router.push(`/patient/dashboard?view=${view}`)}
+              />
+            )}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -430,6 +438,7 @@ export default function PatientSchedulePage() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </nav>
