@@ -41,10 +41,12 @@ export async function POST(req: NextRequest) {
     results.push({ noteId: note.id, transcriptId: note.assemblyai_transcript_id, status: transcriptStatus })
 
     if (transcriptStatus === 'completed') {
-      // Re-fire our webhook handler inline
       await fetch(`${appUrl}/api/visits/webhook/transcription`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.WEBHOOK_SECRET ? { 'x-webhook-secret': process.env.WEBHOOK_SECRET } : {}),
+        },
         body: JSON.stringify({ transcript_id: note.assemblyai_transcript_id, status: 'completed' }),
       })
     }
