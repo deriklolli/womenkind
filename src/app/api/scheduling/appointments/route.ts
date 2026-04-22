@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const startDate = req.nextUrl.searchParams.get('startDate')
     const endDate = req.nextUrl.searchParams.get('endDate')
     const status = req.nextUrl.searchParams.get('status')
+    const includeCanceled = req.nextUrl.searchParams.get('includeCanceled') === 'true'
 
     const session = await getServerSession()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     if (status) {
       conditions.push(eq(appointments.status, status))
-    } else {
+    } else if (!includeCanceled) {
       // By default, exclude canceled
       conditions.push(ne(appointments.status, 'canceled'))
     }

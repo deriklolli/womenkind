@@ -14,6 +14,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   })
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  // Auto-mark as reviewed the first time a provider opens it
+  if (row.status === 'submitted') {
+    await db
+      .update(intakes)
+      .set({ status: 'reviewed', reviewed_at: new Date() })
+      .where(eq(intakes.id, params.id))
+    row.status = 'reviewed'
+    row.reviewed_at = new Date()
+  }
+
   let isMember = false
   if (row.patient_id) {
     const sub = await db.query.subscriptions.findFirst({

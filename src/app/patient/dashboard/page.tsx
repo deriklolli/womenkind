@@ -230,7 +230,7 @@ export default function PatientDashboardPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [appointmentsLoading, setAppointmentsLoading] = useState(true)
   const [hasInitialConsultation, setHasInitialConsultation] = useState(true)
-  const [hasPastAppointment, setHasPastAppointment] = useState(false)
+  const [hasEverHadInitial, setHasEverHadInitial] = useState(false)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
@@ -308,16 +308,19 @@ export default function PatientDashboardPage() {
   const refreshAppointments = async () => {
     if (!patient?.patientId) return
     try {
-      const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}`)
+      const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&includeCanceled=true`)
       const data = await res.json()
       const now = new Date()
       const all = data.appointments || []
-      setAppointments(all.filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now).slice(0, 3))
-      const hasInitial = all.some((a: any) =>
-        (a.appointment_types?.name || '').toLowerCase().includes('initial')
+      setAppointments(
+        all
+          .filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now)
+          .slice(0, 3)
       )
-      setHasInitialConsultation(hasInitial)
-      setHasPastAppointment(all.some((a: any) => new Date(a.ends_at) <= now))
+      const isInitial = (a: any) =>
+        (a.appointment_types?.name || '').toLowerCase().includes('initial')
+      setHasInitialConsultation(all.some((a: any) => isInitial(a) && a.status !== 'canceled'))
+      setHasEverHadInitial(all.some(isInitial))
     } catch (err) {
       console.error('Failed to refresh appointments:', err)
     }
@@ -390,19 +393,21 @@ export default function PatientDashboardPage() {
     if (!patient?.patientId) { setAppointmentsLoading(false); return }
     const fetchAppointments = async () => {
       try {
-        const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}`)
+        const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&includeCanceled=true`)
         const data = await res.json()
         const now = new Date()
         const all = data.appointments || []
-        setAppointments(all.filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now).slice(0, 3))
-        // Patient is eligible to rebook Initial Consultation if they have no non-canceled initial in history.
-        // The API already excludes canceled, so any initial here means they've had/are having one.
-        const hasInitial = all.some((a: any) =>
-          (a.appointment_types?.name || '').toLowerCase().includes('initial')
+        setAppointments(
+          all
+            .filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now)
+            .slice(0, 3)
         )
-        setHasInitialConsultation(hasInitial)
-        // Has any non-canceled appointment already ended — signals consult has happened
-        setHasPastAppointment(all.some((a: any) => new Date(a.ends_at) <= now))
+        const isInitial = (a: any) =>
+          (a.appointment_types?.name || '').toLowerCase().includes('initial')
+        // Any non-canceled initial means the step is scheduled/done
+        setHasInitialConsultation(all.some((a: any) => isInitial(a) && a.status !== 'canceled'))
+        // Ever had any initial (including canceled) — used to keep the step inactive after cancel
+        setHasEverHadInitial(all.some(isInitial))
       } catch (err) {
         console.error('Failed to fetch appointments:', err)
       } finally {
@@ -819,20 +824,27 @@ export default function PatientDashboardPage() {
                         {
                           label: 'Intake submitted',
                           date: patient.intakeSubmittedAt,
-                          done: !!patient.intakeSubmittedAt,
+                          done: true,
                         },
                         {
                           label: 'Provider review',
                           date: patient.intakeReviewedAt,
                           done: !!patient.intakeReviewedAt,
-                          active: patient.intakeStatus === 'submitted',
+                          active: !patient.intakeReviewedAt,
+                        },
+                        {
+                          label: 'Initial consult scheduled',
+                          date: null,
+                          done: hasInitialConsultation,
+                          // Active only if reviewed and no initial has ever been attempted.
+                          // If a prior initial was canceled, this stays inactive per spec.
+                          active: !!patient.intakeReviewedAt && !hasInitialConsultation && !hasEverHadInitial,
                         },
                         {
                           label: 'Care plan ready',
                           date: null,
-                          done: !!patient.presentationId,
-                          // Active only once the initial consult has happened (past appointment) and no plan exists yet
-                          active: hasPastAppointment && !patient.presentationId,
+                          done: false,
+                          active: !!patient.presentationId,
                         },
                       ].map((step, i) => (
                         <div key={i} className="flex items-start gap-3">
