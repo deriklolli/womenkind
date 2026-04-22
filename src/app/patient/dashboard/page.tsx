@@ -230,6 +230,7 @@ export default function PatientDashboardPage() {
   const [appointments, setAppointments] = useState<any[]>([])
   const [appointmentsLoading, setAppointmentsLoading] = useState(true)
   const [hasInitialConsultation, setHasInitialConsultation] = useState(true)
+  const [hasPastAppointment, setHasPastAppointment] = useState(false)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
@@ -316,6 +317,7 @@ export default function PatientDashboardPage() {
         (a.appointment_types?.name || '').toLowerCase().includes('initial')
       )
       setHasInitialConsultation(hasInitial)
+      setHasPastAppointment(all.some((a: any) => new Date(a.ends_at) <= now))
     } catch (err) {
       console.error('Failed to refresh appointments:', err)
     }
@@ -399,6 +401,8 @@ export default function PatientDashboardPage() {
           (a.appointment_types?.name || '').toLowerCase().includes('initial')
         )
         setHasInitialConsultation(hasInitial)
+        // Has any non-canceled appointment already ended — signals consult has happened
+        setHasPastAppointment(all.some((a: any) => new Date(a.ends_at) <= now))
       } catch (err) {
         console.error('Failed to fetch appointments:', err)
       } finally {
@@ -826,8 +830,9 @@ export default function PatientDashboardPage() {
                         {
                           label: 'Care plan ready',
                           date: null,
-                          done: dashboardPhase === 'care_plan_ready' || patient.intakeStatus === 'care_plan_sent',
-                          active: patient.intakeStatus === 'reviewed' && !patient.presentationId,
+                          done: !!patient.presentationId,
+                          // Active only once the initial consult has happened (past appointment) and no plan exists yet
+                          active: hasPastAppointment && !patient.presentationId,
                         },
                       ].map((step, i) => (
                         <div key={i} className="flex items-start gap-3">
