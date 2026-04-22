@@ -172,7 +172,7 @@ export default function EncounterNotesPanel({ patientId, providerId }: Props) {
         return (
           <div
             key={note.id}
-            className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden"
+            className="bg-white rounded-card shadow-sm border border-aubergine/5"
           >
             {/* Header row */}
             <div
