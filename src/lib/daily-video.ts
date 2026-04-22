@@ -52,12 +52,12 @@ export async function createVideoRoom({
       },
       body: JSON.stringify({
         name: sanitizedName,
-        privacy: 'private',
+        privacy: 'public',
         properties: {
           exp: expiresAt,
           enable_chat: true,
           enable_screenshare: true,
-          enable_knocking: true,
+          enable_knocking: false,
           max_participants: 4,
           start_video_off: false,
           start_audio_off: false,
@@ -118,6 +118,51 @@ export async function startCloudRecording(roomName: string): Promise<boolean> {
   } catch (err) {
     console.error('[DAILY] Error starting cloud recording:', err)
     return false
+  }
+}
+
+/**
+ * Create a meeting token that gives the provider owner/host privileges.
+ * The returned token should be appended to the room URL as ?t=TOKEN.
+ */
+export async function createProviderMeetingToken({
+  roomName,
+  endsAt,
+}: {
+  roomName: string
+  endsAt: string
+}): Promise<string | null> {
+  const apiKey = process.env.DAILY_API_KEY
+  if (!apiKey) return null
+
+  const exp = Math.floor(new Date(endsAt).getTime() / 1000) + 3600
+
+  try {
+    const res = await fetch(`${DAILY_API_URL}/meeting-tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        properties: {
+          room_name: roomName,
+          is_owner: true,
+          exp,
+        },
+      }),
+    })
+
+    if (!res.ok) {
+      console.error('[DAILY] Failed to create provider token:', await res.text())
+      return null
+    }
+
+    const data = await res.json()
+    return data.token ?? null
+  } catch (err) {
+    console.error('[DAILY] Error creating provider token:', err)
+    return null
   }
 }
 

@@ -239,7 +239,7 @@ export default function AppointmentsList({ providerId }: Props) {
                                 </button>
                                 {apt.video_room_url && (
                                   <a
-                                    href={apt.video_room_url}
+                                    href={`/api/visits/join-as-host?appointmentId=${apt.id}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-white bg-violet rounded-pill hover:bg-violet/90 transition-colors mr-1"
