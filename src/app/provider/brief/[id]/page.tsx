@@ -29,7 +29,6 @@ export default function BriefViewerPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [isMember, setIsMember] = useState(false)
-  const [generatingBrief, setGeneratingBrief] = useState(false)
   const { setPageContext } = useChatContext()
 
   useEffect(() => {
@@ -54,23 +53,6 @@ export default function BriefViewerPage() {
         intakeId: data.id,
         intakeStatus: data.status,
       })
-
-      // Auto-generate brief in background if missing — don't block page load
-      if (!data.ai_brief && data.answers) {
-        setGeneratingBrief(true)
-        fetch('/api/intake/regenerate-brief', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intakeId }),
-        }).then(async () => {
-          const retryRes = await fetch(`/api/provider/intakes/${intakeId}`)
-          if (retryRes.ok) {
-            const { intake: retryData } = await retryRes.json()
-            setIntake(retryData)
-            setNotes(retryData.provider_notes || '')
-          }
-        }).finally(() => setGeneratingBrief(false))
-      }
 
       if (data.status === 'submitted') {
         await fetch(`/api/provider/intakes/${intakeId}`, {
@@ -120,18 +102,6 @@ export default function BriefViewerPage() {
           <button onClick={() => router.push('/provider/dashboard')} className="text-sm text-violet mt-4 font-sans">
             Back to dashboard
           </button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!intake.ai_brief) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin mx-auto" />
-          <p className="font-sans font-semibold text-lg text-aubergine/60">Generating clinical brief…</p>
-          <p className="text-sm text-aubergine/40 font-sans">This takes about 30 seconds. The page will update automatically.</p>
         </div>
       </div>
     )
