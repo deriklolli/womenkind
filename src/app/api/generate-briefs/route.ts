@@ -98,7 +98,7 @@ async function generateClinicalBrief(
   const ouraSection = buildOuraProfile(wearableMetrics)
 
   const text = await invokeModel({
-    maxTokens: 4096,
+    maxTokens: 8192,
     system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
 
 Key context:
