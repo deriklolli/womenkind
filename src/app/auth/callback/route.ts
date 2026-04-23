@@ -1,10 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * GET /auth/callback
  * Handles Supabase email verification redirect.
- * Exchanges the token_hash for a session, then redirects to /signup/verified.
+ * Exchanges the token_hash for a session and sets session cookies,
+ * then redirects to /signup/verified.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -12,10 +14,24 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get('type')
   const next = searchParams.get('next') || '/signup/verified'
 
+  const redirectTo = new URL(next, req.url)
+  const response = NextResponse.redirect(redirectTo)
+
   if (token_hash && type) {
-    const supabase = createClient(
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options as any)
+            )
+          },
+        },
+      }
     )
 
     const { error } = await supabase.auth.verifyOtp({
@@ -24,10 +40,9 @@ export async function GET(req: NextRequest) {
     })
 
     if (!error) {
-      return NextResponse.redirect(new URL(next, req.url))
+      return response
     }
   }
 
-  // If verification fails, redirect to login with error
   return NextResponse.redirect(new URL('/patient/login?error=verification_failed', req.url))
 }

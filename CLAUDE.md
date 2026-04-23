@@ -40,3 +40,4 @@
 - Never ask the user to edit `.env.local` or paste keys into Vercel UI — do it from the CLI.
 - Tight debug loops: when stuck, write a debug endpoint that dumps all suspect values in one response rather than probing fields one at a time.
 - Don't promise "I'll wake up in N seconds" — just take the next action.
+- **Verify all work before asking the user to take any action.** Run tsc, check logs, confirm DB state, trace the full end-to-end flow. Never ask the user to test something until every step has been verified independently. Incomplete fixes that require follow-up user testing waste the user's time.
