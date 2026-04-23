@@ -1,6 +1,8 @@
 import { invokeModel } from '@/lib/bedrock'
 import { PRESENTATION_COMPONENTS, type PresentationComponent } from '@/lib/presentation-components'
 
+const DEFAULT_PROVIDER_NAME = 'Dr. Urban'
+
 /**
  * Generate patient-facing body copy for every presentation component, based
  * on a patient's intake answers + AI clinical brief. Runs the 10 components
@@ -11,13 +13,14 @@ import { PRESENTATION_COMPONENTS, type PresentationComponent } from '@/lib/prese
 export async function generateComponentBodies(
   answers: Record<string, any>,
   aiBrief: any,
-  firstName?: string | null
+  firstName?: string | null,
+  providerName: string = DEFAULT_PROVIDER_NAME
 ): Promise<Record<string, string>> {
   const name = normalizeName(firstName)
 
   const results = await Promise.allSettled(
     PRESENTATION_COMPONENTS.map(async (comp) => {
-      const draft = await runBodyGeneration(comp, answers, aiBrief, name)
+      const draft = await runBodyGeneration(comp, answers, aiBrief, name, providerName)
       return { key: comp.key, draft }
     })
   )
@@ -38,18 +41,20 @@ export async function generateSingleComponentBody(
   component: PresentationComponent,
   answers: Record<string, any>,
   aiBrief: any,
-  firstName?: string | null
+  firstName?: string | null,
+  providerName: string = DEFAULT_PROVIDER_NAME
 ): Promise<string> {
-  return runBodyGeneration(component, answers, aiBrief, normalizeName(firstName))
+  return runBodyGeneration(component, answers, aiBrief, normalizeName(firstName), providerName)
 }
 
 async function runBodyGeneration(
   component: PresentationComponent,
   answers: Record<string, any>,
   aiBrief: any,
-  firstName: string | null
+  firstName: string | null,
+  providerName: string
 ): Promise<string> {
-  const prompt = buildBodyPrompt(component, answers, aiBrief, firstName)
+  const prompt = buildBodyPrompt(component, answers, aiBrief, firstName, providerName)
   const draft = await invokeModel({
     maxTokens: 800,
     messages: [{ role: 'user', content: prompt }],
@@ -90,14 +95,15 @@ function buildBodyPrompt(
   component: PresentationComponent,
   answers: Record<string, any>,
   aiBrief: any,
-  firstName: string | null
+  firstName: string | null,
+  providerName: string
 ): string {
   const dataBlock = buildDataBlock(answers, aiBrief)
   const whoLine = firstName
     ? `This is for a patient named ${firstName}. You may use her first name at most once, only if it helps the opening feel grounded. Most of the time, leave her name out entirely.`
     : `Do not use a name. Write in second person ("you", "your") throughout.`
 
-  return `You are writing the body copy for the ${component.label} section of a personalized care summary that her doctor is about to send her. She will read this on a web page, before she sees a short note from her doctor.
+  return `You are writing the body copy for the ${component.label} section of a personalized care summary that ${providerName} is about to send her. She will read this on a web page, before she sees a short note from ${providerName}.
 
 SECTION: ${component.label}
 WHY THIS BODY SYSTEM MATTERS IN MIDLIFE: ${component.clinicalRelevance}
@@ -125,6 +131,7 @@ VOICE RULES. These are strict. The output has to read as if a thoughtful human w
 - Speak plainly. If a clinical term is useful, put it in plain English first.
 - Do not sign off. No "with care", no name, no signature line.
 - Do not refer to "this section" or "this page" or "above" or "below". Just write the copy.
+- When referring to the doctor, use the name "${providerName}" (e.g., "${providerName} will walk you through..."). Never say "your doctor", "the doctor", "your provider", or "we" as a stand-in for the doctor. If you don't need to reference the doctor to make the paragraph land, don't.
 
 Output only the two paragraphs, separated by one blank line. No preamble, no title, no explanation of what you did.`
 }
