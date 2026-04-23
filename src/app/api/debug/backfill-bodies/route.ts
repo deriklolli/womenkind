@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     const email = req.nextUrl.searchParams.get('email')
     const force = req.nextUrl.searchParams.get('force') === '1'
+    const full = req.nextUrl.searchParams.get('full') === '1'
     if (!email) return NextResponse.json({ error: 'email param required' }, { status: 400 })
 
     const supabaseAdmin = createClient(
@@ -73,10 +74,13 @@ export async function GET(req: NextRequest) {
       intakeId: intakeRow.id,
       count: Object.keys(bodies).length,
       keys: Object.keys(bodies),
-      // Short preview so we can eyeball voice without pulling the whole thing
-      preview: Object.fromEntries(
-        Object.entries(bodies).map(([k, v]) => [k, (v as string).slice(0, 180) + '…'])
-      ),
+      // Short preview so we can eyeball voice without pulling the whole thing.
+      // Pass &full=1 to return the whole bodies instead of truncated previews.
+      preview: full
+        ? bodies
+        : Object.fromEntries(
+            Object.entries(bodies).map(([k, v]) => [k, (v as string).slice(0, 180) + '…'])
+          ),
     })
   } catch (err: any) {
     console.error('Debug backfill error:', err)
