@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
 import { generateClinicalBrief } from '@/lib/intake-brief'
+import { generateComponentBodies } from '@/lib/intake-component-bodies'
 import { db } from '@/lib/db'
 import { intakes, providers, patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       .where(eq(intakes.id, intakeId))
 
     // 2. Generate AI clinical brief via Bedrock
-    let aiBrief = null
+    let aiBrief: any = null
     try {
       aiBrief = await generateClinicalBrief(answers)
 
@@ -58,6 +59,32 @@ export async function POST(req: NextRequest) {
     } catch (aiErr) {
       console.error('AI brief generation error:', aiErr)
       // Don't fail the submission — brief can be generated later
+    }
+
+    // 3. Pre-generate personalized body copy for all 10 presentation components
+    //    in parallel, so the doctor never waits during the presentation-create
+    //    flow. Failures are tolerated — any missing component falls back to the
+    //    on-demand /api/presentation/ai-body endpoint when the doctor toggles it.
+    if (aiBrief) {
+      try {
+        let firstName: string | null = null
+        if (patientId) {
+          const p = await db.query.patients.findFirst({
+            where: eq(patients.id, patientId),
+            with: { profiles: { columns: { first_name: true } } },
+          })
+          firstName = p?.profiles?.first_name ?? null
+        }
+        const component_bodies = await generateComponentBodies(answers, aiBrief, firstName)
+        aiBrief = { ...aiBrief, component_bodies }
+        await db
+          .update(intakes)
+          .set({ ai_brief: aiBrief })
+          .where(eq(intakes.id, intakeId))
+      } catch (bodiesErr) {
+        console.error('Component bodies generation error:', bodiesErr)
+        // Don't fail the submission — bodies can be lazily filled on first toggle
+      }
     }
 
     // Send intake confirmation emails (fire and forget)

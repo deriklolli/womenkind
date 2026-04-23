@@ -26,6 +26,7 @@ export default function CreatePresentationPage() {
   const patientId = params.patientId as string
 
   const [patient, setPatient] = useState<PatientInfo | null>(null)
+  const [preGeneratedBodies, setPreGeneratedBodies] = useState<Record<string, string>>({})
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [notes, setNotes] = useState<ComponentNotes>({})
   const [welcomeMessage, setWelcomeMessage] = useState('')
@@ -56,8 +57,23 @@ export default function CreatePresentationPage() {
     try {
       const res = await fetch(`/api/provider/patients/${patientId}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const { patient: data } = await res.json()
+      const { patient: data, intakes } = await res.json()
       setPatient({ id: data.id, profiles: data.profiles })
+
+      // Pull pre-generated component bodies from the latest intake so toggling
+      // a body system can populate its paragraph instantly. Falls back to the
+      // on-demand endpoint on toggle if any are missing.
+      const latestIntake = Array.isArray(intakes) && intakes.length
+        ? [...intakes].sort((a: any, b: any) => {
+            const da = a?.submitted_at ? new Date(a.submitted_at).getTime() : 0
+            const db_ = b?.submitted_at ? new Date(b.submitted_at).getTime() : 0
+            return db_ - da
+          })[0]
+        : null
+      const bodies = latestIntake?.ai_brief?.component_bodies
+      if (bodies && typeof bodies === 'object') {
+        setPreGeneratedBodies(bodies as Record<string, string>)
+      }
 
       const firstName = data.profiles?.first_name || ''
       const lastName = data.profiles?.last_name || ''
@@ -80,7 +96,7 @@ export default function CreatePresentationPage() {
   const firstName = patient?.profiles?.first_name || 'your patient'
 
   const toggleComponent = (key: string) => {
-    let shouldAutoDraftBody = false
+    let needsLazyDraft = false
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(key)) {
@@ -90,20 +106,20 @@ export default function CreatePresentationPage() {
         next.add(key)
         setActiveComponent(key)
         if (!notes[key]) {
+          const preGenerated = preGeneratedBodies[key] || ''
           setNotes((n) => ({
             ...n,
-            [key]: { provider_note: '', ai_draft: '', personalized_body: '' },
+            [key]: { provider_note: '', ai_draft: '', personalized_body: preGenerated },
           }))
-          shouldAutoDraftBody = true
-        } else if (!notes[key].personalized_body) {
-          shouldAutoDraftBody = true
+          // Only fall back to the on-demand endpoint when intake-time
+          // pre-generation didn't run or failed for this component (legacy
+          // intakes submitted before we started pre-generating bodies).
+          if (!preGenerated) needsLazyDraft = true
         }
       }
       return next
     })
-    if (shouldAutoDraftBody) {
-      // Fire-and-forget: populate the personalized body text in the background
-      // so the doctor sees a draft by the time they focus this section.
+    if (needsLazyDraft) {
       void handleBodyDraft(key)
     }
   }
