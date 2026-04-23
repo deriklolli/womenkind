@@ -34,8 +34,7 @@ export default function IntakePage() {
   const [patientId, setPatientId] = useState<string | null>(null)
   const [userFirstName, setUserFirstName] = useState<string | null>(null)
   const [pendingResumeIndex, setPendingResumeIndex] = useState<number | null>(null)
-  const [consentTelehealth, setConsentTelehealth] = useState(false)
-  const [consentRecording, setConsentRecording] = useState(false)
+  const [consentPrivacy, setConsentPrivacy] = useState(false)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Check for authenticated user and resume existing draft
@@ -313,46 +312,25 @@ export default function IntakePage() {
               If you need to step away, your progress is saved automatically and you can pick up right where you left off.
             </p>
 
-            {/* Consent checkboxes */}
-            <div className="mb-8 text-left space-y-4 max-w-md mx-auto">
+            {/* Privacy policy checkbox */}
+            <div className="mb-8 text-left max-w-md mx-auto">
               <label className="flex items-start gap-3 cursor-pointer group">
                 <input
                   type="checkbox"
-                  checked={consentTelehealth}
-                  onChange={(e) => setConsentTelehealth(e.target.checked)}
+                  checked={consentPrivacy}
+                  onChange={(e) => setConsentPrivacy(e.target.checked)}
                   className="mt-0.5 w-4 h-4 rounded border-beige/40 text-violet accent-violet shrink-0 cursor-pointer"
                 />
                 <span className="text-sm text-beige/70 font-sans leading-relaxed">
                   I have read and agree to the{' '}
                   <a
-                    href="/consent/telehealth-informed-consent.docx"
+                    href="/privacy-policy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-violet underline underline-offset-2 hover:text-violet-dark"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Telehealth Informed Consent
-                  </a>
-                </span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={consentRecording}
-                  onChange={(e) => setConsentRecording(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-beige/40 text-violet accent-violet shrink-0 cursor-pointer"
-                />
-                <span className="text-sm text-beige/70 font-sans leading-relaxed">
-                  I have read and agree to the{' '}
-                  <a
-                    href="/consent/patient-recording-consent.docx"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-violet underline underline-offset-2 hover:text-violet-dark"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Patient Recording Consent
+                    Privacy Policy
                   </a>
                 </span>
               </label>
@@ -360,7 +338,7 @@ export default function IntakePage() {
 
             <button
               onClick={startIntake}
-              disabled={!consentTelehealth || !consentRecording}
+              disabled={!consentPrivacy}
               className="inline-flex items-center gap-3 px-10 py-4 rounded-full font-sans text-base font-semibold
                          bg-violet text-white hover:bg-violet-dark
                          transition-all duration-300 hover:scale-[1.02]
