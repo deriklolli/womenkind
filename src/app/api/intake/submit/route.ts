@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { intakes, providers, patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 /**
  * POST /api/intake/submit

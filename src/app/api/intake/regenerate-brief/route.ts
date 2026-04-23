@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { intakes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
