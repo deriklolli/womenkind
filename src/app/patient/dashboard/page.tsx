@@ -439,8 +439,7 @@ export default function PatientDashboardPage() {
   const dashboardPhase: DashboardPhase = (() => {
     if (!patient) return 'intake_done'
     if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
-    // Care plan only surfaces after an appointment has been booked
-    if (patient.presentationId && appointments.length > 0) return 'care_plan_ready'
+    if (patient.presentationId) return 'care_plan_ready'
     if (appointments.length > 0) return 'appointment_booked'
     return 'intake_done'
   })()
