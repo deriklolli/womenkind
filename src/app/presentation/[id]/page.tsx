@@ -181,12 +181,15 @@ export default function PresentationViewerPage() {
         id="overview-section"
         className="relative min-h-screen flex items-center overflow-hidden"
       >
-        {/* Hero background image */}
+        {/* Hero background video */}
         <div className="absolute inset-0" style={{ backgroundColor: '#c9b8a8' }} />
-        <img
-          src="/middleagedwoman.png"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-top"
+        <video
+          src="/herovideo.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
         {/* Warm brown gradient overlay — left-weighted for text legibility */}
         <div
