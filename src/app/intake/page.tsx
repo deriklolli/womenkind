@@ -324,7 +324,7 @@ export default function IntakePage() {
                 <span className="text-sm text-beige/70 font-sans leading-relaxed">
                   I have read and agree to the{' '}
                   <a
-                    href="/privacy-policy"
+                    href="/consent/privacy-policy.docx"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-violet underline underline-offset-2 hover:text-violet-dark"
