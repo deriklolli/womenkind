@@ -13,7 +13,6 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const passwordValid = password.length >= 8
@@ -33,94 +32,26 @@ export default function SignUpPage() {
     }
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            role: 'patient',
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/signup/verified`,
-        },
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, email, password }),
       })
 
-      if (signUpError) throw signUpError
-
-      // If email confirmation is required (no session returned)
-      if (!data.session) {
-        // Send welcome email via our API
-        await fetch('/api/auth/welcome', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            firstName,
-          }),
-        })
-        setEmailSent(true)
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Sign up failed')
         return
       }
 
-      // If auto-confirmed, go straight to intake
+      // Session cookies are set server-side — refresh the client session then go to intake
+      await supabase.auth.refreshSession()
       router.push('/intake')
     } catch (err: any) {
       setError(err.message || 'Sign up failed')
     } finally {
       setLoading(false)
     }
-  }
-
-  // Email sent confirmation view
-  if (emailSent) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Image
-              src="/womenkind-logo-dark.png"
-              alt="Womenkind"
-              width={600}
-              height={135}
-              className="h-[120px] w-auto mx-auto mb-2"
-              priority
-            />
-          </div>
-
-          <div className="bg-white rounded-card shadow-lg shadow-aubergine/5 p-8 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/10 border-2 border-violet/20 mb-5">
-              <svg className="w-8 h-8 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
-            </div>
-
-            <h2 className="font-sans font-semibold text-xl text-aubergine mb-3">
-              Check your email
-            </h2>
-            <p className="text-sm font-sans text-aubergine/50 leading-relaxed mb-2">
-              We sent a verification link to
-            </p>
-            <p className="text-sm font-sans font-semibold text-aubergine/70 mb-6">
-              {email}
-            </p>
-            <p className="text-xs font-sans text-aubergine/35 leading-relaxed">
-              Click the link in the email to verify your account and start your intake survey. The link will expire in 24 hours.
-            </p>
-          </div>
-
-          <p className="text-xs text-aubergine/30 font-sans text-center mt-6">
-            Already verified?{' '}
-            <button
-              onClick={() => router.push('/patient/login')}
-              className="text-violet font-semibold hover:text-violet/80 transition-colors"
-            >
-              Sign in
-            </button>
-          </p>
-        </div>
-      </div>
-    )
   }
 
   return (
