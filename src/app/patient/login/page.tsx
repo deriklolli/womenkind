@@ -275,16 +275,25 @@ export default function PatientLoginPage() {
           {/* Toggle sign up / sign in */}
           <p className="text-sm text-center text-aubergine/40 font-sans mt-5">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError('')
-                setMessage('')
-              }}
-              className="text-violet font-semibold hover:text-violet-dark transition-colors"
-            >
-              {isSignUp ? 'Sign in' : 'Sign up'}
-            </button>
+            {isSignUp ? (
+              <button
+                onClick={() => {
+                  setIsSignUp(false)
+                  setError('')
+                  setMessage('')
+                }}
+                className="text-violet font-semibold hover:text-violet-dark transition-colors"
+              >
+                Sign in
+              </button>
+            ) : (
+              <a
+                href="https://www.womenkindhealth.com/signup"
+                className="text-violet font-semibold hover:text-violet-dark transition-colors"
+              >
+                Sign up
+              </a>
+            )}
           </p>
 
         </div>
