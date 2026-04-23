@@ -94,7 +94,7 @@ export default function BriefViewerPage() {
     )
   }
 
-  if (!intake || !intake.ai_brief) {
+  if (!intake) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
@@ -102,6 +102,36 @@ export default function BriefViewerPage() {
           <button onClick={() => router.push('/provider/dashboard')} className="text-sm text-violet mt-4 font-sans">
             Back to dashboard
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!intake.ai_brief) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="font-sans font-semibold text-xl text-aubergine/40">Brief not yet generated</p>
+          <p className="text-sm text-aubergine/40 font-sans">The intake was submitted but the AI brief failed to generate.</p>
+          <button
+            onClick={async () => {
+              setLoading(true)
+              await fetch('/api/intake/regenerate-brief', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intakeId }),
+              })
+              await loadIntake()
+            }}
+            className="px-6 py-2.5 rounded-full bg-violet text-white text-sm font-sans font-semibold hover:bg-violet/90 transition-colors"
+          >
+            Generate Brief Now
+          </button>
+          <div>
+            <button onClick={() => router.push('/provider/dashboard')} className="text-sm text-violet font-sans">
+              Back to dashboard
+            </button>
+          </div>
         </div>
       </div>
     )
