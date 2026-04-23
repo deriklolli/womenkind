@@ -7,6 +7,7 @@ import { patients, profiles, intakes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
 import { generateComponentBodies } from '@/lib/intake-component-bodies'
+import { generateClinicalBrief } from '@/lib/intake-brief'
 
 /**
  * GET /api/debug/backfill-bodies?email=<patient_email>[&force=1]
@@ -41,12 +42,12 @@ export async function GET(req: NextRequest) {
     })
     if (!intakeRow) return NextResponse.json({ error: 'No intake for patient' }, { status: 404 })
 
-    const aiBrief = intakeRow.ai_brief as any
+    let aiBrief = intakeRow.ai_brief as any
+    let briefGenerated = false
     if (!aiBrief) {
-      return NextResponse.json(
-        { error: 'Intake has no ai_brief — run brief generation first' },
-        { status: 400 }
-      )
+      aiBrief = await generateClinicalBrief(intakeRow.answers as Record<string, any>)
+      await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, intakeRow.id))
+      briefGenerated = true
     }
 
     const existing = aiBrief.component_bodies
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      briefGenerated,
       patientId: rdsPatient.id,
       intakeId: intakeRow.id,
       count: Object.keys(bodies).length,
