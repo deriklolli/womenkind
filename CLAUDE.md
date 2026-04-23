@@ -26,12 +26,13 @@
 - CORS: allows `*` origins, methods PUT/GET/HEAD, headers `*` — required for browser direct upload via pre-signed URL
 - Video call recordings go to Daily.co's own S3 (`daily-meeting-recordings`), not this bucket
 - `src/lib/s3.ts` — `getUploadUrl()` (pre-signed PUT), `getDownloadUrl()` (pre-signed GET for AssemblyAI)
+- S3 client uses **explicit** credentials (same reason as Bedrock — Vercel's `VERCEL_OIDC_TOKEN` poisons the default chain, producing pre-signed URLs that return 403 when AssemblyAI tries to download them)
 
 ## Recording → Transcription Pipeline
 - **In-office**: browser → pre-signed S3 PUT → `/api/visits/ambient-recording` → AssemblyAI → `/api/visits/webhook/transcription`
 - **Video call**: Daily cloud records → Daily fires `recording.ready-to-download` webhook → `/api/visits/webhook/recording` → AssemblyAI → `/api/visits/webhook/transcription` → Bedrock SOAP note → `encounter_notes` table
 - `WEBHOOK_SECRET` must be set in Vercel — AssemblyAI sends it as `x-webhook-secret`, Daily signs with HMAC-SHA256 (`x-daily-signature` + `x-daily-timestamp`)
-- Daily webhook registered at: `https://api.daily.co/v1/webhooks` (no `event_types` filter — Daily API doesn't support it; all events go to one endpoint)
+- Daily webhook registered at: `https://api.daily.co/v1/webhooks` (no `event_types` filter — Daily API doesn't support it; all events go to one endpoint); URL must be `https://www.womenkindhealth.com/api/visits/webhook/recording`
 - Debug endpoints: `/api/debug/reprocess-transcripts` (re-fires stuck AssemblyAI jobs), `/api/debug/create-test-video-appointment` (creates Daily room + appointment for testing)
 - Cloud recording starts automatically via Daily's `enable_recording: 'cloud'` room property when participants join — do NOT call `startCloudRecording()` at booking time (nobody is in the room yet, it conflicts)
 
