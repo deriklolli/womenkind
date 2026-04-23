@@ -5,7 +5,13 @@ let _client: S3Client | null = null
 
 function getClient(): S3Client {
   if (!_client) {
-    _client = new S3Client({ region: process.env.AWS_REGION || 'us-west-2' })
+    _client = new S3Client({
+      region: process.env.AWS_REGION || 'us-west-2',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    })
   }
   return _client
 }
