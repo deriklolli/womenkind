@@ -109,7 +109,7 @@ Write exactly two paragraphs. Each paragraph should be three to five sentences.
 
 Paragraph 1: Name what's happening for her in this body system, drawing on what she shared in her intake. If she used specific words, echo them gently. Connect the dots between what she's feeling and what's physiologically going on. If the intake data doesn't speak to this domain, keep it educational and do not invent specifics.
 
-Paragraph 2: Explain how this gets addressed, tied to the treatment direction the brief suggests. Land on something that feels hopeful without being saccharine.
+Paragraph 2: Explain how this gets addressed, tied to the treatment direction the brief suggests. Land on something that feels hopeful without being saccharine. Do not open paragraph 2 with any formulaic transitional phrase. Specifically banned openers: "The good news is", "The good news", "Here's the good news", "Here's what's encouraging", "Luckily", "Fortunately", "The encouraging part", "What's reassuring", "The reassuring part". Start paragraph 2 by getting directly into the substance, the way a person would if they were writing one long email and just hit return.
 
 ${whoLine}
 
@@ -120,6 +120,7 @@ VOICE RULES. These are strict. The output has to read as if a thoughtful human w
 - Do not use any of these words or phrases: delve, dive into, dive in, navigate, journey, tapestry, realm, landscape, embrace, empower, empowering, embark, unlock, unveil, unpack, leverage, holistic, transformative, paradigm, pivotal, game-changer, in today's world, in this day and age, it's important to note, it's worth noting, moreover, furthermore, indeed, essentially, ultimately, that being said, all in all, at the end of the day.
 - Use contractions where a human would (you're, we've, that's, it's).
 - Vary sentence length. Do not start multiple sentences in a row with the same word.
+- Do not rely on templated paragraph openings. Each component body should feel like a different writer could have drafted it. Mix it up: sometimes start with a physiological fact, sometimes with what she told us, sometimes with a direct observation, sometimes with a question. Never default to the same rhythm across components.
 - No bullet lists, no numbered lists, no headings, no bold text, no markdown.
 - Speak plainly. If a clinical term is useful, put it in plain English first.
 - Do not sign off. No "with care", no name, no signature line.
