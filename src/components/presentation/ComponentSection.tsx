@@ -7,6 +7,7 @@ import type { PresentationComponent } from '@/lib/presentation-components'
 interface ComponentSectionProps {
   component: PresentationComponent
   providerNote: string
+  personalizedBody?: string
   index: number
   total: number
   providerName: string
@@ -16,11 +17,14 @@ interface ComponentSectionProps {
 export default function ComponentSection({
   component,
   providerNote,
+  personalizedBody,
   index,
   total,
   providerName,
   onCreamBackground = true,
 }: ComponentSectionProps) {
+  const bodyText = (personalizedBody?.trim() || component.defaultExplanation).trim()
+  const paragraphs = bodyText.split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean)
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10% 0px' })
 
@@ -70,16 +74,23 @@ export default function ComponentSection({
             style={{ backgroundColor: component.color }}
           />
 
-          {/* Patient-facing explanation — warm body text */}
-          <motion.p
+          {/* Patient-facing explanation — warm body text, personalized to this patient */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-base md:text-lg font-sans leading-relaxed mb-10 max-w-2xl"
-            style={{ color: '#422a1f' }}
+            className="mb-10 max-w-2xl space-y-5"
           >
-            {component.defaultExplanation}
-          </motion.p>
+            {paragraphs.map((para, i) => (
+              <p
+                key={i}
+                className="text-base md:text-lg font-sans leading-relaxed"
+                style={{ color: '#422a1f' }}
+              >
+                {para}
+              </p>
+            ))}
+          </motion.div>
 
           {/* Provider's personalized note */}
           {providerNote && (

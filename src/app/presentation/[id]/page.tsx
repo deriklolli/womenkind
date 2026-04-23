@@ -12,7 +12,7 @@ interface Presentation {
   patient_id: string
   provider_id: string
   selected_components: string[]
-  component_notes: Record<string, { provider_note: string; ai_draft?: string }>
+  component_notes: Record<string, { provider_note: string; ai_draft?: string; personalized_body?: string }>
   welcome_message: string | null
   closing_message: string | null
   status: string
@@ -283,6 +283,7 @@ export default function PresentationViewerPage() {
             <ComponentSection
               component={comp}
               providerNote={presentation.component_notes[comp.key]?.provider_note || ''}
+              personalizedBody={presentation.component_notes[comp.key]?.personalized_body || ''}
               index={i}
               total={components.length}
               providerName="Dr. Urban"

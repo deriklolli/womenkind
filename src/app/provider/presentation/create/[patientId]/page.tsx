@@ -16,6 +16,7 @@ interface ComponentNotes {
   [key: string]: {
     provider_note: string
     ai_draft: string
+    personalized_body: string
   }
 }
 
@@ -35,6 +36,7 @@ export default function CreatePresentationPage() {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [draftingAI, setDraftingAI] = useState<string | null>(null)
+  const [draftingBody, setDraftingBody] = useState<string | null>(null)
   const [providerId, setProviderId] = useState<string>('')
   const [sendError, setSendError] = useState<string | null>(null)
 
@@ -78,6 +80,7 @@ export default function CreatePresentationPage() {
   const firstName = patient?.profiles?.first_name || 'your patient'
 
   const toggleComponent = (key: string) => {
+    let shouldAutoDraftBody = false
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(key)) {
@@ -86,19 +89,36 @@ export default function CreatePresentationPage() {
       } else {
         next.add(key)
         setActiveComponent(key)
-        // Initialize notes if not present
         if (!notes[key]) {
-          setNotes((n) => ({ ...n, [key]: { provider_note: '', ai_draft: '' } }))
+          setNotes((n) => ({
+            ...n,
+            [key]: { provider_note: '', ai_draft: '', personalized_body: '' },
+          }))
+          shouldAutoDraftBody = true
+        } else if (!notes[key].personalized_body) {
+          shouldAutoDraftBody = true
         }
       }
       return next
     })
+    if (shouldAutoDraftBody) {
+      // Fire-and-forget: populate the personalized body text in the background
+      // so the doctor sees a draft by the time they focus this section.
+      void handleBodyDraft(key)
+    }
   }
 
   const updateNote = (key: string, text: string) => {
     setNotes((prev) => ({
       ...prev,
       [key]: { ...prev[key], provider_note: text },
+    }))
+  }
+
+  const updateBody = (key: string, text: string) => {
+    setNotes((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], personalized_body: text },
     }))
   }
 
@@ -121,6 +141,32 @@ export default function CreatePresentationPage() {
       console.error('AI draft failed:', err)
     } finally {
       setDraftingAI(null)
+    }
+  }
+
+  const handleBodyDraft = async (key: string) => {
+    setDraftingBody(key)
+    try {
+      const res = await fetch('/api/presentation/ai-body', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, componentKey: key }),
+      })
+      const data = await res.json()
+      if (data.draft) {
+        setNotes((prev) => ({
+          ...prev,
+          [key]: {
+            provider_note: prev[key]?.provider_note || '',
+            ai_draft: prev[key]?.ai_draft || '',
+            personalized_body: data.draft,
+          },
+        }))
+      }
+    } catch (err) {
+      console.error('AI body draft failed:', err)
+    } finally {
+      setDraftingBody(null)
     }
   }
 
@@ -287,6 +333,10 @@ export default function CreatePresentationPage() {
                     onNoteChange={(text) => updateNote(activeComponent, text)}
                     onAIDraft={() => handleAIDraft(activeComponent)}
                     isDrafting={draftingAI === activeComponent}
+                    personalizedBody={notes[activeComponent]?.personalized_body || ''}
+                    onBodyChange={(text) => updateBody(activeComponent, text)}
+                    onBodyRegenerate={() => handleBodyDraft(activeComponent)}
+                    isDraftingBody={draftingBody === activeComponent}
                     firstName={firstName}
                   />
                 ) : selected.size > 0 ? (
@@ -429,6 +479,10 @@ function ComponentEditor({
   onNoteChange,
   onAIDraft,
   isDrafting,
+  personalizedBody,
+  onBodyChange,
+  onBodyRegenerate,
+  isDraftingBody,
   firstName,
 }: {
   component: PresentationComponent
@@ -436,6 +490,10 @@ function ComponentEditor({
   onNoteChange: (text: string) => void
   onAIDraft: () => void
   isDrafting: boolean
+  personalizedBody: string
+  onBodyChange: (text: string) => void
+  onBodyRegenerate: () => void
+  isDraftingBody: boolean
   firstName: string
 }) {
   return (
@@ -468,10 +526,48 @@ function ComponentEditor({
         <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{component.clinicalRelevance}</p>
       </div>
 
-      {/* Patient-facing explanation preview */}
-      <div className="mb-5 p-4 rounded-brand bg-cream border border-aubergine/5">
-        <p className="text-xs font-sans font-semibold text-aubergine/40 mb-1">Default Patient Explanation</p>
-        <p className="text-sm font-sans text-aubergine/60 leading-relaxed italic">{component.defaultExplanation}</p>
+      {/* Personalized body text — replaces the default paragraph in the presentation */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-sans font-semibold text-aubergine/50">
+            Personalized Body Text for {firstName}
+          </label>
+          <button
+            onClick={onBodyRegenerate}
+            disabled={isDraftingBody}
+            className="flex items-center gap-1.5 text-xs font-sans text-violet hover:text-violet-dark transition-colors disabled:opacity-50"
+          >
+            {isDraftingBody ? (
+              <>
+                <div className="w-3 h-3 border-2 border-violet/30 border-t-violet rounded-full animate-spin" />
+                Drafting...
+              </>
+            ) : (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {personalizedBody ? 'Regenerate' : 'AI Draft'}
+              </>
+            )}
+          </button>
+        </div>
+        {isDraftingBody && !personalizedBody ? (
+          <div className="w-full px-3 py-6 text-sm font-sans text-aubergine/40 bg-cream border border-aubergine/10 rounded-brand text-center">
+            Drafting from {firstName}&apos;s intake, symptom check-ins, and wearable data…
+          </div>
+        ) : (
+          <textarea
+            value={personalizedBody}
+            onChange={(e) => onBodyChange(e.target.value)}
+            rows={8}
+            placeholder={`Auto-drafting a personalized paragraph for ${firstName}'s ${component.shortLabel.toLowerCase()} section…`}
+            className="w-full px-3 py-2 text-sm font-sans text-aubergine bg-cream border border-aubergine/10 rounded-brand focus:outline-none focus:border-violet/40 focus:ring-1 focus:ring-violet/20 resize-y leading-relaxed"
+          />
+        )}
+        <p className="text-xs font-sans text-aubergine/25 mt-1.5">
+          This replaces the default paragraph in this section. It&apos;s auto-drafted from her intake — edit freely.
+        </p>
       </div>
 
       {/* Provider notes */}
