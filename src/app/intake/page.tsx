@@ -313,7 +313,7 @@ export default function IntakePage() {
             </p>
 
             {/* Privacy policy checkbox */}
-            <div className="mb-8 text-left max-w-md mx-auto">
+            <div className="mb-8 max-w-md mx-auto flex justify-center">
               <label className="flex items-start gap-3 cursor-pointer group">
                 <input
                   type="checkbox"
