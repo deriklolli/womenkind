@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server'
+
+export const maxDuration = 60
+
 import { db } from '@/lib/db'
 import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles, appointments } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
+
 import { invokeModel } from '@/lib/bedrock'
 import { db } from '@/lib/db'
 import { intakes, wearable_metrics } from '@/lib/db/schema'

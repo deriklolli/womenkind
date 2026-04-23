@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
+
 import { getStripe } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { intakes, subscriptions, appointments } from '@/lib/db/schema'
