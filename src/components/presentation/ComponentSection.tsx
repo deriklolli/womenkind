@@ -46,12 +46,12 @@ export default function ComponentSection({
             &bull;&ensp;{index + 1} of {total}&ensp;&bull;
           </motion.p>
 
-          {/* Title — large Vogun serif */}
+          {/* Title — Playfair Display serif */}
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-sans font-semibold text-3xl md:text-4xl lg:text-5xl text-aubergine mb-6 leading-tight"
+            className="font-serif font-normal text-3xl md:text-4xl lg:text-5xl text-aubergine mb-6 leading-tight"
           >
             {component.label.split('&').map((part, i, arr) => (
               <span key={i}>

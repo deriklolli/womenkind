@@ -135,10 +135,11 @@ export default function PresentationViewerPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 1.0 }}
-            className="flex items-center justify-center gap-3 text-sm font-sans text-white/30"
+            className="flex items-center justify-center gap-3 text-sm font-sans"
+            style={{ color: '#d4b896' }}
           >
             <span>Prepared by Dr. Joseph Urban Jr.</span>
-            <span className="w-1 h-1 rounded-full bg-white/20" />
+            <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'rgba(212,184,150,0.5)' }} />
             <span>
               {new Date(presentation.created_at).toLocaleDateString('en-US', {
                 month: 'long',
@@ -181,44 +182,42 @@ export default function PresentationViewerPage() {
         className="relative min-h-screen flex items-center overflow-hidden"
       >
         {/* Hero background image */}
-        <div
-          className="absolute inset-0 bg-aubergine"
-          style={{
-            backgroundImage: 'url(/presentation-hero.jpg), url(https://images.unsplash.com/photo-1552058544-f2b08422138a?w=1920&q=80&fit=crop&crop=faces)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center 20%',
-          }}
+        <div className="absolute inset-0" style={{ backgroundColor: '#c9b8a8' }} />
+        <img
+          src="/middleagedwoman.png"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-top"
         />
-        {/* Dark gradient overlay — left-weighted for text legibility */}
+        {/* Warm brown gradient overlay — left-weighted for text legibility */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to right, rgba(26, 9, 48, 0.75) 0%, rgba(26, 9, 48, 0.5) 45%, rgba(26, 9, 48, 0.2) 100%)',
+            background: 'linear-gradient(to right, rgba(90,62,38,0.95) 0%, rgba(90,62,38,0.85) 30%, rgba(90,62,38,0.4) 52%, rgba(90,62,38,0.0) 70%)',
           }}
         />
-        {/* Subtle bottom gradient for lower content */}
+        {/* Subtle bottom gradient */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to top, rgba(26, 9, 48, 0.6) 0%, transparent 40%)',
+            background: 'linear-gradient(to top, rgba(70,50,35,0.3) 0%, transparent 30%)',
           }}
         />
 
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-8 md:px-16 py-24">
-          <div className="max-w-xl">
-            {/* Section label — Figma-style uppercase with dot separators */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-8 md:px-16 py-24" style={{ maxWidth: '720px', marginLeft: 0 }}>
+          <div style={{ paddingLeft: '72px', paddingRight: 0 }}>
+            {/* Section label */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="text-xs font-sans font-semibold tracking-[0.2em] uppercase mb-8"
-              style={{ color: '#ffd4b0' }}
+              className="text-xs font-sans font-semibold tracking-[0.2em] uppercase mb-6"
+              style={{ color: 'rgba(255,230,200,0.75)' }}
             >
               &bull;&ensp;{firstName}&apos;s Care Plan&ensp;&bull;
             </motion.p>
 
-            {/* Headline — Vogun serif, large, white */}
+            {/* Headline */}
             <motion.h2
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -226,23 +225,23 @@ export default function PresentationViewerPage() {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="font-serif font-normal text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-6"
             >
-              What We&apos;re<br />Focusing On
+              Understanding Your Care<br />Brings Peace of Mind
             </motion.h2>
 
-            {/* Body text — Plus Jakarta, white at 80% */}
+            {/* Body text */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-base md:text-lg font-sans text-white/80 leading-relaxed mb-10 max-w-md"
+              className="text-base font-sans leading-relaxed mb-10 max-w-md"
+              style={{ color: 'rgba(255,255,255,0.78)' }}
             >
-              Based on your evaluation, we&apos;ve identified {components.length} key areas
-              to address in your personalized care plan. Scroll through each section to
-              understand what&apos;s happening and how we&apos;ll help.
+              Knowing what&apos;s happening in your body — and why — makes the journey feel lighter.
+              We&apos;ve identified {components.length} areas to focus on together, each explained in plain language below.
             </motion.p>
 
-            {/* Component pills */}
+            {/* Component pills — violet bg, white text */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -258,12 +257,8 @@ export default function PresentationViewerPage() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: 0.6 + i * 0.08 }}
-                  className="text-sm font-sans px-4 py-2 rounded-pill cursor-pointer transition-all duration-300
-                    shadow-md shadow-white/10 hover:shadow-lg hover:shadow-white/30 hover:scale-[1.03]"
-                  style={{
-                    color: '#944fed',
-                    backgroundColor: 'white',
-                  }}
+                  className="text-sm font-sans font-semibold px-5 py-3 rounded-full text-white cursor-pointer transition-all duration-200 hover:opacity-90 hover:-translate-y-px"
+                  style={{ backgroundColor: '#944fed' }}
                   onClick={(e) => {
                     e.preventDefault()
                     document.getElementById(`section-${comp.key}`)?.scrollIntoView({ behavior: 'smooth' })
