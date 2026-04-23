@@ -15,7 +15,11 @@
 - IAM user: `womenkind-app` (account `695385417786`), policies: `AmazonBedrockFullAccess` + `AmazonS3FullAccess`
 - Env vars on Vercel: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION=us-west-2`, `BEDROCK_MODEL_ID`
 - `src/lib/bedrock.ts` uses **explicit** credentials, not the default chain (Vercel's `VERCEL_OIDC_TOKEN` interferes)
-- Brief pipeline: `/api/intake/regenerate-brief` → `generateClinicalBrief()` → `invokeModel()` → writes `intakes.ai_brief`
+- Brief pipeline: `/api/intake/submit` → `generateClinicalBrief()` → `invokeModel()` → writes `intakes.ai_brief`
+- **Every route that calls Bedrock must have `export const maxDuration = 300`** — Vercel's default 10s kills Bedrock calls silently. Routes: `intake/submit`, `intake/regenerate-brief`, `generate-briefs`, `visits/webhook/transcription`. Others (chat, visit-prep, ai-notes, stripe webhook) use 60s.
+- Brief generation uses `maxTokens: 8192` — full intake answers can exceed 4096 tokens and Bedrock will hard-error (not truncate silently)
+- `/api/generate-briefs` is protected by `GENERATE_BRIEFS_SECRET` env var — call it to manually regenerate missing briefs. The secret is set in Vercel (not in local env files).
+- Intakes only appear in the provider queue **after** a brief is generated — no need for recovery UX on the brief viewer page
 
 ## S3 Recordings
 - Bucket: `womenkind-recordings` (us-west-2), used for ambient (in-office) recordings
@@ -29,11 +33,13 @@
 - `WEBHOOK_SECRET` must be set in Vercel — AssemblyAI sends it as `x-webhook-secret`, Daily signs with HMAC-SHA256 (`x-daily-signature` + `x-daily-timestamp`)
 - Daily webhook registered at: `https://api.daily.co/v1/webhooks` (no `event_types` filter — Daily API doesn't support it; all events go to one endpoint)
 - Debug endpoints: `/api/debug/reprocess-transcripts` (re-fires stuck AssemblyAI jobs), `/api/debug/create-test-video-appointment` (creates Daily room + appointment for testing)
-- Cloud recording starts automatically via `startCloudRecording()` at room creation — providers do NOT need to hit record
+- Cloud recording starts automatically via Daily's `enable_recording: 'cloud'` room property when participants join — do NOT call `startCloudRecording()` at booking time (nobody is in the room yet, it conflicts)
 
 ## Auth / test accounts
 - Provider: `josephurbanmd@gmail.com` / `password123`
 - Patient `dlolli@gmail.com` password is **not** `password123` — ask the user if you need to log in as that account
+- Signup flow is fully server-side (`/api/auth/signup`): admin client with `email_confirm: true` skips Supabase SMTP, creates RDS `profiles` + `patients` rows immediately, signs in server-side, sends welcome email via Resend
+- Patient signup link on the login page goes to `womenkindhealth.com/signup` (marketing site), not the in-app `/signup` route
 
 ## Working style
 - User is a solo, non-developer founder. Keep explanations short. Do the work, don't narrate plans.
