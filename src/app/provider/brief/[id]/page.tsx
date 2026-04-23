@@ -54,6 +54,21 @@ export default function BriefViewerPage() {
         intakeStatus: data.status,
       })
 
+      // Auto-generate brief if missing (e.g. Bedrock timed out during submission)
+      if (!data.ai_brief && data.answers) {
+        await fetch('/api/intake/regenerate-brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intakeId }),
+        })
+        const retryRes = await fetch(`/api/provider/intakes/${intakeId}`)
+        if (retryRes.ok) {
+          const { intake: retryData } = await retryRes.json()
+          setIntake(retryData)
+          setNotes(retryData.provider_notes || '')
+        }
+      }
+
       if (data.status === 'submitted') {
         await fetch(`/api/provider/intakes/${intakeId}`, {
           method: 'PATCH',

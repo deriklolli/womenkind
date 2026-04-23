@@ -7,6 +7,8 @@ import { db } from '@/lib/db'
 import { intakes, providers, patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
+export const maxDuration = 60
+
 /**
  * POST /api/intake/submit
  * Finalizes an intake: marks as submitted, triggers AI brief generation
