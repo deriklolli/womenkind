@@ -107,6 +107,19 @@ export default function BriefViewerPage() {
     )
   }
 
+  if (!intake.ai_brief) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-center">
+          <p className="font-sans font-semibold text-xl text-aubergine/40">Brief not found</p>
+          <button onClick={() => router.push('/provider/dashboard')} className="text-sm text-violet mt-4 font-sans">
+            Back to dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const brief = intake.ai_brief
   const answers = intake.answers || {}
   const age = answers.dob
