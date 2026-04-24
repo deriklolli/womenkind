@@ -108,7 +108,7 @@ export default function PresentationViewerPage() {
               alt="Womenkind"
               width={200}
               height={45}
-              className="h-[42px] w-auto mx-auto mb-12 opacity-60"
+              className="h-[42px] w-auto mx-auto mb-12 opacity-60 -mt-16"
             />
           </motion.div>
 
@@ -116,7 +116,7 @@ export default function PresentationViewerPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
-            className="font-serif font-normal text-3xl md:text-4xl text-white mb-6 leading-tight"
+            className="font-serif font-normal text-4xl md:text-5xl lg:text-6xl text-white mb-6 leading-tight"
           >
             Your Future Health<br />Blueprint Summary
           </motion.h1>
@@ -228,7 +228,7 @@ export default function PresentationViewerPage() {
               transition={{ duration: 0.8, delay: 0.1 }}
               className="font-serif font-normal text-4xl md:text-5xl lg:text-6xl text-white leading-tight mb-6"
             >
-              Understanding Your Care<br />Brings Peace of Mind
+              Understanding Your Care Brings Peace of Mind
             </motion.h2>
 
             {/* Body text */}
@@ -237,7 +237,7 @@ export default function PresentationViewerPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-base font-sans leading-relaxed mb-10 max-w-md"
+              className="text-base font-sans leading-relaxed mb-10 max-w-lg"
               style={{ color: 'rgba(255,255,255,0.78)' }}
             >
               Knowing what&apos;s happening in your body — and why — makes the journey feel lighter.
