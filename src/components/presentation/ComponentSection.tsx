@@ -1,7 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useRef, useEffect } from 'react'
 import type { PresentationComponent } from '@/lib/presentation-components'
 
 interface ComponentSectionProps {
@@ -25,96 +24,114 @@ export default function ComponentSection({
 }: ComponentSectionProps) {
   const bodyText = (personalizedBody?.trim() || component.defaultExplanation).trim()
   const paragraphs = bodyText.split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean)
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-10% 0px' })
+
+  const sectionRef = useRef<HTMLElement>(null)
+  const labelRef = useRef<HTMLParagraphElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const dividerRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let ctx: any
+
+    const init = async () => {
+      const { gsap } = await import('gsap')
+      const { ScrollTrigger } = await import('gsap/ScrollTrigger')
+      gsap.registerPlugin(ScrollTrigger)
+
+      ctx = gsap.context(() => {
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 72%',
+            once: true,
+          },
+          defaults: { ease: 'power3.out' },
+        })
+
+        tl.from(labelRef.current, { opacity: 0, y: 12, duration: 0.5 })
+          .from(titleRef.current, { opacity: 0, y: 44, duration: 0.75 }, '-=0.25')
+          .from(dividerRef.current, { scaleX: 0, transformOrigin: 'left center', duration: 0.65 }, '-=0.5')
+          .from(
+            bodyRef.current ? Array.from(bodyRef.current.children) : [],
+            { opacity: 0, y: 24, stagger: 0.14, duration: 0.65 },
+            '-=0.35'
+          )
+
+        if (cardRef.current) {
+          tl.from(cardRef.current, { opacity: 0, y: 20, duration: 0.55 }, '-=0.25')
+        }
+      }, sectionRef)
+    }
+
+    init()
+    return () => ctx?.revert()
+  }, [])
 
   return (
     <section
-      ref={ref}
+      ref={sectionRef}
       className="min-h-[70vh] flex items-center py-20 md:py-32"
     >
       <div className="w-full max-w-4xl mx-auto px-8 md:px-16">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+        <p
+          ref={labelRef}
+          className="text-xs font-sans font-semibold tracking-[0.2em] uppercase mb-8"
+          style={{ color: '#944fed' }}
         >
-          {/* Section label — Figma-style uppercase with dots */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-xs font-sans font-semibold tracking-[0.2em] uppercase mb-8"
-            style={{ color: '#944fed' }}
-          >
-            &bull;&ensp;{index + 1} of {total}&ensp;&bull;
-          </motion.p>
+          &bull;&ensp;{index + 1} of {total}&ensp;&bull;
+        </p>
 
-          {/* Title — Playfair Display serif */}
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-serif font-normal text-3xl md:text-4xl lg:text-5xl text-aubergine mb-6 leading-tight"
-          >
-            {component.label.split('&').map((part, i, arr) => (
-              <span key={i}>
-                {part}
-                {i < arr.length - 1 && <span className="text-violet">&amp;</span>}
-              </span>
-            ))}
-          </motion.h2>
+        <h2
+          ref={titleRef}
+          className="font-serif font-normal text-3xl md:text-4xl lg:text-5xl text-aubergine mb-6 leading-tight"
+        >
+          {component.label.split('&').map((part, i, arr) => (
+            <span key={i}>
+              {part}
+              {i < arr.length - 1 && <span className="text-violet">&amp;</span>}
+            </span>
+          ))}
+        </h2>
 
-          {/* Decorative divider */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={isInView ? { scaleX: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="origin-left h-px w-20 mb-8"
-            style={{ backgroundColor: component.color }}
-          />
+        <div
+          ref={dividerRef}
+          className="h-px w-20 mb-8"
+          style={{ backgroundColor: component.color }}
+        />
 
-          {/* Patient-facing explanation — warm body text, personalized to this patient */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="mb-10 max-w-2xl space-y-5"
-          >
-            {paragraphs.map((para, i) => (
-              <p
-                key={i}
-                className="text-base md:text-lg font-sans leading-relaxed"
-                style={{ color: '#422a1f' }}
-              >
-                {para}
-              </p>
-            ))}
-          </motion.div>
-
-          {/* Provider's personalized note */}
-          {providerNote && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="rounded-2xl border flex items-start gap-5 p-6 md:p-8"
-              style={{
-                backgroundColor: onCreamBackground ? '#ffffff' : '#f7f3ee',
-                borderColor: onCreamBackground ? '#e8e4df' : '#ebe7e2',
-              }}
+        <div ref={bodyRef} className="mb-10 max-w-2xl space-y-5">
+          {paragraphs.map((para, i) => (
+            <p
+              key={i}
+              className="text-base md:text-lg font-sans leading-relaxed"
+              style={{ color: '#422a1f' }}
             >
-              <img
-                src="/dr-urban.jpg"
-                alt={providerName}
-                className="w-[62px] h-[62px] rounded-full object-cover object-top flex-shrink-0"
-              />
-              <p className="text-base font-sans leading-relaxed" style={{ color: '#422a1f' }}>
-                {providerNote}
-              </p>
-            </motion.div>
-          )}
-        </motion.div>
+              {para}
+            </p>
+          ))}
+        </div>
+
+        {providerNote && (
+          <div
+            ref={cardRef}
+            className="rounded-2xl border flex items-start gap-5 p-6 md:p-8"
+            style={{
+              backgroundColor: onCreamBackground ? '#ffffff' : '#f7f3ee',
+              borderColor: onCreamBackground ? '#e8e4df' : '#ebe7e2',
+            }}
+          >
+            <img
+              src="/dr-urban.jpg"
+              alt={providerName}
+              className="w-[62px] h-[62px] rounded-full object-cover object-top flex-shrink-0"
+            />
+            <p className="text-base font-sans leading-relaxed" style={{ color: '#422a1f' }}>
+              {providerNote}
+            </p>
+          </div>
+        )}
       </div>
     </section>
   )
