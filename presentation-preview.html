@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Care Presentation Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500&family=Great+Vibes&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --aubergine: #280f49;
+      --aubergine-light: #3d1a6e;
+      --aubergine-dark: #1a0930;
+      --violet: #944fed;
+      --cream: #f7f3ee;
+      --natural: #ffd4b0;
+      --beige: #422a1f;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: #fff;
+      color: var(--beige);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      background: var(--aubergine);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-glow-1 {
+      position: absolute;
+      top: 25%; left: 25%;
+      width: 384px; height: 384px;
+      background: rgba(148, 79, 237, 0.10);
+      border-radius: 50%;
+      filter: blur(60px);
+      pointer-events: none;
+    }
+    .hero-glow-2 {
+      position: absolute;
+      bottom: 25%; right: 25%;
+      width: 320px; height: 320px;
+      background: rgba(216, 86, 35, 0.05);
+      border-radius: 50%;
+      filter: blur(60px);
+      pointer-events: none;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 640px;
+      padding: 0 24px;
+      animation: fadeUp 1s ease-out both;
+    }
+    .logo-placeholder {
+      width: 160px;
+      height: 36px;
+      margin: 0 auto 48px;
+      opacity: 0.5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.6);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+    .hero h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(32px, 4.5vw, 56px);
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 24px;
+      animation: fadeUp 1s 0.3s ease-out both;
+    }
+    .hero p {
+      font-size: 19px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+      margin-bottom: 40px;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      animation: fadeUp 0.8s 0.6s ease-out both;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #d4b896;
+      animation: fadeIn 0.8s 1s ease-out both;
+    }
+    .hero-meta .dot { width: 4px; height: 4px; border-radius: 50%; background: rgba(212,184,150,0.5); }
+    .scroll-btn {
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--violet);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      animation: fadeIn 0.8s 1.5s ease-out both;
+    }
+    .scroll-btn:hover { background: rgba(148,79,237,0.1); }
+    .scroll-btn svg { animation: bounce 1.5s ease-in-out infinite; color: var(--violet); }
+
+    /* ── Overview ── */
+    .overview {
+      min-height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .overview-bg {
+      position: absolute;
+      inset: 0;
+      background: #c9b8a8;
+    }
+    .overview-img {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+    .overview-overlay-l {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right,
+        rgba(90, 62, 38, 0.95) 0%,
+        rgba(90, 62, 38, 0.85) 30%,
+        rgba(90, 62, 38, 0.4)  52%,
+        rgba(90, 62, 38, 0.0)  70%);
+    }
+    .overview-overlay-b {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(70,50,35,0.3) 0%, transparent 30%);
+    }
+    .overview-content {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 96px 72px;
+      max-width: 720px;
+      margin: 0;
+      padding-left: 72px;
+      padding-right: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,230,200,0.75);
+      margin-bottom: 24px;
+    }
+    .overview h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(32px, 4.5vw, 56px);
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 24px;
+    }
+    .overview-body {
+      font-size: 15px;
+      color: rgba(255,255,255,0.78);
+      line-height: 1.75;
+      max-width: 480px;
+      margin-bottom: 40px;
+    }
+    .overview-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--violet);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px 24px;
+      border-radius: 9999px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s, transform 0.2s;
+      width: fit-content;
+    }
+    .overview-cta:hover { background: #7a35d9; transform: translateY(-1px); }
+    .overview-cta-arrow {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .pill {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 11px 22px;
+      border-radius: 9999px;
+      background: var(--violet);
+      color: #fff;
+      border: none;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      cursor: pointer;
+    }
+    .pill:hover { background: #7a35d9; transform: translateY(-1px); }
+
+    /* ── Component sections ── */
+    .comp-section {
+      min-height: 70vh;
+      display: flex;
+      align-items: center;
+      padding: 80px 0;
+    }
+    .comp-section.cream { background: var(--cream); }
+    .comp-section.white { background: #fff; }
+    .comp-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 64px;
+    }
+    .comp-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--violet);
+      margin-bottom: 32px;
+    }
+    .comp-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(28px, 5vw, 48px);
+      color: var(--aubergine);
+      line-height: 1.15;
+      margin-bottom: 24px;
+    }
+    .comp-title .accent { color: var(--violet); }
+    .comp-divider {
+      height: 1px;
+      width: 80px;
+      margin-bottom: 32px;
+    }
+    .comp-body {
+      font-size: 16px;
+      line-height: 1.75;
+      color: var(--beige);
+      max-width: 640px;
+      margin-bottom: 40px;
+    }
+    .provider-card {
+      border-radius: 16px;
+      border: 1px solid #e8e4df;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 24px 32px;
+    }
+    .comp-section.white .provider-card { background: var(--cream); border-color: #ebe7e2; }
+    .comp-section.cream .provider-card { background: #fff; border-color: #e8e4df; }
+    .provider-avatar {
+      width: 62px; height: 62px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: rgba(148,79,237,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--violet);
+      font-weight: 600;
+      font-size: 18px;
+    }
+    .provider-note {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--beige);
+      padding-top: 4px;
+    }
+
+    /* ── Split-image sections ── */
+    .comp-section.has-image {
+      padding: 80px 0;
+    }
+    .comp-split {
+      display: flex;
+      align-items: center;
+      gap: 56px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 64px;
+      perspective: 1000px;
+    }
+    .comp-split .comp-inner {
+      flex: 1;
+      max-width: none;
+      padding: 0;
+      margin: 0;
+    }
+    .comp-split.img-left .comp-inner {
+      order: 2;
+    }
+    .comp-split-img {
+      flex: 0 0 38%;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(60, 30, 10, 0.13);
+      aspect-ratio: 3 / 4;
+      will-change: transform;
+    }
+    .comp-split.img-left .comp-split-img {
+      order: 1;
+    }
+    .comp-split-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Closing ── */
+    .closing {
+      background: var(--aubergine);
+      padding: 96px 24px;
+      text-align: center;
+    }
+    .closing-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: rgba(148,79,237,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .closing h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(22px, 4vw, 32px);
+      color: #fff;
+      margin-bottom: 24px;
+    }
+    .closing p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+      max-width: 520px;
+      margin: 0 auto 32px;
+    }
+    .closing-divider {
+      width: 64px;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 0 auto 32px;
+    }
+    .closing-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.6;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--aubergine);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 24px;
+      width: 100%;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    footer .footer-logo {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.06em;
+    }
+    footer p { font-size: 11px; color: rgba(255,255,255,0.2); }
+
+    /* ── Animations ── */
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(4px); }
+    }
+
+    /* Intersection observer fade-in for sections */
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<section class="hero" id="top">
+  <div class="hero-glow-1"></div>
+  <div class="hero-glow-2"></div>
+  <div class="hero-content">
+    <img src="./public/womenkind-logo.png" alt="Womenkind" style="height:42px;width:auto;opacity:0.7;margin-bottom:48px;margin-top:-60px;" />
+    <h1>Your Future Health<br />Blueprint Summary</h1>
+<p>Sarah, I've put together a personalized summary of what's happening in your body and how we're going to address it together.</p>
+    <div class="hero-meta">
+      <span>Prepared by Dr. Joseph Urban Jr.</span>
+      <span class="dot"></span>
+      <span>April 21, 2026</span>
+    </div>
+  </div>
+  <button class="scroll-btn" onclick="document.getElementById('overview').scrollIntoView({behavior:'smooth'})">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:var(--violet)">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    </svg>
+  </button>
+</section>
+
+<!-- ── OVERVIEW ── -->
+<section class="overview" id="overview">
+  <div class="overview-bg"></div>
+  <video class="overview-img" src="./public/herovideo.mp4" autoplay loop muted playsinline></video>
+  <div class="overview-overlay-l"></div>
+  <div class="overview-overlay-b"></div>
+  <div class="overview-content">
+    <p class="section-label reveal">• Sarah's Care Plan •</p>
+    <h2 class="reveal">Understanding Your Care Brings Peace of Mind</h2>
+    <p class="overview-body reveal">Knowing what's happening in your body — and why — makes the journey feel lighter. We've identified 5 areas to focus on together, each explained in plain language below.</p>
+<div class="pills reveal">
+      <a class="pill" onclick="scrollTo('brain')">Brain</a>
+      <a class="pill" onclick="scrollTo('vasomotor')">Vasomotor</a>
+      <a class="pill" onclick="scrollTo('sleep')">Sleep</a>
+      <a class="pill" onclick="scrollTo('mood')">Mood</a>
+      <a class="pill" onclick="scrollTo('hormonal')">Hormonal</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 1: Brain & Cognition ── -->
+<div class="comp-section cream has-image" id="brain">
+  <div class="comp-split img-right">
+    <div class="comp-inner">
+      <p class="comp-label reveal">• 1 of 5 •</p>
+      <h2 class="comp-title reveal">Brain <span class="accent">&</span> Cognition</h2>
+      <div class="comp-divider reveal" style="background:#944fed"></div>
+      <p class="comp-body reveal">You may have noticed changes in your thinking — moments of forgetfulness, difficulty finding words, or trouble focusing. This is your brain adjusting to changing hormone levels. Estrogen plays an important role in brain function, and as levels shift, these cognitive changes are common and expected.</p>
+      <div class="provider-card reveal">
+        <div class="provider-avatar">JU</div>
+        <p class="provider-note">Sarah, your intake scores and the way you described the word-finding issues really stood out to me. This is one of the most underrecognized effects of perimenopause — it's neurological, not psychological. We'll start with optimizing sleep and reducing cortisol load, which often provides meaningful relief within 6–8 weeks. I want you to know this is very treatable.</p>
+      </div>
+    </div>
+    <div class="comp-split-img">
+      <img src="./public/presentation2.png" alt="" style="object-position: center top;" />
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: Nervous System & Vasomotor ── -->
+<div class="comp-section white" id="vasomotor">
+  <div class="comp-inner">
+    <p class="comp-label reveal">• 2 of 5 •</p>
+    <h2 class="comp-title reveal">Nervous System <span class="accent">&</span> Vasomotor</h2>
+    <div class="comp-divider reveal" style="background:#d85623"></div>
+    <p class="comp-body reveal">Hot flashes and night sweats happen because your body's internal thermostat has become more sensitive. Changing estrogen levels affect the part of your brain that regulates temperature, causing it to overreact to small changes. This is the most common symptom of menopause, and there are effective treatments available.</p>
+    <div class="provider-card reveal">
+      <div class="provider-avatar">JU</div>
+      <p class="provider-note">Your Oura data shows you're waking between 2–4am consistently, and I suspect vasomotor events are the primary driver. I'd like to discuss low-dose transdermal estradiol — the evidence here is very strong, and for women in your age group and health profile, the benefit-to-risk ratio is highly favorable.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 3: Sleep & Circadian Rhythm ── -->
+<div class="comp-section cream has-image" id="sleep">
+  <div class="comp-split img-left">
+    <div class="comp-split-img">
+      <img src="./public/presentation3.png?v=2" alt="" style="object-position: center 30%;" />
+    </div>
+    <div class="comp-inner">
+      <p class="comp-label reveal">• 3 of 5 •</p>
+      <h2 class="comp-title reveal">Sleep <span class="accent">&</span> Circadian Rhythm</h2>
+      <div class="comp-divider reveal" style="background:#5d9ed5"></div>
+      <p class="comp-body reveal">If you're struggling with sleep, you're not alone — it's one of the most common concerns during this transition. Hormonal changes affect the brain chemicals that regulate your sleep-wake cycle, and night sweats can further disrupt rest. Improving sleep is often one of the first things we focus on because it impacts everything else.</p>
+      <div class="provider-card reveal">
+        <div class="provider-avatar">JU</div>
+        <p class="provider-note">Your 30-day Oura average shows sleep efficiency of 74% — we want that closer to 85%. Beyond the vasomotor piece, I also noticed your REM is compressed. Micronized progesterone at bedtime is something I'd like to trial — it has a calming, sleep-promoting effect that many of my patients find transformative.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 4: Mood & Mental Health ── -->
+<div class="comp-section white" id="mood">
+  <div class="comp-inner">
+    <p class="comp-label reveal">• 4 of 5 •</p>
+    <h2 class="comp-title reveal">Mood <span class="accent">&</span> Mental Health</h2>
+    <div class="comp-divider reveal" style="background:#7c6bc4"></div>
+    <p class="comp-body reveal">Mood changes during this time are not "just stress" — they have a real biological basis. Estrogen influences the brain chemicals that regulate mood, and as levels fluctuate, you may experience anxiety, irritability, or low mood that feels different from anything before. Recognizing this connection is the first step toward feeling more like yourself again.</p>
+    <div class="provider-card reveal">
+      <div class="provider-avatar">JU</div>
+      <p class="provider-note">What you described in your intake — the sudden irritability and the feeling that your emotional baseline has shifted — is something I hear from almost every patient in perimenopause. It's hormonal, and it responds to treatment. As we stabilize estrogen levels, most women notice significant mood improvement within 4–8 weeks.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 5: Hormonal & Reproductive ── -->
+<div class="comp-section cream has-image" id="hormonal">
+  <div class="comp-split img-right">
+    <div class="comp-inner">
+      <p class="comp-label reveal">• 5 of 5 •</p>
+      <h2 class="comp-title reveal">Hormonal <span class="accent">&</span> Reproductive</h2>
+      <div class="comp-divider reveal" style="background:#c2796d"></div>
+      <p class="comp-body reveal">At the core of everything you're experiencing is a natural shift in your hormone levels. Your ovaries are gradually producing less estrogen and progesterone, and your brain is sending stronger signals (FSH) trying to compensate. Your lab results help us understand exactly where you are in this transition and how to best support you.</p>
+      <div class="provider-card reveal">
+        <div class="provider-avatar">JU</div>
+        <p class="provider-note">Your FSH of 42 and estradiol of 28 pg/mL confirm you're in perimenopause. This is exactly the window where early hormone therapy has the greatest long-term benefit — for your brain, heart, bones, and quality of life. I want to walk you through our options at your next visit so we can build a plan you feel confident in.</p>
+      </div>
+    </div>
+    <div class="comp-split-img">
+      <img src="./public/presentation4.png" alt="" style="object-position: calc(50% + 15px) 40%;" />
+    </div>
+  </div>
+</div>
+
+<!-- ── CLOSING ── -->
+<section class="closing">
+  <div class="closing-icon">
+    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--violet)">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  </div>
+  <h2>You're Not Alone in This</h2>
+  <p>Remember, this is a journey and you're not alone in it. I'm here to guide you every step of the way. — Dr. Urban</p>
+  <div class="closing-divider"></div>
+  <p class="closing-sub">This care summary was prepared exclusively for you by Dr. Joseph Urban Jr.<br />You can revisit this presentation anytime from your patient portal.</p>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <img src="./public/womenkind-logo.png" alt="Womenkind" style="height:20px;width:auto;opacity:0.3;" />
+    <p>© 2026 Womenkind. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // 3D tilt on image boxes
+  document.querySelectorAll('.comp-split-img').forEach((el) => {
+    el.style.transformStyle = 'preserve-3d';
+    el.style.willChange = 'transform';
+
+    el.addEventListener('mousemove', (e) => {
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width  - 0.5;  // -0.5 to 0.5
+      const y = (e.clientY - rect.top)  / rect.height - 0.5;
+      gsap.to(el, {
+        rotateY:  x * 12,
+        rotateX: -y * 12,
+        scale: 1.03,
+        duration: 0.4,
+        ease: 'power2.out',
+      });
+    });
+
+    el.addEventListener('mouseleave', () => {
+      gsap.to(el, {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        duration: 0.6,
+        ease: 'elastic.out(1, 0.5)',
+      });
+    });
+  });
+
+  // Animate each component section as it enters the viewport
+  document.querySelectorAll('.comp-section').forEach((section) => {
+    const label    = section.querySelector('.comp-label');
+    const title    = section.querySelector('.comp-title');
+    const divider  = section.querySelector('.comp-divider');
+    const body     = section.querySelector('.comp-body');
+    const card     = section.querySelector('.provider-card');
+    const img      = section.querySelector('.comp-split-img');
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: 'top 72%',
+        once: true,
+      },
+      defaults: { ease: 'power3.out' },
+    });
+
+    // Image slides in from its side simultaneously with label
+    if (img) {
+      const fromRight = section.querySelector('.comp-split.img-right .comp-split-img');
+      tl.from(img, {
+        opacity: 0,
+        x: fromRight ? 60 : -60,
+        scale: 0.96,
+        duration: 1.1,
+      }, 0);
+    }
+
+    if (label)   tl.from(label,   { opacity: 0, y: 14, duration: 0.5 }, 0);
+    if (title)   tl.from(title,   { opacity: 0, y: 48, duration: 0.8 }, '-=0.3');
+    if (divider) tl.from(divider, { scaleX: 0, transformOrigin: 'left center', duration: 0.65 }, '-=0.5');
+    if (body)    tl.from(body,    { opacity: 0, y: 26, duration: 0.65 }, '-=0.4');
+    if (card)    tl.from(card,    { opacity: 0, y: 20, duration: 0.55 }, '-=0.3');
+  });
+</script>
+</body>
+</html>

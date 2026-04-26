@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Care Presentation — Your Future Health Blueprint</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --aubergine: #280f49;
+      --violet:    #944fed;
+      --cream:     #f7f3ee;
+      --white:     #ffffff;
+      --brown:     #422a1f;
+      --tan:       #d4b896;
+    }
+
+    html { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; scroll-behavior: auto; }
+    body { overflow-x: hidden; background: var(--aubergine); }
+
+    /* ── Custom cursor ───────────────────────────── */
+    #cr {
+      position: fixed; pointer-events: none; z-index: 9999;
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 1.5px solid rgba(148,79,237,.5);
+      transform: translate(-50%,-50%); will-change: transform;
+      transition: width .25s, height .25s, border-color .25s, background .25s;
+    }
+    #cd {
+      position: fixed; pointer-events: none; z-index: 9999;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--violet);
+      transform: translate(-50%,-50%); will-change: transform;
+    }
+    .cl #cr { border-color: rgba(40,15,73,.22); }
+    .ch #cr { width: 64px; height: 64px; background: rgba(148,79,237,.07); border-color: rgba(148,79,237,.35); }
+
+    /* ── Line-reveal helper ─────────────────────── */
+    .lw { display: block; overflow: hidden; }
+    .li { display: block; }
+
+    /* ═══════════ HERO ══════════════════════════════ */
+    .hero {
+      min-height: 100vh; background: var(--aubergine);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+      text-align: center; padding: 88px 32px;
+    }
+    .h-g1 { position:absolute; top:18%; left:18%; width:520px; height:520px; background:rgba(148,79,237,.09); border-radius:50%; filter:blur(80px); pointer-events:none; }
+    .h-g2 { position:absolute; bottom:16%; right:16%; width:360px; height:360px; background:rgba(216,86,35,.05); border-radius:50%; filter:blur(80px); pointer-events:none; }
+    .hero-logo   { height:36px; width:auto; margin-bottom:52px; margin-top:-64px; opacity:0; }
+    .hero-eyebrow{ font-size:11px; font-weight:700; letter-spacing:.24em; text-transform:uppercase; color:rgba(148,79,237,.85); margin-bottom:28px; opacity:0; }
+    .hero-h1 {
+      font-family:'Playfair Display',serif; font-weight:400;
+      font-size:clamp(40px,5.5vw,80px); color:#fff; line-height:1.08; margin-bottom:28px;
+    }
+    .hero-h1 em { font-style:italic; color:rgba(255,255,255,.38); }
+    .hero-sub  { font-size:17px; color:rgba(255,255,255,.5); line-height:1.75; max-width:400px; margin-bottom:48px; opacity:0; }
+    .hero-meta { display:flex; align-items:center; gap:12px; font-size:13px; color:var(--tan); opacity:0; }
+    .hmd { width:3px; height:3px; border-radius:50%; background:rgba(212,184,150,.5); }
+    .scroll-cue {
+      position:absolute; bottom:36px; left:50%; transform:translateX(-50%);
+      display:flex; flex-direction:column; align-items:center; gap:10px; opacity:0;
+    }
+    .sc-line {
+      width:1px; height:56px;
+      background:linear-gradient(to bottom, transparent, rgba(148,79,237,.7));
+      animation: scl 2s ease-in-out infinite;
+    }
+    .sc-label { font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.25); }
+    @keyframes scl {
+      0%,100% { transform:scaleY(0); transform-origin:top; opacity:0; }
+      20%,80%  { opacity:1; }
+      50%      { transform:scaleY(1); transform-origin:top; }
+      51%      { transform:scaleY(1); transform-origin:bottom; }
+    }
+
+    /* ═══════════ OVERVIEW ══════════════════════════ */
+    .overview {
+      min-height: 100vh; position: relative;
+      display: flex; align-items: center; overflow: hidden;
+    }
+    .overview video {
+      position:absolute; inset:0; width:100%; height:100%;
+      object-fit:cover; object-position:center; will-change:transform;
+    }
+    .ov-ol {
+      position:absolute; inset:0;
+      background:linear-gradient(to right,
+        rgba(55,33,10,.96) 0%, rgba(55,33,10,.88) 28%,
+        rgba(55,33,10,.42) 54%, rgba(55,33,10,0) 72%);
+    }
+    .ov-ol-b {
+      position:absolute; inset:0;
+      background:linear-gradient(to top, rgba(40,24,6,.4) 0%, transparent 38%);
+    }
+    .ov-content {
+      position:relative; z-index:2;
+      padding:100px 0 100px 88px; max-width:700px;
+    }
+    .ov-ey { font-size:11px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:rgba(255,218,168,.72); margin-bottom:28px; }
+    .ov-h2 {
+      font-family:'Playfair Display',serif; font-weight:400;
+      font-size:clamp(36px,4.8vw,66px); color:#fff; line-height:1.1; margin-bottom:28px;
+    }
+    .ov-body { font-size:16px; color:rgba(255,255,255,.7); line-height:1.8; max-width:460px; margin-bottom:44px; }
+    .pills { display:flex; flex-wrap:wrap; gap:10px; }
+    .pill  {
+      font-size:13px; font-weight:600; padding:11px 22px; border-radius:9999px;
+      background:rgba(148,79,237,.9); color:#fff; border:none; cursor:pointer;
+      transition:background .2s, transform .15s;
+    }
+    .pill:hover { background:#7a35d9; transform:translateY(-2px); }
+
+    /* ═══════════ CONTENT SECTIONS ══════════════════ */
+    .cs {
+      height: 100vh; position: relative; overflow: hidden;
+      display: flex; align-items: stretch;
+    }
+    .cs.cream { background: var(--cream); }
+    .cs.white { background: var(--white); }
+    .cs.sky   { background: #e8f1f8; }
+
+    /* Ghost number */
+    .gn {
+      position:absolute; pointer-events:none; user-select:none;
+      font-family:'Playfair Display',serif; font-weight:400;
+      font-size:clamp(240px,30vw,420px); line-height:1;
+      right:-8px; bottom:-48px; letter-spacing:-.04em;
+    }
+    .cs.cream .gn, .cs.white .gn, .cs.sky .gn { color:rgba(0,0,0,.04); }
+
+    /* Horizontal rule that draws in above each section */
+    .cs-rule {
+      position:absolute; top:0; left:0; right:0; height:1px;
+      transform-origin:left; transform:scaleX(0);
+    }
+    .cs.cream .cs-rule, .cs.white .cs-rule, .cs.sky .cs-rule { background:rgba(0,0,0,.08); }
+
+    /* ── Image panel (full height) ────────────────── */
+    .img-panel {
+      width: 44%; flex-shrink: 0;
+      position: relative; overflow: hidden;
+    }
+    .img-panel img {
+      position: absolute; inset: 0;
+      width: 100%; height: 116%;
+      object-fit: cover; will-change: transform;
+    }
+
+    /* ── Decorative panel (no photo) ──────────────── */
+    .deco-panel {
+      width: 44%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .deco-card {
+      width: 66%; aspect-ratio: 3/4; border-radius: 24px;
+      position: relative; overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,.1);
+    }
+    .deco-bg {
+      position: absolute; inset: 0;
+      border: 1px solid rgba(0,0,0,.07);
+    }
+    .deco-orb {
+      position: absolute; inset: 0;
+      border-radius: inherit;
+    }
+
+    /* ── Text panel ───────────────────────────────── */
+    .tp {
+      flex: 1; display: flex; align-items: center;
+      padding: 80px 72px;
+    }
+    .ti { max-width: 560px; width: 100%; }
+
+    .cs-label {
+      display:block; font-size:10px; font-weight:700;
+      letter-spacing:.26em; text-transform:uppercase;
+      margin-bottom:22px;
+    }
+    .cs.cream .cs-label, .cs.white .cs-label, .cs.sky .cs-label { color:var(--violet); }
+
+    .cs-title {
+      font-family:'Playfair Display',serif; font-weight:400;
+      font-size:clamp(34px,4vw,58px); line-height:1.08; margin-bottom:20px;
+    }
+    .cs.cream .cs-title, .cs.white .cs-title, .cs.sky .cs-title { color:var(--aubergine); }
+    .cs-title .accent { color:var(--violet); }
+
+    .cs-div { height:1px; width:72px; margin-bottom:26px; }
+
+    .cs-body {
+      font-size:15px; line-height:1.9; margin-bottom:32px; max-width:520px;
+    }
+    .cs.cream .cs-body, .cs.white .cs-body, .cs.sky .cs-body { color:var(--brown); }
+
+    .pcard {
+      display:flex; align-items:flex-start; gap:16px;
+      padding:20px 24px; border-radius:16px; max-width:520px;
+    }
+    .cs.cream .pcard { background:#fff; border:1px solid rgba(0,0,0,.07); }
+    .cs.white .pcard { background:var(--cream); border:1px solid rgba(0,0,0,.07); }
+    .cs.sky   .pcard { background:#fff; border:1px solid rgba(0,0,0,.07); }
+    .p-avatar { width:48px; height:48px; border-radius:50%; object-fit:cover; object-position:top; flex-shrink:0; }
+    .p-note { font-size:13px; line-height:1.7; }
+    .cs.cream .p-note, .cs.white .p-note, .cs.sky .p-note { color:var(--brown); }
+
+    /* ═══════════ CLOSING ═══════════════════════════ */
+    .closing {
+      background:var(--aubergine); padding:128px 24px;
+      text-align:center; position:relative; overflow:hidden;
+    }
+    .cl-glow {
+      position:absolute; top:0; left:50%; transform:translate(-50%,-40%);
+      width:700px; height:700px; border-radius:50%;
+      background:radial-gradient(circle, rgba(148,79,237,.13), transparent 68%);
+      pointer-events:none;
+    }
+    .cl-ring {
+      width:64px; height:64px; border-radius:50%; background:rgba(148,79,237,.18);
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 36px; position:relative; z-index:1;
+    }
+    .closing h2 {
+      font-family:'Playfair Display',serif; font-weight:400;
+      font-size:clamp(28px,4vw,44px); color:#fff;
+      margin-bottom:24px; position:relative; z-index:1; line-height:1.2;
+    }
+    .cl-body { font-size:16px; color:rgba(255,255,255,.5); line-height:1.8; max-width:480px; margin:0 auto 40px; position:relative; z-index:1; }
+    .cl-div  { width:48px; height:1px; background:rgba(255,255,255,.1); margin:0 auto 40px; }
+    .cl-sub  { font-size:13px; color:rgba(255,255,255,.24); line-height:1.7; position:relative; z-index:1; }
+
+    /* ═══════════ FOOTER ════════════════════════════ */
+    footer { background:var(--aubergine); border-top:1px solid rgba(255,255,255,.05); padding:28px 40px; }
+    .fi { display:flex; align-items:center; justify-content:space-between; max-width:1100px; margin:0 auto; }
+    footer p { font-size:11px; color:rgba(255,255,255,.2); }
+  </style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cr"></div>
+<div id="cd"></div>
+
+<!-- ══════════════════════════════════════ HERO ══ -->
+<section class="hero" id="top">
+  <div class="h-g1"></div>
+  <div class="h-g2"></div>
+  <img src="./public/womenkind-logo.png" alt="Womenkind" class="hero-logo" />
+  <p class="hero-eyebrow">Care Presentation &nbsp;·&nbsp; April 2026</p>
+  <h1 class="hero-h1">
+    <span class="lw"><span class="li">Your Future</span></span>
+    <span class="lw"><span class="li">Health Blueprint</span></span>
+    <span class="lw"><span class="li"><em>Summary</em></span></span>
+  </h1>
+  <p class="hero-sub">Sarah, I've put together a personalized summary of what's happening in your body and how we're going to address it together.</p>
+  <div class="hero-meta">
+    <span>Prepared by Dr. Joseph Urban Jr.</span>
+    <span class="hmd"></span>
+    <span>April 23, 2026</span>
+  </div>
+  <div class="scroll-cue">
+    <div class="sc-line"></div>
+    <span class="sc-label">Scroll</span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ OVERVIEW ══ -->
+<section class="overview" id="overview">
+  <video src="./public/herovideo.mp4" autoplay loop muted playsinline id="ov-vid"></video>
+  <div class="ov-ol"></div>
+  <div class="ov-ol-b"></div>
+  <div class="ov-content">
+    <p class="ov-ey">· Sarah's Care Plan ·</p>
+    <h2 class="ov-h2">
+      <span class="lw"><span class="li">Understanding Your Care</span></span>
+      <span class="lw"><span class="li">Brings Peace of Mind</span></span>
+    </h2>
+    <p class="ov-body">Knowing what's happening in your body — and why — makes the journey feel lighter. We've identified 5 areas to focus on together, each explained in plain language below.</p>
+    <div class="pills">
+      <button class="pill" data-target="s1">Brain &amp; Cognition</button>
+      <button class="pill" data-target="s2">Vasomotor</button>
+      <button class="pill" data-target="s3">Sleep</button>
+      <button class="pill" data-target="s4">Mood</button>
+      <button class="pill" data-target="s5">Hormonal</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════ SECTION 1 · BRAIN & COGNITION ══ -->
+<section class="cs cream" id="s1">
+  <div class="cs-rule"></div>
+  <div class="gn">01</div>
+  <div class="tp">
+    <div class="ti">
+      <span class="cs-label">Brain &amp; Cognition &nbsp;·&nbsp; 1 of 5</span>
+      <h2 class="cs-title">
+        <span class="lw"><span class="li">Brain <span class="accent">&amp;</span></span></span>
+        <span class="lw"><span class="li">Cognition</span></span>
+      </h2>
+      <div class="cs-div" style="background:#944fed"></div>
+      <p class="cs-body">The brain fog and forgetfulness you're dealing with aren't signs that something is wrong with you mentally. They're a direct result of falling estrogen levels — a hormone deeply involved in how the brain manages energy, regulates neurotransmitters, and maintains the neural connections that allow for clear thinking and sharp recall.</p>
+      <div class="pcard">
+        <img src="./public/dr-urban.jpg" alt="Dr. Urban" class="p-avatar" />
+        <p class="p-note">Sarah, your intake scores and the way you described the word-finding issues really stood out to me. This is one of the most underrecognized effects of perimenopause — neurological, not psychological. We'll start with sleep optimization and cortisol reduction, which often provides meaningful relief within 6–8 weeks.</p>
+      </div>
+    </div>
+  </div>
+  <div class="img-panel" data-side="right">
+    <img src="./public/presentation2.png" alt="" style="object-position:center top" />
+  </div>
+</section>
+
+<!-- ══════════════════ SECTION 2 · VASOMOTOR ══ -->
+<section class="cs white" id="s2">
+  <div class="cs-rule"></div>
+  <div class="gn">02</div>
+  <div class="deco-panel">
+    <div class="deco-card">
+      <div class="deco-bg"></div>
+      <div class="deco-orb" style="background:radial-gradient(circle at 40% 38%, rgba(216,86,35,.14) 0%, rgba(212,184,150,.22) 55%, transparent 82%)"></div>
+    </div>
+  </div>
+  <div class="tp">
+    <div class="ti">
+      <span class="cs-label">Vasomotor &nbsp;·&nbsp; 2 of 5</span>
+      <h2 class="cs-title">
+        <span class="lw"><span class="li">Nervous System</span></span>
+        <span class="lw"><span class="li"><span class="accent">&amp;</span> Vasomotor</span></span>
+      </h2>
+      <div class="cs-div" style="background:#d85623"></div>
+      <p class="cs-body">Hot flashes and night sweats happen because your body's internal thermostat has become more sensitive. Changing estrogen levels affect the part of your brain that regulates temperature, causing it to overreact to small changes. This is the most common symptom of perimenopause — and there are highly effective treatments available.</p>
+      <div class="pcard">
+        <img src="./public/dr-urban.jpg" alt="Dr. Urban" class="p-avatar" />
+        <p class="p-note">Your Oura data shows you're waking between 2–4am consistently, and I suspect vasomotor events are the primary driver. I'd like to discuss low-dose transdermal estradiol — for women in your health profile, the benefit-to-risk ratio is very favorable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ SECTION 3 · SLEEP ══ -->
+<section class="cs cream" id="s3">
+  <div class="cs-rule"></div>
+  <div class="gn">03</div>
+  <div class="img-panel" data-side="left">
+    <img src="./public/presentation3.png" alt="" style="object-position:center 30%" />
+  </div>
+  <div class="tp">
+    <div class="ti">
+      <span class="cs-label">Sleep &nbsp;·&nbsp; 3 of 5</span>
+      <h2 class="cs-title">
+        <span class="lw"><span class="li">Sleep <span class="accent">&amp;</span></span></span>
+        <span class="lw"><span class="li">Circadian Rhythm</span></span>
+      </h2>
+      <div class="cs-div" style="background:#5d9ed5"></div>
+      <p class="cs-body">Sleep is one of the first things to shift as estrogen and progesterone begin to change — often before a person even connects the dots to hormones. These two hormones do quiet but significant work regulating the brain's sleep architecture, body temperature at night, and the signals that keep you asleep through early morning hours.</p>
+      <div class="pcard">
+        <img src="./public/dr-urban.jpg" alt="Dr. Urban" class="p-avatar" />
+        <p class="p-note">Your 30-day Oura average shows sleep efficiency of 74% — we want that closer to 85%. Micronized progesterone at bedtime is something I'd like to trial. Its calming, sleep-promoting effect is transformative for many of my patients.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ SECTION 4 · MOOD ══ -->
+<section class="cs sky" id="s4">
+  <div class="cs-rule"></div>
+  <div class="gn">04</div>
+  <div class="tp">
+    <div class="ti">
+      <span class="cs-label">Mood &nbsp;·&nbsp; 4 of 5</span>
+      <h2 class="cs-title">
+        <span class="lw"><span class="li">Mood <span class="accent">&amp;</span></span></span>
+        <span class="lw"><span class="li">Mental Health</span></span>
+      </h2>
+      <div class="cs-div" style="background:#7c6bc4"></div>
+      <p class="cs-body">Mood changes during this time are not "just stress" — they have a real biological basis. Estrogen influences the brain chemicals that regulate mood, and as levels fluctuate you may experience anxiety, irritability, or a low that feels different from anything before. Recognizing this connection is the first step toward feeling like yourself again.</p>
+      <div class="pcard">
+        <img src="./public/dr-urban.jpg" alt="Dr. Urban" class="p-avatar" />
+        <p class="p-note">What you described — the sudden irritability and the feeling that your emotional baseline has shifted — is something I hear from almost every patient in perimenopause. It's hormonal, and it responds to treatment. Most women notice significant improvement within 4–8 weeks.</p>
+      </div>
+    </div>
+  </div>
+  <div class="deco-panel">
+    <div class="deco-card">
+      <div class="deco-bg"></div>
+      <div class="deco-orb" style="background:radial-gradient(circle at 50% 42%, rgba(148,79,237,.16) 0%, rgba(100,140,210,.14) 52%, transparent 80%)"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ SECTION 5 · HORMONAL ══ -->
+<section class="cs cream" id="s5">
+  <div class="cs-rule"></div>
+  <div class="gn">05</div>
+  <div class="tp">
+    <div class="ti">
+      <span class="cs-label">Hormonal &nbsp;·&nbsp; 5 of 5</span>
+      <h2 class="cs-title">
+        <span class="lw"><span class="li">Hormonal <span class="accent">&amp;</span></span></span>
+        <span class="lw"><span class="li">Reproductive</span></span>
+      </h2>
+      <div class="cs-div" style="background:#c2796d"></div>
+      <p class="cs-body">At the core of everything you're experiencing is a natural shift in your hormone levels. Your ovaries are gradually producing less estrogen and progesterone, and your brain is sending stronger signals trying to compensate. Your lab results help us understand exactly where you are in this transition and how best to support you through it.</p>
+      <div class="pcard">
+        <img src="./public/dr-urban.jpg" alt="Dr. Urban" class="p-avatar" />
+        <p class="p-note">Your FSH of 42 and estradiol of 28 pg/mL confirm you're in perimenopause. This is exactly the window where early hormone therapy has the greatest long-term benefit — for your brain, heart, bones, and quality of life. Let's walk through your options at your next visit.</p>
+      </div>
+    </div>
+  </div>
+  <div class="img-panel" data-side="right">
+    <img src="./public/presentation4.png" alt="" style="object-position:calc(50% + 15px) 40%" />
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════ CLOSING ══ -->
+<section class="closing" id="closing">
+  <div class="cl-glow"></div>
+  <div class="cl-ring">
+    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:#944fed">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+    </svg>
+  </div>
+  <h2>
+    <span class="lw"><span class="li">You're Not Alone</span></span>
+    <span class="lw"><span class="li">in This</span></span>
+  </h2>
+  <p class="cl-body">Remember, this is a journey and you're not alone in it. I'm here to guide you every step of the way. — Dr. Urban</p>
+  <div class="cl-div"></div>
+  <p class="cl-sub">This care summary was prepared exclusively for you by Dr. Joseph Urban Jr.<br/>You can revisit this presentation anytime from your patient portal.</p>
+</section>
+
+<footer>
+  <div class="fi">
+    <img src="./public/womenkind-logo.png" alt="Womenkind" style="height:20px;width:auto;opacity:.3" />
+    <p>© 2026 Womenkind. All rights reserved.</p>
+  </div>
+</footer>
+
+<script>
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ── Custom cursor ──────────────────────────────── */
+  const cr = document.getElementById('cr'), cd = document.getElementById('cd');
+  let mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  gsap.ticker.add(() => {
+    rx += (mx - rx) * 0.1; ry += (my - ry) * 0.1;
+    gsap.set(cr, { x: rx - 21, y: ry - 21 });
+    gsap.set(cd, { x: mx - 2.5, y: my - 2.5 });
+  });
+  document.querySelectorAll('button, a, .pill').forEach(el => {
+    el.addEventListener('mouseenter', () => document.body.classList.add('ch'));
+    el.addEventListener('mouseleave', () => document.body.classList.remove('ch'));
+  });
+
+  /* ── Cursor: light sections ─────────────────────── */
+  ['overview','s1','s2','s3','s4','s5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    ScrollTrigger.create({
+      trigger: el, start: 'top 50%', end: 'bottom 50%',
+      onEnter:     () => document.body.classList.add('cl'),
+      onLeave:     () => document.body.classList.remove('cl'),
+      onEnterBack: () => document.body.classList.add('cl'),
+      onLeaveBack: () => document.body.classList.remove('cl'),
+    });
+  });
+
+  /* ── HERO ───────────────────────────────────────── */
+  gsap.timeline({ defaults: { ease: 'power4.out' } })
+    .to('.hero-logo',  { opacity: 0.65, duration: 0.9 }, 0.1)
+    .from('.hero-eyebrow', { opacity: 0, y: 18, duration: 0.6 }, 0.3)
+    .to('.hero-eyebrow',   { opacity: 1, duration: 0 }, 0.3)
+    .from('.hero-h1 .li',  { yPercent: 115, duration: 1.15, stagger: 0.12 }, 0.45)
+    .from('.hero-sub',  { opacity: 0, y: 22, duration: 0.8 }, 1.05)
+    .to('.hero-sub',    { opacity: 1, duration: 0 }, 1.05)
+    .from('.hero-meta', { opacity: 0, y: 14, duration: 0.6 }, 1.25)
+    .to('.hero-meta',   { opacity: 1, duration: 0 }, 1.25)
+    .from('.scroll-cue',{ opacity: 0, y: 8, duration: 0.6 }, 1.6)
+    .to('.scroll-cue',  { opacity: 1, duration: 0 }, 1.6);
+
+  /* ── OVERVIEW ───────────────────────────────────── */
+  gsap.to('#ov-vid', {
+    scale: 1.1, ease: 'none',
+    scrollTrigger: { trigger: '.overview', start: 'top top', end: 'bottom top', scrub: true }
+  });
+
+  ScrollTrigger.create({
+    trigger: '.ov-content', start: 'top 75%', once: true,
+    onEnter: () => gsap.timeline({ defaults: { ease: 'power3.out' } })
+      .from('.ov-ey',          { opacity: 0, y: 18, duration: 0.55 })
+      .to('.ov-ey',            { opacity: 1, duration: 0 }, '<')
+      .from('.ov-h2 .li',      { yPercent: 110, duration: 0.85, stagger: 0.1 }, 0.1)
+      .from('.ov-body',        { opacity: 0, y: 22, duration: 0.75 }, 0.5)
+      .to('.ov-body',          { opacity: 1, duration: 0 }, 0.5)
+      .from('.pill',           { opacity: 0, y: 16, scale: 0.92, stagger: 0.07, duration: 0.5 }, 0.75)
+      .to('.pill',             { opacity: 1, duration: 0 }, 0.75)
+  });
+
+  /* ── CONTENT SECTIONS — pin + animate ──────────── */
+  const revealed = new Set();
+
+  document.querySelectorAll('.cs').forEach(section => {
+    const imgPanel   = section.querySelector('.img-panel');
+    const decoCard   = section.querySelector('.deco-card');
+    const rule       = section.querySelector('.cs-rule');
+    const label      = section.querySelector('.cs-label');
+    const titleLines = section.querySelectorAll('.cs-title .li');
+    const divider    = section.querySelector('.cs-div');
+    const body       = section.querySelector('.cs-body');
+    const card       = section.querySelector('.pcard');
+
+    // ── Initial hidden states ────────────────────
+    gsap.set([label, divider, body, card].filter(Boolean), { opacity: 0, y: 36 });
+    if (titleLines.length) gsap.set(titleLines, { yPercent: 115 });
+    if (imgPanel) {
+      const fromRight = imgPanel.dataset.side === 'right';
+      gsap.set(imgPanel, { clipPath: fromRight ? 'inset(0% 0% 0% 100%)' : 'inset(0% 100% 0% 0%)' });
+    }
+    if (decoCard) gsap.set(decoCard, { opacity: 0, y: 48, scale: 0.88 });
+    if (rule) gsap.set(rule, { scaleX: 0 });
+
+    // ── Pin section + fire animation on entry ────
+    ScrollTrigger.create({
+      trigger: section,
+      start: 'top top',
+      end: '+=480',
+      pin: true,
+      anticipatePin: 1,
+      onEnter: () => {
+        if (revealed.has(section)) return;
+        revealed.add(section);
+
+        const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+
+        // Rule draws in across the top
+        if (rule) tl.fromTo(rule, { scaleX: 0 }, { scaleX: 1, transformOrigin: 'left center', duration: 0.9, ease: 'power3.inOut' }, 0);
+
+        // Image wipes in from side
+        if (imgPanel) {
+          tl.to(imgPanel, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.2, ease: 'power4.inOut' }, 0);
+        }
+
+        // Deco card rises up
+        if (decoCard) {
+          tl.to(decoCard, { opacity: 1, y: 0, scale: 1, duration: 1.0, ease: 'power3.out' }, 0.1);
+        }
+
+        // Label
+        if (label) tl.to(label, { opacity: 1, y: 0, duration: 0.5 }, 0.3);
+
+        // Title lines rise through clip mask
+        if (titleLines.length) tl.to(titleLines, { yPercent: 0, duration: 0.85, stagger: 0.1 }, 0.42);
+
+        // Divider draws left-to-right
+        if (divider) {
+          tl.fromTo(divider,
+            { opacity: 0, y: 36, scaleX: 0, transformOrigin: 'left center' },
+            { opacity: 1, y: 0, scaleX: 1, transformOrigin: 'left center', duration: 0.7, ease: 'power3.out' },
+            0.72
+          );
+        }
+
+        // Body fades up
+        if (body) tl.to(body, { opacity: 1, y: 0, duration: 0.7 }, 0.88);
+
+        // Provider card
+        if (card) tl.to(card, { opacity: 1, y: 0, duration: 0.6 }, 1.1);
+      },
+    });
+  });
+
+  /* ── CLOSING ────────────────────────────────────── */
+  ScrollTrigger.create({
+    trigger: '.closing', start: 'top 70%', once: true,
+    onEnter: () => gsap.timeline({ defaults: { ease: 'power3.out' } })
+      .from('.cl-ring',       { scale: 0.4, opacity: 0, duration: 1.0, ease: 'elastic.out(1,.5)' })
+      .from('.closing h2 .li',{ yPercent: 110, duration: 0.85, stagger: 0.1 }, '-=0.5')
+      .from('.cl-body',       { opacity: 0, y: 24, duration: 0.75 }, '-=0.4')
+      .to('.cl-body',         { opacity: 1, duration: 0 }, '<')
+      .from('.cl-div',        { scaleX: 0, transformOrigin: 'center', duration: 0.55 }, '-=0.3')
+      .from('.cl-sub',        { opacity: 0, y: 14, duration: 0.6 }, '-=0.2')
+      .to('.cl-sub',          { opacity: 1, duration: 0 }, '<')
+  });
+
+  /* ── Pill scroll-to ─────────────────────────────── */
+  document.querySelectorAll('.pill[data-target]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const target = document.getElementById(pill.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>
