@@ -2300,7 +2300,11 @@
   window._diveOpen = false;
 
   function openDive(id) {
-    document.getElementById('slider-' + id)?.classList.add('open');
+    const panel = document.getElementById('slider-' + id);
+    if (panel) {
+      panel.scrollTop = 0;
+      panel.classList.add('open');
+    }
     document.querySelector('.dot-nav')?.classList.remove('visible');
     window._diveOpen = true;
   }
