@@ -167,6 +167,15 @@ const components = envComponent
   ? envComponent.split(',').map((s) => s.trim()).filter(Boolean)
   : ALL_COMPONENTS
 
+// NO_NOTES=1 strips consultation notes + wearable + scores to test the
+// "no documented treatment" guardrail (the AI must not invent prescriptions).
+if (process.env.NO_NOTES === '1') {
+  console.log('\n[NO_NOTES mode] consultation notes, wearable, and symptom scores stripped\n')
+  ctx.consultationNotes = null
+  ctx.wearableSummary = null
+  ctx.symptomScores = null
+}
+
 // ── Run ───────────────────────────────────────────────────────────────────────
 
 async function main() {
