@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { intakes, patients, care_presentations } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { intakes, patients, care_presentations, encounter_notes } from '@/lib/db/schema'
+import { and, eq, inArray } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { Resend } from 'resend'
 
@@ -29,11 +29,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get the latest intake for this patient (optional link)
-    const latestIntake = await db.query.intakes.findFirst({
-      where: eq(intakes.patient_id, patientId),
-      orderBy: (intakes, { desc }) => [desc(intakes.submitted_at)],
-    })
+    // Get the latest intake and most recent encounter note in parallel
+    const [latestIntake, latestEncounterNote] = await Promise.all([
+      db.query.intakes.findFirst({
+        where: eq(intakes.patient_id, patientId),
+        orderBy: (intakes, { desc }) => [desc(intakes.submitted_at)],
+      }),
+      db.query.encounter_notes.findFirst({
+        where: and(
+          eq(encounter_notes.patient_id, patientId),
+          inArray(encounter_notes.status, ['draft', 'signed'])
+        ),
+        orderBy: (n, { desc }) => [desc(n.created_at)],
+        columns: { appointment_id: true },
+      }),
+    ])
 
     // Get patient email for sending
     const patient = await db.query.patients.findFirst({
@@ -52,6 +62,7 @@ export async function POST(req: Request) {
         patient_id: patientId,
         provider_id: session.providerId!,
         intake_id: latestIntake?.id || null,
+        appointment_id: latestEncounterNote?.appointment_id || null,
         selected_components: selectedComponents,
         component_notes: componentNotes,
         welcome_message: welcomeMessage,

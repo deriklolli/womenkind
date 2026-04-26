@@ -372,6 +372,7 @@ export const care_presentations = pgTable('care_presentations', {
   patient_id:          uuid('patient_id').notNull().references(() => patients.id),
   provider_id:         uuid('provider_id').notNull().references(() => providers.id),
   intake_id:           uuid('intake_id').references(() => intakes.id),
+  appointment_id:      uuid('appointment_id').references(() => appointments.id),
   selected_components: json('selected_components'),
   component_notes:     json('component_notes'),
   welcome_message:     text('welcome_message'),
