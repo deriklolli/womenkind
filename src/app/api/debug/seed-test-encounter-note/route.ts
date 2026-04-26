@@ -1,37 +1,35 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { encounter_notes, patients, providers } from '@/lib/db/schema'
+import { encounter_notes, patients, providers, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { sql } from 'drizzle-orm'
 
 /**
  * POST /api/debug/seed-test-encounter-note
  * Seeds a realistic telehealth SOAP note for dlolli@gmail.com.
  * Mimics an AssemblyAI-transcribed + Bedrock-summarized video consultation.
- * Delete this endpoint after use.
  */
 export async function POST() {
   try {
-    // Find Derik's patient record via profiles join
-    const result = await db.execute(sql`
-      SELECT p.id as patient_id, p.provider_id
-      FROM patients p
-      JOIN profiles pr ON pr.id = p.profile_id
-      WHERE pr.email = 'dlolli@gmail.com'
-      LIMIT 1
-    `)
-
-    const row = (result as unknown as { rows: Record<string, string>[] }).rows?.[0]
-    if (!row) return NextResponse.json({ error: 'Patient not found for dlolli@gmail.com' }, { status: 404 })
-
-    const patientId = row.patient_id
-    const providerId = row.provider_id
-
-    // Get provider record
-    const providerRow = await db.query.providers.findFirst({
-      where: eq(providers.id, providerId),
+    // Find Derik's profile by email
+    const profile = await db.query.profiles.findFirst({
+      where: eq(profiles.email, 'dlolli@gmail.com'),
+      columns: { id: true },
     })
-    if (!providerRow) return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
+    if (!profile) return NextResponse.json({ error: 'Profile not found for dlolli@gmail.com' }, { status: 404 })
+
+    // Find patient record via profile_id
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.profile_id, profile.id),
+      columns: { id: true },
+    })
+    if (!patient) return NextResponse.json({ error: 'Patient record not found' }, { status: 404 })
+
+    // Get the first active provider (Dr. Urban)
+    const provider = await db.query.providers.findFirst({
+      where: eq(providers.is_active, true),
+      columns: { id: true },
+    })
+    if (!provider) return NextResponse.json({ error: 'No active provider found' }, { status: 404 })
 
     const transcript = `Provider: Hi Derik, thanks for coming in today. How are you feeling since our last conversation?
 
@@ -72,8 +70,8 @@ Provider: Exactly. It gives us objective data to measure your response to treatm
     const [note] = await db
       .insert(encounter_notes)
       .values({
-        patient_id: patientId,
-        provider_id: providerId,
+        patient_id: patient.id,
+        provider_id: provider.id,
         source: 'telehealth',
         status: 'signed',
         transcript,
@@ -92,7 +90,8 @@ Provider: Exactly. It gives us objective data to measure your response to treatm
     return NextResponse.json({
       ok: true,
       encounter_note_id: note.id,
-      patient_id: patientId,
+      patient_id: patient.id,
+      provider_id: provider.id,
       message: 'Test encounter note seeded for dlolli@gmail.com',
     })
   } catch (err: unknown) {
