@@ -107,7 +107,12 @@ Priority order — use the highest available:
   2. A specific symptom score or wearable metric tied to this domain.
   3. A clinical finding from the consultation notes.
   4. A domain finding from the clinical brief.
-  5. ONLY as a last resort with zero other data: a single population-level fact, stated as directly relevant to this patient.
+  5. The treatment or test being ordered for this patient that directly addresses this domain.
+  6. ONLY as a last resort with zero other data: a single population-level fact stated as relevant to this patient's situation.
+
+Additional lead rules:
+- Do NOT pivot from another topic. Each section is self-contained. Never open with "You came in focused on X, but Y is also..." — the patient is reading this section on its own.
+- Do NOT invent symptoms. If the patient has not mentioned skin or hair changes, do not assume they are experiencing them. Open with what IS documented: the treatment being started, the clinical reason it protects this domain, and what we're watching for.
 
 Output: valid JSON only. No markdown, no code fences, no commentary outside the JSON object.
 
@@ -123,7 +128,11 @@ JSON shape:
   "stat": { "value": "string", "label": "string" }
 }
 
-The stat field is optional. Include it only when there is a compelling patient-specific number directly relevant to THIS component's domain — not a generic wearable metric that could appear in any section. For example, resting heart rate belongs in vasomotor, sleep score belongs in sleep, HRV belongs in cardiovascular. Do not use a metric that belongs to a different domain. If no directly relevant stat exists for this component, omit the stat key entirely. Write the label in second person ("your sleep score over the past 30 days").
+The stat field is optional. Include it only when there is a compelling patient-specific number directly relevant to THIS component's domain. Rules:
+- The value must be a specific number or measurement from THIS patient's data: a wearable metric, a symptom score, a lab value, a clinical measurement. It must be numeric.
+- Never use: a population percentage (e.g. "30%"), a text label like "Never" or "Not done", or any number not directly from this patient's chart.
+- Do not use a metric that belongs to a different domain — resting heart rate belongs in vasomotor/cardiovascular, sleep score belongs in sleep, HRV belongs in cardiovascular.
+- If no patient-specific numeric stat exists for this component, omit the stat key entirely. It is better to omit than to fabricate or reuse a population figure.
 
 The plan should have 3-4 items. Every item must be grounded in this patient's actual clinical picture — name the real medication being prescribed, the real test being ordered, the real metric being tracked. Generic items like "begin treatment" or "track your symptoms" are not acceptable when we have clinical detail. Write each detail as a direct, specific instruction for this patient.
 
@@ -431,7 +440,7 @@ export async function generateDeepDiveForComponent(
       ]
         .filter(Boolean)
         .join('\n')
-    : `No domain-specific findings available for ${component.label}. Use population-level statistics for perimenopausal/postmenopausal women.`
+    : `No patient-reported symptoms for ${component.label}. The patient has not described complaints in this domain. Do NOT invent symptoms or pivot from other topics. Open the lead with the clinical reason estradiol therapy directly supports this domain, and what we are watching for proactively. Do not use population percentages.`
 
   const userPrompt = [
     patientSection,
@@ -470,7 +479,7 @@ export async function generateDeepDiveForComponent(
     raw = await invokeModel({
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
-      maxTokens: 1024,
+      maxTokens: 2048,
     })
   } catch (err) {
     console.error(`[deep-dive] Bedrock call failed for component "${component.key}":`, err)
