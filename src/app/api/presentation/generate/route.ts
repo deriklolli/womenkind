@@ -4,6 +4,9 @@ import { intakes, patients, care_presentations, encounter_notes } from '@/lib/db
 import { and, eq, inArray } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { Resend } from 'resend'
+import { populateDeepDives } from '@/lib/populate-deep-dives'
+
+export const maxDuration = 300
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -73,6 +76,21 @@ export async function POST(req: Request) {
 
     if (!presentation) {
       throw new Error('Failed to create presentation')
+    }
+
+    // Generate AI deep-dive content for every selected component before
+    // sending the email. This is the personalized lead, dr_card, dr_quote,
+    // dr_body, plan, and stat that powers each section. Without this step
+    // the patient sees only the static editorial fallback copy.
+    try {
+      const result = await populateDeepDives(presentation.id)
+      console.log(
+        `[presentation/generate] deep dives populated for ${presentation.id}: ${result.generated.length} components, followUp=${result.isFollowUp}, notes=${result.hadConsultationNotes}, wearable=${result.hadWearableData}`
+      )
+    } catch (ddErr) {
+      console.error('[presentation/generate] deep-dive generation failed:', ddErr)
+      // Don't fail the whole request — the presentation row exists and the
+      // provider can manually re-trigger via /api/presentations/[id]/generate-deep-dive
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
