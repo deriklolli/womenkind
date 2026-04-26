@@ -105,8 +105,8 @@ Output: valid JSON only. No markdown, no code fences, no commentary outside the 
 JSON shape:
 {
   "lead": "string — 2-3 sentences, second person (you/your), anchored in this patient's specific data or words — never generic",
-  "dr_quote": "string — 1-2 sentences, first person, the most important thing Dr. Urban wants the patient to take away",
-  "dr_body": "string — 2-3 sentences, first person, follow-up context that supports the quote",
+  "dr_quote": "string — 1-2 sentences, first person. The single most important clinical truth for this patient. Reference something specific to her situation — her symptom severity, her wearable data, her words, her treatment plan.",
+  "dr_body": "string — 2-3 sentences, first person. Supports the quote with specifics from this patient's data. Mention the actual medication, the actual finding, the actual number — not a generic explanation of how menopause works.",
   "plan": [
     { "when": "string", "title": "string", "detail": "string" }
   ],
@@ -115,7 +115,10 @@ JSON shape:
 
 The stat field is optional. Include it only when there is a compelling patient-specific number (e.g., a wearable metric, a symptom score, a risk percentage) that anchors the narrative. Write the stat label in second person ("your resting heart rate over the past 30 days", not "patient resting heart rate"). Omit the key entirely if nothing meaningful applies.
 
-The plan should have 3-4 items covering an arc from immediate (this week) through medium-term (month 2+). Write each detail as a direct instruction or clear next step for the patient.`
+The plan should have 3-4 items. Every item must be grounded in this patient's actual clinical picture — name the real medication being prescribed, the real test being ordered, the real metric being tracked. Generic items like "begin treatment" or "track your symptoms" are not acceptable when we have clinical detail. Write each detail as a direct, specific instruction for this patient.
+
+PERSONALIZATION STANDARD — applies to every field, not just the lead:
+Any sentence that could appear in any patient's presentation is a failure. Every sentence should pass this test: "Could I only write this for this specific patient, given what I know about her?" If not, replace it with something that uses her data, her words, or her clinical findings.`
 
 const FOLLOW_UP_ADDENDUM = `
 
