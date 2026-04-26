@@ -267,18 +267,24 @@
     cursor: pointer;
     padding: 0;
     position: relative;
-    transition: background 0.5s ease, transform 0.25s ease;
+    transition: background 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
     flex-shrink: 0;
   }
   .dot-nav button.active {
     background: var(--violet);
     transform: scale(1.55);
   }
-  .dot-nav button:hover { background: rgba(40,15,73,0.55); }
+  .dot-nav button:not(.active):hover {
+    background: rgba(40,15,73,0.45);
+    transform: scale(1.55);
+  }
   /* light dots for dark-background sections (overview, closing) */
   .dot-nav.on-dark button          { background: rgba(255,255,255,0.3); }
   .dot-nav.on-dark button.active   { background: var(--violet); }
-  .dot-nav.on-dark button:hover    { background: rgba(255,255,255,0.65); }
+  .dot-nav.on-dark button:not(.active):hover {
+    background: rgba(255,255,255,0.55);
+    transform: scale(1.55);
+  }
   /* tooltip */
   .dot-nav button .dot-tip {
     position: absolute;
