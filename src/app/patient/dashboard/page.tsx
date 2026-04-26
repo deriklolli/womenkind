@@ -742,7 +742,7 @@ export default function PatientDashboardPage() {
             className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
             style={{ minHeight: '200px' }}
             onClick={async () => {
-              window.open(`/presentation/${patient.presentationId}`, '_blank')
+              window.open(`/presentation-blueprint.html?id=${patient.presentationId}`, '_blank')
               setPatient(prev => prev ? { ...prev, presentationStatus: 'viewed' } : prev)
               // Persist via API (service role) — patients cannot update care_presentations via RLS
               await fetch('/api/presentations/viewed', {
