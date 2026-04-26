@@ -2492,9 +2492,10 @@
         }
 
         // Main-view dr-card quote bubble
-        if (c.dr_body || c.providerNote) {
+        var cardText = c.providerNote || c.dr_card || c.dr_body;
+        if (cardText) {
           var cardNote = sec.querySelector('.dr-card .note');
-          if (cardNote) cardNote.innerHTML = '“' + esc(c.providerNote || c.dr_body) + '”';
+          if (cardNote) cardNote.innerHTML = '”' + esc(cardText) + '”';
         }
 
         // Timeline / plan steps

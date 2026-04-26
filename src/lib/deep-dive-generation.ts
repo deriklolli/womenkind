@@ -6,6 +6,7 @@ import type { WearableSummary } from '@/lib/wearable-summary'
 
 export interface DeepDiveContent {
   lead: string
+  dr_card: string
   dr_quote: string
   dr_body: string
   plan: Array<{
@@ -105,6 +106,7 @@ Output: valid JSON only. No markdown, no code fences, no commentary outside the 
 JSON shape:
 {
   "lead": "string — 2-3 sentences, second person (you/your), anchored in this patient's specific data or words — never generic",
+  "dr_card": "string — 1-2 sentences max, first person. Shown on the main presentation page (not the deep dive). Reference one specific thing Dr. Urban heard or observed from this patient, then close with a brief forward-looking line. No jargon. No treatment details. Warm, direct, human. Example tone: 'You described three weeks of waking up drenched and exhausted. I hear you, and we have a clear plan.'",
   "dr_quote": "string — 1-2 sentences, first person. The single most important clinical truth for this patient. Reference something specific to her situation — her symptom severity, her wearable data, her words, her treatment plan.",
   "dr_body": "string — 2-3 sentences, first person. Supports the quote with specifics from this patient's data. Mention the actual medication, the actual finding, the actual number — not a generic explanation of how menopause works.",
   "plan": [
@@ -113,7 +115,7 @@ JSON shape:
   "stat": { "value": "string", "label": "string" }
 }
 
-The stat field is optional. Include it only when there is a compelling patient-specific number (e.g., a wearable metric, a symptom score, a risk percentage) that anchors the narrative. Write the stat label in second person ("your resting heart rate over the past 30 days", not "patient resting heart rate"). Omit the key entirely if nothing meaningful applies.
+The stat field is optional. Include it only when there is a compelling patient-specific number directly relevant to THIS component's domain — not a generic wearable metric that could appear in any section. For example, resting heart rate belongs in vasomotor, sleep score belongs in sleep, HRV belongs in cardiovascular. Do not use a metric that belongs to a different domain. If no directly relevant stat exists for this component, omit the stat key entirely. Write the label in second person ("your sleep score over the past 30 days").
 
 The plan should have 3-4 items. Every item must be grounded in this patient's actual clinical picture — name the real medication being prescribed, the real test being ordered, the real metric being tracked. Generic items like "begin treatment" or "track your symptoms" are not acceptable when we have clinical detail. Write each detail as a direct, specific instruction for this patient.
 
@@ -321,6 +323,7 @@ function buildPreviousVisitSection(
 function buildFallback(component: PresentationComponent): DeepDiveContent {
   return {
     lead: component.defaultExplanation,
+    dr_card: `This is an area we'll look at closely together. We have a clear path forward.`,
     dr_quote: `This is one of the areas I focus on carefully for every patient in this transition.`,
     dr_body: `${component.clinicalRelevance} We'll build a targeted plan based on where you are right now and where you want to be.`,
     plan: [
@@ -472,6 +475,7 @@ export async function generateDeepDiveForComponent(
     if (!parsed.lead || !parsed.dr_quote || !parsed.dr_body || !Array.isArray(parsed.plan)) {
       throw new Error('Missing required fields in parsed response')
     }
+    if (!parsed.dr_card) parsed.dr_card = parsed.dr_quote
     return parsed
   } catch (err) {
     console.error(
@@ -509,6 +513,20 @@ export async function generateAllDeepDives(
       output[result.value.key] = result.value.content
     } else if (result.status === 'rejected') {
       console.error('[deep-dive] Unexpected rejection in allSettled:', result.reason)
+    }
+  }
+
+  // Remove duplicate stat values — each stat can only appear once across all components
+  const seenStatValues = new Set<string>()
+  for (const key of Object.keys(output)) {
+    const stat = output[key].stat
+    if (stat?.value) {
+      const normalized = stat.value.trim().toLowerCase()
+      if (seenStatValues.has(normalized)) {
+        delete output[key].stat
+      } else {
+        seenStatValues.add(normalized)
+      }
     }
   }
 
