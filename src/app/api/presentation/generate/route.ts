@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const presentationUrl = `${appUrl}/presentation/${presentation.id}`
+    const presentationUrl = `${appUrl}/presentation-blueprint.html?id=${presentation.id}`
 
     // Send email via Resend
     let emailSent = false
