@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import ProviderNav from '@/components/provider/ProviderNav'
 import { useChatContext } from '@/lib/chat-context'
+import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
 
-type Tab = 'symptoms' | 'risks' | 'treatment' | 'questions'
+type Tab = 'symptoms' | 'risks' | 'treatment' | 'questions' | 'intake'
 
 interface Intake {
   id: string
@@ -131,6 +132,7 @@ export default function BriefViewerPage() {
     { key: 'risks', label: 'Risk Flags', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z' },
     { key: 'treatment', label: 'Treatment', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
     { key: 'questions', label: 'Questions', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key: 'intake', label: 'Intake', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
   ]
 
   return (
@@ -237,6 +239,7 @@ export default function BriefViewerPage() {
               {activeTab === 'risks' && <RiskFlagsTab brief={brief} />}
               {activeTab === 'treatment' && <TreatmentTab brief={brief} />}
               {activeTab === 'questions' && <QuestionsTab brief={brief} />}
+              {activeTab === 'intake' && <IntakeAnswersTab answers={answers} patientName={answers.full_name || 'Patient'} />}
             </div>
           </div>
 
@@ -482,6 +485,97 @@ function QuestionsTab({ brief }: { brief: any }) {
             </p>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+const SKIP_FIELDS = new Set(['full_name', 'email', 'phone', '_authenticated'])
+
+function formatAnswer(value: unknown): string {
+  if (Array.isArray(value)) return value.join(', ')
+  if (value === null || value === undefined || value === '') return ''
+  return String(value)
+}
+
+function IntakeAnswersTab({ answers, patientName }: { answers: Record<string, any>; patientName: string }) {
+  const handlePrint = () => {
+    const printContent = document.getElementById('intake-print-area')
+    if (!printContent) return
+    const win = window.open('', '_blank', 'width=800,height=900')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html><head><title>Intake — ${patientName}</title><style>
+      body { font-family: -apple-system, sans-serif; color: #1a0a2e; padding: 40px; max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 18px; margin-bottom: 4px; }
+      .meta { font-size: 12px; color: #888; margin-bottom: 32px; }
+      h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c3aed;
+           border-bottom: 1px solid #ede9fe; padding-bottom: 6px; margin: 28px 0 14px; }
+      .row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f3f0fa; }
+      .q { flex: 0 0 44%; font-size: 12px; color: #555; line-height: 1.5; }
+      .a { flex: 1; font-size: 12px; color: #1a0a2e; font-weight: 500; line-height: 1.5; white-space: pre-wrap; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>`)
+    win.document.write(printContent.innerHTML)
+    win.document.write('</body></html>')
+    win.document.close()
+    win.focus()
+    setTimeout(() => { win.print() }, 400)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="font-sans font-semibold text-lg text-aubergine">Raw Intake Responses</h2>
+          <p className="text-xs font-sans text-aubergine/40 mt-0.5">Exactly as submitted — no AI interpretation</p>
+        </div>
+        <button
+          onClick={handlePrint}
+          className="flex items-center gap-2 px-4 py-2 rounded-brand border border-aubergine/15 text-sm font-sans font-medium text-aubergine/60 hover:text-aubergine hover:border-aubergine/30 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Export PDF
+        </button>
+      </div>
+
+      <div id="intake-print-area">
+        <h1 style={{ fontFamily: 'sans-serif', fontSize: '18px', marginBottom: '4px' }}>{patientName} — Intake Form</h1>
+        <p className="text-xs font-sans text-aubergine/30 mb-6" style={{ marginBottom: '24px' }}>
+          Womenkind Health · Raw intake responses
+        </p>
+
+        {SECTIONS.map((section) => {
+          const sectionQs = QUESTIONS.filter(
+            (q) => q.sec === section && !SKIP_FIELDS.has(q.id)
+          )
+          const answered = sectionQs.filter((q) => {
+            const val = answers[q.id]
+            if (val === undefined || val === null || val === '') return false
+            if (Array.isArray(val) && val.length === 0) return false
+            return true
+          })
+          if (answered.length === 0) return null
+
+          return (
+            <div key={section} className="mb-6">
+              <h3 className="text-xs font-sans font-semibold uppercase tracking-[0.12em] text-violet border-b border-violet/10 pb-2 mb-3">
+                {section}
+              </h3>
+              <div className="space-y-0">
+                {answered.map((q) => (
+                  <div key={q.id} className="flex gap-4 py-2.5 border-b border-aubergine/[0.04] last:border-0">
+                    <p className="flex-[0_0_44%] text-xs font-sans text-aubergine/50 leading-relaxed">{q.label}</p>
+                    <p className="flex-1 text-xs font-sans text-aubergine font-medium leading-relaxed whitespace-pre-wrap">
+                      {formatAnswer(answers[q.id])}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
