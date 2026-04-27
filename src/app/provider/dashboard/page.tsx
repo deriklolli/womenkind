@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { type ProviderTab } from '@/components/provider/ProviderNav'
+import DashboardHome from '@/components/provider/DashboardHome'
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import ProviderCancellationAlerts from '@/components/provider/ProviderCancellationAlerts'
@@ -66,8 +67,8 @@ export default function ProviderDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const validTabs: DashboardTab[] = ['queue', 'patients', 'schedule', 'messages', 'refills']
-  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'queue') as DashboardTab
+  const validTabs: DashboardTab[] = ['home', 'queue', 'patients', 'schedule', 'messages', 'refills']
+  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'home') as DashboardTab
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
@@ -89,7 +90,7 @@ export default function ProviderDashboard() {
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab)
     } else {
-      setActiveTab('queue')
+      setActiveTab('home')
     }
   }, [searchParams])
 
@@ -203,6 +204,8 @@ export default function ProviderDashboard() {
       year: 'numeric',
     })
   }
+
+  if (activeTab === 'home') return <DashboardHome />
 
   return (
     <div className="min-h-screen bg-cream">
