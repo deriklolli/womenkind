@@ -122,7 +122,7 @@ export default function DashboardHome() {
   }, [providerId])
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  const displayName = providerName
+  const displayName = providerName.replace(/^Dr\.\s*/i, '')
 
   if (loading && !providerId) {
     return (

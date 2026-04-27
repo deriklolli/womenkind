@@ -290,79 +290,97 @@ export default function PatientProfilePage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-7xl mx-auto px-6 pt-6 pb-8">
-        {/* Patient header */}
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
-              {membership && (
-                <span className="flex items-center gap-1 flex-shrink-0">
-                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
-              {age && <span>{age} years old</span>}
-              {heightStr && <span>{heightStr}</span>}
-              {weightLbs && <span>{weightLbs} lbs</span>}
-              {bmi && <span>BMI {bmi}</span>}
-              {patient.state && <span>{patient.state}</span>}
-            </div>
-            {latestIntake?.ai_brief?.metadata && (
-              <div className="flex items-center gap-2 mt-2">
-                {burden && (
-                  <span className={`text-xs font-sans px-2.5 py-1 rounded-pill border ${
-                    burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
-                    burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
-                    burden === 'moderate' ? 'text-amber-600 bg-amber-50 border-amber-200' :
-                    'text-emerald-600 bg-emerald-50 border-emerald-200'
-                  }`}>
-                    {burden.charAt(0).toUpperCase() + burden.slice(1)} Burden
-                  </span>
-                )}
-                {stage && (
-                  <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-violet bg-violet/5 border-violet/20">
-                    {stage.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                  </span>
-                )}
-                {latestIntake.ai_brief.metadata.complexity && (
-                  <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-aubergine/50 bg-aubergine/5 border-aubergine/10">
-                    {latestIntake.ai_brief.metadata.complexity.charAt(0).toUpperCase() + latestIntake.ai_brief.metadata.complexity.slice(1)} Complexity
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Patient header card */}
+        <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5 mb-8">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="font-sans font-semibold text-2xl text-aubergine tracking-tight">{name || 'Unknown Patient'}</h1>
+                {membership && (
+                  <span className="flex items-center gap-1 flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                    <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
                   </span>
                 )}
               </div>
-            )}
-          </div>
-          <div className="inline-grid gap-2 flex-shrink-0">
-            <button
-              onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
-              className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Create Care Presentation
-            </button>
-            {latestIntake && (
+              <div className="flex items-center gap-4 text-sm font-sans text-aubergine/50">
+                {age && <span>{age} years old</span>}
+                {heightStr && <span>{heightStr}</span>}
+                {weightLbs && <span>{weightLbs} lbs</span>}
+                {bmi && <span>BMI {bmi}</span>}
+                {patient.state && <span>{patient.state}</span>}
+              </div>
+              {latestIntake?.ai_brief?.metadata && (
+                <div className="flex items-center gap-2 mt-3">
+                  {burden && (
+                    <span className={`text-xs font-sans px-2.5 py-1 rounded-pill border ${
+                      burden === 'severe' ? 'text-red-600 bg-red-50 border-red-200' :
+                      burden === 'high' ? 'text-orange-600 bg-orange-50 border-orange-200' :
+                      burden === 'moderate' ? 'text-amber-600 bg-amber-50 border-amber-200' :
+                      'text-emerald-600 bg-emerald-50 border-emerald-200'
+                    }`}>
+                      {burden.charAt(0).toUpperCase() + burden.slice(1)} Burden
+                    </span>
+                  )}
+                  {stage && (
+                    <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-violet bg-violet/5 border-violet/20">
+                      {stage.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                    </span>
+                  )}
+                  {latestIntake.ai_brief.metadata.complexity && (
+                    <span className="text-xs font-sans px-2.5 py-1 rounded-pill border text-aubergine/50 bg-aubergine/5 border-aubergine/10">
+                      {latestIntake.ai_brief.metadata.complexity.charAt(0).toUpperCase() + latestIntake.ai_brief.metadata.complexity.slice(1)} Complexity
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="inline-grid gap-2 flex-shrink-0">
               <button
-                onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
+                onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
                 className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                View Clinical Brief
+                Create Care Presentation
               </button>
-            )}
+              {latestIntake && (
+                <button
+                  onClick={() => router.push(`/provider/brief/${latestIntake.id}`)}
+                  className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  View Clinical Brief
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Current overview — priority: signed encounter note → visit notes → intake overview */}
+          {(() => {
+            const overview =
+              latestEncounterNote?.assessment ||
+              visits.find(v => v.treatment_updates || v.provider_notes)?.treatment_updates ||
+              visits.find(v => v.provider_notes)?.provider_notes ||
+              latestIntake?.ai_brief?.symptom_summary?.overview ||
+              null
+            if (!overview) return null
+            return (
+              <div className="mt-4 pt-4 border-t border-aubergine/5">
+                <p className="text-sm font-sans text-aubergine/70 leading-relaxed line-clamp-3">{overview}</p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Tab navigation */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex gap-1 bg-white rounded-brand p-1 shadow-sm">
           {TABS.map((tab) => (
             <button
