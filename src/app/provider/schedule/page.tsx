@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ProviderNav from '@/components/provider/ProviderNav'
 import AppointmentTypesManager from '@/components/provider/AppointmentTypesManager'
 import AvailabilityEditor from '@/components/provider/AvailabilityEditor'
 import AppointmentsList from '@/components/provider/AppointmentsList'
@@ -41,6 +42,7 @@ export default function ProviderSchedulePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-cream">
+        <ProviderNav activeTab="schedule" />
         <div className="flex items-center justify-center h-64">
           <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
         </div>
@@ -50,6 +52,8 @@ export default function ProviderSchedulePage() {
 
   return (
     <div className="min-h-screen bg-cream">
+      <ProviderNav activeTab="schedule" providerName={providerName} />
+
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page header */}
         <div className="flex items-center justify-between mb-8">

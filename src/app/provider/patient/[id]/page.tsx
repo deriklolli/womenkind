@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import ProviderNav from '@/components/provider/ProviderNav'
 import SymptomTrendChart from '@/components/provider/SymptomTrendChart'
 import VisitTimeline from '@/components/provider/VisitTimeline'
 import PrescriptionsPanel from '@/components/provider/PrescriptionsPanel'
@@ -239,6 +240,7 @@ export default function PatientProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-cream">
+        <ProviderNav />
         <div className="flex items-center justify-center py-32">
           <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
         </div>
@@ -249,6 +251,7 @@ export default function PatientProfilePage() {
   if (!patient) {
     return (
       <div className="min-h-screen bg-cream">
+        <ProviderNav />
         <div className="text-center py-32">
           <p className="font-sans font-semibold text-xl text-aubergine/30">Patient not found</p>
           <button onClick={() => router.push('/provider/dashboard')} className="text-sm font-sans text-violet mt-4 hover:text-violet-dark">
@@ -290,6 +293,8 @@ export default function PatientProfilePage() {
 
   return (
     <div className="min-h-screen bg-cream">
+      <ProviderNav />
+
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Patient header card */}
         <div className="bg-white rounded-card p-6 shadow-sm border border-aubergine/5 mb-8">

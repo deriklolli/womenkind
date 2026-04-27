@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { type ProviderTab } from '@/components/provider/ProviderNav'
-import DashboardHome from '@/components/provider/DashboardHome'
+import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav'
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import ProviderCancellationAlerts from '@/components/provider/ProviderCancellationAlerts'
@@ -67,8 +66,8 @@ export default function ProviderDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const validTabs: DashboardTab[] = ['home', 'queue', 'patients', 'schedule', 'messages', 'refills']
-  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'home') as DashboardTab
+  const validTabs: DashboardTab[] = ['queue', 'patients', 'schedule', 'messages', 'refills']
+  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'queue') as DashboardTab
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
@@ -78,21 +77,14 @@ export default function ProviderDashboard() {
   const [providerId, setProviderId] = useState<string>('')
   const [filter, setFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
+  const [pendingRefillCount, setPendingRefillCount] = useState(0)
+
   const { setPageContext } = useChatContext()
 
   useEffect(() => {
     setPageContext({ page: 'dashboard' })
   }, [])
-
-  // Sync tab state with URL when the left nav changes the route
-  useEffect(() => {
-    const tab = searchParams.get('tab') as DashboardTab | null
-    if (tab && validTabs.includes(tab)) {
-      setActiveTab(tab)
-    } else {
-      setActiveTab('home')
-    }
-  }, [searchParams])
 
   useEffect(() => {
     getProviderSession().then(session => {
@@ -106,6 +98,29 @@ export default function ProviderDashboard() {
     loadIntakes()
     loadPatients()
   }, [])
+
+  // Load badge counts once we have a provider ID
+  useEffect(() => {
+    if (!providerId) return
+    loadCounts()
+  }, [providerId])
+
+  const loadCounts = async () => {
+    try {
+      // Fetch pending refill count
+      const refillRes = await fetch(`/api/refill-requests?providerId=${providerId}&status=pending`)
+      const refillData = await refillRes.json()
+      setPendingRefillCount((refillData.refillRequests || []).length)
+
+      // Fetch unread message count
+      const msgRes = await fetch(`/api/messages?providerId=${providerId}`)
+      const msgData = await msgRes.json()
+      const unread = (msgData.threads || []).reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
+      setUnreadMessageCount(unread)
+    } catch (err) {
+      console.error('Failed to load counts:', err)
+    }
+  }
 
   const loadIntakes = async () => {
     setLoading(true)
@@ -205,10 +220,18 @@ export default function ProviderDashboard() {
     })
   }
 
-  if (activeTab === 'home') return <DashboardHome />
-
   return (
     <div className="min-h-screen bg-cream">
+      <ProviderNav
+        providerName={providerName}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        newIntakeCount={counts.submitted}
+        patientCount={patients.length}
+        unreadMessageCount={unreadMessageCount}
+        pendingRefillCount={pendingRefillCount}
+      />
+
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {providerId && <ProviderCancellationAlerts providerId={providerId} />}
@@ -459,12 +482,12 @@ export default function ProviderDashboard() {
 
         {activeTab === 'messages' && (
           /* ====== MESSAGES TAB ====== */
-          <ProviderMessagesInbox providerId={providerId} />
+          <ProviderMessagesInbox providerId={providerId} onCountChange={setUnreadMessageCount} />
         )}
 
         {activeTab === 'refills' && (
           /* ====== REFILL REQUESTS TAB ====== */
-          <ProviderRefillQueue providerId={providerId} />
+          <ProviderRefillQueue providerId={providerId} onCountChange={setPendingRefillCount} />
         )}
       </div>
     </div>
