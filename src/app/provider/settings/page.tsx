@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import ProviderNav from '@/components/provider/ProviderNav'
 import { getProviderSession } from '@/lib/getProviderSession'
 
 interface CalendarStatus {
@@ -115,8 +114,6 @@ export default function ProviderSettingsPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <ProviderNav />
-
       <div className="max-w-3xl mx-auto px-6 py-10">
         <h1 className="text-2xl font-serif font-normal text-aubergine mb-1">Settings</h1>
         <p className="text-sm font-sans text-aubergine/50 mb-8">

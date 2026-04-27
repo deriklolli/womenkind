@@ -7,6 +7,7 @@ import { ChatContextProvider, useChatContext } from '@/lib/chat-context'
 import { RecordingProvider } from '@/lib/recording-context'
 import ChatWidget from '@/components/provider/ChatWidget'
 import RecordingBar from '@/components/provider/RecordingBar'
+import ProviderNav from '@/components/provider/ProviderNav'
 import { useIdleTimeout } from '@/hooks/useIdleTimeout'
 import { signOutProvider } from '@/lib/signOut'
 
@@ -90,7 +91,12 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
   return (
     <ChatContextProvider>
       <RecordingProvider>
-        {children}
+        <div className="flex min-h-screen">
+          <ProviderNav />
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            {children}
+          </main>
+        </div>
         <RecordingBar />
         <ChatWidgetWithContext />
       </RecordingProvider>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import ProviderNav from '@/components/provider/ProviderNav'
 import { useChatContext } from '@/lib/chat-context'
 import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
 
@@ -137,8 +136,6 @@ export default function BriefViewerPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <ProviderNav />
-
       <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Patient header */}
         <div className="bg-white rounded-card shadow-sm p-6 mb-6">
