@@ -190,7 +190,7 @@ export default function ProviderNav() {
       </div>
 
       {/* Nav items */}
-      <div className="flex-1 px-3 space-y-0.5">
+      <div className="flex-1 px-3 space-y-0.5 mt-2.5">
         {navItems.map(({ key, label, badge, badgeColor, icon }) => {
           const isActive = activeItem === key
           return (
