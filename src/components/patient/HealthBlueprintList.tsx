@@ -140,7 +140,7 @@ export default function HealthBlueprintList({ patientId }: HealthBlueprintListPr
               </div>
 
               <button
-                onClick={() => window.open(`/presentation/${p.id}`, '_blank')}
+                onClick={() => window.open(`/presentation-blueprint.html?id=${p.id}`, '_blank')}
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-brand text-sm font-sans font-medium transition-colors ${
                   isNew
                     ? 'bg-violet text-white hover:bg-violet/90 shadow-sm'
