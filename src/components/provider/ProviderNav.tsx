@@ -162,7 +162,7 @@ export default function ProviderNav() {
   const initials = displayName.replace(/^Dr\.\s*/i, '').charAt(0).toUpperCase()
 
   return (
-    <nav className="w-60 min-h-screen bg-aubergine flex flex-col flex-shrink-0">
+    <nav className="w-[255px] min-h-screen bg-aubergine flex flex-col flex-shrink-0">
       {/* Logo */}
       <div className="px-5 py-6">
         <button onClick={() => router.push('/provider/dashboard')} className="flex items-center">
