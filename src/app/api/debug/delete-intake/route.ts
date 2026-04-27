@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { intakes } from '@/lib/db/schema'
+import { intakes, subscriptions, care_presentations } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
@@ -16,6 +17,10 @@ export async function DELETE(req: NextRequest) {
   if (intake.status !== 'draft' || intake.submitted_at !== null) {
     return NextResponse.json({ error: 'refusing to delete non-draft or submitted intake' }, { status: 400 })
   }
+
+  // Clear FK references before deleting
+  await db.update(subscriptions).set({ intake_id: null }).where(eq(subscriptions.intake_id, id))
+  await db.update(care_presentations).set({ intake_id: null }).where(eq(care_presentations.intake_id, id))
 
   await db.delete(intakes).where(and(eq(intakes.id, id), eq(intakes.status, 'draft')))
   return NextResponse.json({ deleted: id })
