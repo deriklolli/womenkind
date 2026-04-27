@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import VisitPrepPanel from './VisitPrepPanel'
+import { devFixtures } from '@/lib/dev-fixtures'
 
 interface Appointment {
   id: string
@@ -99,9 +100,16 @@ export default function AppointmentsList({ providerId }: Props) {
       const params = new URLSearchParams({ providerId })
       const res = await fetch(`/api/scheduling/appointments?${params}`)
       const data = await res.json()
-      setAppointments(data.appointments || [])
+      const apts = data.appointments || []
+      if (apts.length === 0 && process.env.NODE_ENV === 'development') {
+        setAppointments(devFixtures.scheduleAppointments as any)
+      } else {
+        setAppointments(apts)
+      }
     } catch (err) {
-      console.error('Failed to fetch appointments:', err)
+      if (process.env.NODE_ENV === 'development') {
+        setAppointments(devFixtures.scheduleAppointments as any)
+      }
     } finally {
       setLoading(false)
     }
@@ -188,11 +196,11 @@ export default function AppointmentsList({ providerId }: Props) {
                                 </span>
                               )}
                               {isMember && (
-                                <span className="flex items-center gap-1 flex-shrink-0">
-                                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-600 text-xs font-sans font-medium px-2 py-0.5 rounded-pill flex-shrink-0">
+                                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                   </svg>
-                                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
+                                  Member
                                 </span>
                               )}
                             </div>
@@ -224,20 +232,18 @@ export default function AppointmentsList({ providerId }: Props) {
                               </div>
                             ) : (
                               <>
-                                <button
-                                  onClick={() => setVisitPrepAptId(visitPrepAptId === apt.id ? null : apt.id)}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold rounded-pill transition-colors mr-1 ${
-                                    visitPrepAptId === apt.id
-                                      ? 'text-white bg-violet border border-violet'
-                                      : 'text-violet bg-violet/5 border border-violet/15 hover:bg-violet/10'
-                                  }`}
+                                <a
+                                  href={`/provider/patient/${apt.patients?.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-semibold text-violet bg-violet/5 border border-violet/15 rounded-pill hover:bg-violet/10 transition-colors mr-1"
                                 >
                                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                   </svg>
                                   Visit Prep
-                                </button>
-                                {apt.video_room_url && (
+                                </a>
+                                {apt.video_room_url ? (
                                   <a
                                     href={`/api/visits/join-as-host?appointmentId=${apt.id}`}
                                     target="_blank"
@@ -249,6 +255,13 @@ export default function AppointmentsList({ providerId }: Props) {
                                     </svg>
                                     Join Call
                                   </a>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans font-medium text-aubergine/50 bg-aubergine/5 border border-aubergine/10 rounded-pill mr-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                                    </svg>
+                                    In-Office
+                                  </span>
                                 )}
                                 <button
                                   onClick={() => setCancelConfirmId(apt.id)}

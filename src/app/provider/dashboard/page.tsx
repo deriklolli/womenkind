@@ -6,6 +6,8 @@ import ProviderNav, { type ProviderTab } from '@/components/provider/ProviderNav
 import ProviderRefillQueue from '@/components/provider/ProviderRefillQueue'
 import ProviderMessagesInbox from '@/components/provider/ProviderMessagesInbox'
 import ProviderCancellationAlerts from '@/components/provider/ProviderCancellationAlerts'
+import DashboardHome from '@/components/provider/DashboardHome'
+import { devFixtures } from '@/lib/dev-fixtures'
 import { useChatContext } from '@/lib/chat-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { signOutProvider } from '@/lib/signOut'
@@ -66,8 +68,9 @@ export default function ProviderDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const validTabs: DashboardTab[] = ['queue', 'patients', 'schedule', 'messages', 'refills']
-  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'queue') as DashboardTab
+  const validTabs: DashboardTab[] = ['patients', 'schedule', 'messages', 'refills']
+  const isDashboardHome = !tabParam
+  const initialTab = (validTabs.includes(tabParam as DashboardTab) ? tabParam : 'patients') as DashboardTab
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [patients, setPatients] = useState<DirectoryPatient[]>([])
@@ -144,7 +147,11 @@ export default function ProviderDashboard() {
       const data = await res.json()
       setPatients(data.patients || [])
     } catch (err) {
-      console.error('Failed to load patients:', err)
+      if (process.env.NODE_ENV === 'development') {
+        setPatients(devFixtures.patients as DirectoryPatient[])
+      } else {
+        console.error('Failed to load patients:', err)
+      }
     } finally {
       setPatientsLoading(false)
     }
@@ -224,150 +231,25 @@ export default function ProviderDashboard() {
     <div className="min-h-screen bg-cream">
       <ProviderNav
         providerName={providerName}
-        activeTab={activeTab}
+        activeTab={isDashboardHome ? undefined : activeTab}
         onTabChange={setActiveTab}
-        newIntakeCount={counts.submitted}
         patientCount={patients.length}
         unreadMessageCount={unreadMessageCount}
         pendingRefillCount={pendingRefillCount}
       />
 
-      {/* Main content */}
+      {isDashboardHome ? (
+        <DashboardHome />
+      ) : (
       <div className="max-w-7xl mx-auto px-6 py-8">
         {providerId && <ProviderCancellationAlerts providerId={providerId} />}
-        {activeTab === 'queue' && (
-          /* ====== INTAKE QUEUE TAB ====== */
-          <>
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight">Intake Queue</h1>
-                <p className="text-sm font-sans text-aubergine/50 mt-1">
-                  {counts.submitted} new {counts.submitted === 1 ? 'intake' : 'intakes'} awaiting review
-                </p>
-              </div>
-            </div>
-
-            {/* Filter tabs */}
-            <div className="flex gap-1 mb-6 bg-white rounded-brand p-1 w-fit shadow-sm">
-              {[
-                { key: 'all', label: 'All' },
-                { key: 'submitted', label: 'New' },
-                { key: 'reviewed', label: 'Reviewed' },
-                { key: 'care_plan_sent', label: 'Care Plan Sent' },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setFilter(tab.key)}
-                  className={`px-4 py-2 rounded-brand text-sm font-sans font-medium transition-all
-                    ${filter === tab.key
-                      ? 'bg-aubergine text-white shadow-sm'
-                      : 'text-aubergine/50 hover:text-aubergine hover:bg-aubergine/5'
-                    }`}
-                >
-                  {tab.label}
-                  <span className={`ml-1.5 text-xs ${filter === tab.key ? 'text-white/60' : 'text-aubergine/30'}`}>
-                    {counts[tab.key as keyof typeof counts]}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Patient list */}
-            {loading ? (
-              <div className="text-center py-20">
-                <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin mx-auto" />
-                <p className="text-sm font-sans text-aubergine/40 mt-4">Loading intakes...</p>
-              </div>
-            ) : filteredIntakes.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-card shadow-sm">
-                <p className="text-lg font-sans font-semibold text-aubergine/30">No intakes found</p>
-                <p className="text-sm font-sans text-aubergine/20 mt-2">
-                  {filter !== 'all' ? 'Try a different filter' : 'Completed intakes will appear here'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredIntakes.map((intake) => {
-                  const name = getPatientName(intake.answers)
-                  const age = getPatientAgeFromAnswers(intake.answers)
-                  const concerns = getTopConcerns(intake.answers)
-                  const burden = getSymptomBurden(intake.ai_brief)
-                  const isMember = intake.patients?.subscriptions?.some(
-                    (s) => s.plan_type === 'membership' && s.status === 'active'
-                  )
-                  const status = STATUS_CONFIG[intake.status] || STATUS_CONFIG.draft
-
-                  return (
-                    <button
-                      key={intake.id}
-                      onClick={() => router.push(`/provider/brief/${intake.id}`)}
-                      className="relative overflow-hidden w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md
-                                 border border-transparent hover:border-violet/10
-                                 transition-all duration-200 text-left group"
-                    >
-                      {/* Unread sliver — shown when intake has not been opened yet */}
-                      {intake.status === 'submitted' && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet" />
-                      )}
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-sans font-semibold text-lg text-aubergine truncate">
-                              {name}
-                            </h3>
-                            {age && (
-                              <span className="text-xs font-sans text-aubergine/40 flex-shrink-0">
-                                {age}y
-                              </span>
-                            )}
-                            {isMember && (
-                              <span className="flex items-center gap-1 flex-shrink-0">
-                                <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                </svg>
-                                <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
-                              </span>
-                            )}
-                            {burden && (
-                              <span className={`text-xs font-sans px-2.5 py-0.5 rounded-pill flex-shrink-0
-                                ${burden === 'severe' ? 'text-red-600 bg-red-50 border border-red-200' :
-                                  burden === 'high' ? 'text-orange-600 bg-orange-50 border border-orange-200' :
-                                  burden === 'moderate' ? 'text-amber-600 bg-amber-50 border border-amber-200' :
-                                  'text-emerald-600 bg-emerald-50 border border-emerald-200'}`}
-                              >
-                                {burden.charAt(0).toUpperCase() + burden.slice(1)} burden
-                              </span>
-                            )}
-                          </div>
-                          {concerns.length > 0 && (
-                            <p className="text-sm font-sans text-aubergine/50 mb-2">
-                              <span className="font-medium">Chief concerns:</span> {concerns.join(', ')}
-                            </p>
-                          )}
-                          <p className="text-xs font-sans text-aubergine/30">
-                            Submitted {formatDate(intake.submitted_at)}
-                          </p>
-                        </div>
-                        <div className="flex-shrink-0 ml-4">
-                          <svg className="w-5 h-5 text-aubergine/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
 
         {activeTab === 'patients' && (
           /* ====== PATIENTS DIRECTORY TAB ====== */
           <>
             <div className="flex items-end justify-between mb-8">
               <div>
-                <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight">My Patients</h1>
+                <h1 className="font-serif font-normal text-4xl text-aubergine">My Patients</h1>
                 <p className="text-sm font-sans text-aubergine/50 mt-1">
                   {patients.length} active {patients.length === 1 ? 'patient' : 'patients'}
                 </p>
@@ -403,15 +285,10 @@ export default function ProviderDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="bg-white rounded-card shadow-sm border border-aubergine/5 divide-y divide-aubergine/5 overflow-hidden">
                 {filteredPatients.map((patient) => {
                   const name = `${patient.profiles?.first_name || ''} ${patient.profiles?.last_name || ''}`.trim() || 'Unknown'
                   const age = getPatientAge(patient.date_of_birth)
-                  const latestIntake = patient.intakes?.sort((a, b) =>
-                    new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime()
-                  )[0]
-                  const burden = getSymptomBurden(latestIntake?.ai_brief)
-                  const stage = getMenopausalStage(latestIntake?.ai_brief)
                   const visitCount = patient.visits?.length || 0
                   const hasMembership = patient.subscriptions?.some(
                     (s) => s.plan_type === 'membership' && s.status === 'active'
@@ -424,54 +301,35 @@ export default function ProviderDashboard() {
                     <button
                       key={patient.id}
                       onClick={() => router.push(`/provider/patient/${patient.id}`)}
-                      className="w-full bg-white rounded-card p-5 shadow-sm hover:shadow-md
-                                 border border-transparent hover:border-violet/10
-                                 transition-all duration-200 text-left group"
+                      className="w-full px-6 py-4 hover:bg-violet/8 transition-colors text-left group flex items-center gap-4"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          {/* Avatar */}
-                          <div className="w-10 h-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-sans font-semibold text-violet">
-                              {(patient.profiles?.first_name?.[0] || '?').toUpperCase()}
-                              {(patient.profiles?.last_name?.[0] || '').toUpperCase()}
+                      <div className="w-10 h-10 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-sans font-semibold text-violet">
+                          {(patient.profiles?.first_name?.[0] || '?').toUpperCase()}
+                          {(patient.profiles?.last_name?.[0] || '').toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-0.5">
+                          <h3 className="font-sans font-semibold text-sm text-aubergine truncate">{name}</h3>
+                          {age && (
+                            <span className="text-xs font-sans text-aubergine/40 flex-shrink-0">{age}y</span>
+                          )}
+                          {hasMembership && (
+                            <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-600 text-xs font-sans font-medium px-2 py-0.5 rounded-pill flex-shrink-0">
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                              Member
                             </span>
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-sans font-semibold text-lg text-aubergine transition-colors truncate">
-                                {name}
-                              </h3>
-                              {age && (
-                                <span className="text-xs font-sans text-aubergine/40 flex-shrink-0">{age}y</span>
-                              )}
-                              {hasMembership && (
-                                <span className="flex items-center gap-1 flex-shrink-0">
-                                  <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                  </svg>
-                                  <span className="text-xs font-sans text-aubergine/50 font-medium">Member</span>
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4 text-xs font-sans text-aubergine/40">
-                              <span>{visitCount} {visitCount === 1 ? 'visit' : 'visits'}</span>
-                              {latestVisitDate && (
-                                <span>Last seen {formatShortDate(latestVisitDate)}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Arrow */}
-                        <div className="flex-shrink-0 ml-4">
-                          <svg className="w-5 h-5 text-aubergine/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
+                          )}
                         </div>
                       </div>
+
+                      <svg className="w-4 h-4 text-aubergine/20 group-hover:text-violet transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   )
                 })}
@@ -490,6 +348,7 @@ export default function ProviderDashboard() {
           <ProviderRefillQueue providerId={providerId} onCountChange={setPendingRefillCount} />
         )}
       </div>
+      )}
     </div>
   )
 }

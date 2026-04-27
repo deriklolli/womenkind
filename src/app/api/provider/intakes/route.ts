@@ -18,6 +18,7 @@ export async function GET() {
       answers: true,
       submitted_at: true,
       ai_brief: true,
+      patient_id: true,
     },
     with: {
       patients: {
