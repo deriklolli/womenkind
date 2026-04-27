@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
       status: true,
       submitted_at: true,
       created_at: true,
-      updated_at: true,
       answers: true,
     },
   })
@@ -26,7 +25,6 @@ export async function GET(req: NextRequest) {
       status: r.status,
       submitted_at: r.submitted_at,
       created_at: r.created_at,
-      updated_at: r.updated_at,
       answer_count: Object.keys((r.answers as Record<string, unknown>) ?? {}).length,
       answer_keys: Object.keys((r.answers as Record<string, unknown>) ?? {}),
     }))
