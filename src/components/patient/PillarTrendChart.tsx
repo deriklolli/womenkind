@@ -1,0 +1,482 @@
+'use client'
+
+import { useState, useEffect, useId } from 'react'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type PillarKey = 'sleep' | 'vasomotor' | 'mood' | 'brain' | 'hormonal'
+
+interface Pillar {
+  key: PillarKey
+  name: string
+  accent: string
+  baseline: number
+  current: number
+  unit: string
+}
+
+interface Milestone {
+  wk: number
+  type: 'visit' | 'rx' | 'dose' | 'lab'
+  short: string
+  title: string
+  body: string
+}
+
+interface PillarTrendData {
+  pillars: Pillar[]
+  series: Record<PillarKey, (number | null)[]>
+  milestones: Milestone[]
+  startDate: string
+}
+
+interface Props {
+  patientId: string
+  initialPillar?: PillarKey
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const AUBERGINE = '#280f49'
+const WARM = '#422a1f'
+const CREAM = '#f7f3ee'
+
+const VB_W = 1100
+const VB_H = 380
+const PAD = { l: 54, r: 36, t: 62, b: 46 }
+const CHART_W = VB_W - PAD.l - PAD.r   // 1010
+const CHART_H = VB_H - PAD.t - PAD.b   // 272
+const WEEKS = 24
+
+const X_TICKS = [
+  { wk: 0,  label: 'START' },
+  { wk: 6,  label: 'WK 6' },
+  { wk: 12, label: 'WK 12' },
+  { wk: 18, label: 'WK 18' },
+  { wk: 23, label: 'NOW' },
+]
+
+// ── Math helpers ──────────────────────────────────────────────────────────────
+
+function xOf(wk: number): number {
+  return PAD.l + (wk / (WEEKS - 1)) * CHART_W
+}
+
+function yOf(val: number): number {
+  return PAD.t + CHART_H - (val / 10) * CHART_H
+}
+
+function buildPath(pts: [number, number][]): string {
+  if (pts.length === 0) return ''
+  if (pts.length === 1) return `M${pts[0][0]},${pts[0][1]}`
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1]
+    const [x1, y1] = pts[i]
+    const mid = (x0 + x1) / 2
+    d += ` C${mid.toFixed(1)},${y0.toFixed(1)} ${mid.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`
+  }
+  return d
+}
+
+// ── Pillar dropdown ───────────────────────────────────────────────────────────
+
+function PillarDropdown({
+  pillars,
+  active,
+  onChange,
+}: {
+  pillars: Pillar[]
+  active: PillarKey
+  onChange: (k: PillarKey) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const activePillar = pillars.find(p => p.key === active)!
+
+  return (
+    <div className="relative" style={{ minWidth: 230 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-cream border transition-colors"
+        style={{
+          borderRadius: 14,
+          borderColor: open ? '#944fed' : 'rgba(66,42,31,.15)',
+        }}
+      >
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: activePillar.accent }} />
+        <span className="flex-1 text-left">
+          <span className="block font-sans text-[9px] font-bold tracking-[0.16em] text-aubergine/40 uppercase">Pillar</span>
+          <span className="block font-display text-sm text-aubergine">{activePillar.name}</span>
+        </span>
+        <svg
+          width="10" height="6" viewBox="0 0 10 6" fill="none"
+          className="transition-transform flex-shrink-0"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', color: WARM, opacity: 0.4 }}
+        >
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full mt-1.5 w-full bg-white border border-aubergine/10 shadow-lg z-20 overflow-hidden"
+          style={{ borderRadius: 14 }}
+        >
+          {pillars.map(p => (
+            <button
+              key={p.key}
+              onClick={() => { onChange(p.key); setOpen(false) }}
+              className="w-full flex items-center gap-3 px-4 py-3 transition-colors hover:bg-cream/60"
+              style={{ background: p.key === active ? CREAM : undefined }}
+            >
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: p.accent }} />
+              <span className="font-display text-sm text-aubergine">{p.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+      )}
+    </div>
+  )
+}
+
+// ── Annotation card ───────────────────────────────────────────────────────────
+
+function AnnotationCard({
+  milestone,
+  milestoneIndex,
+  displayNumber,
+  accent,
+  highlighted,
+  onHover,
+}: {
+  milestone: Milestone
+  milestoneIndex: number
+  displayNumber: number
+  accent: string
+  highlighted: boolean
+  onHover: (idx: number | null) => void
+}) {
+  return (
+    <div
+      className="rounded-2xl p-4 cursor-default transition-all duration-[250ms]"
+      style={{
+        background: highlighted ? accent : CREAM,
+        color: highlighted ? 'white' : AUBERGINE,
+      }}
+      onMouseEnter={() => onHover(milestoneIndex)}
+      onMouseLeave={() => onHover(null)}
+    >
+      {/* Top row: chip + eyebrow */}
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-[250ms]"
+          style={{
+            background: highlighted ? 'white' : accent,
+            color: highlighted ? accent : 'white',
+            fontSize: 9,
+            fontWeight: 700,
+            fontFamily: 'var(--font-display, serif)',
+            fontStyle: 'italic',
+          }}
+        >
+          {displayNumber}
+        </span>
+        <span
+          className="font-sans font-bold tracking-[0.18em] uppercase transition-colors duration-[250ms]"
+          style={{
+            fontSize: 9.5,
+            color: highlighted ? 'rgba(255,255,255,0.65)' : 'rgba(66,42,31,0.45)',
+          }}
+        >
+          WK {milestone.wk} · {milestone.short}
+        </span>
+      </div>
+      {/* Title */}
+      <p
+        className="font-display leading-snug transition-colors duration-[250ms]"
+        style={{
+          fontSize: 14,
+          color: highlighted ? 'white' : AUBERGINE,
+        }}
+      >
+        {milestone.title}
+      </p>
+    </div>
+  )
+}
+
+// ── Main chart ────────────────────────────────────────────────────────────────
+
+export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }: Props) {
+  const gradId = useId().replace(/:/g, '')
+  const [data, setData] = useState<PillarTrendData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [activePillar, setActivePillar] = useState<PillarKey>(initialPillar)
+  const [hoveredPin, setHoveredPin] = useState<number | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/patient/pillar-trend?patientId=${encodeURIComponent(patientId)}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [patientId])
+
+  if (loading || !data) {
+    return (
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8 animate-pulse">
+        <div className="h-6 bg-aubergine/5 rounded w-48 mb-4" />
+        <div className="h-64 bg-aubergine/5 rounded" />
+      </div>
+    )
+  }
+
+  const pillar = data.pillars.find(p => p.key === activePillar) ?? data.pillars[0]
+  const series = data.series[activePillar]
+  const { accent } = pillar
+  const milestones = data.milestones
+
+  // Build SVG points from series
+  const pts: [number, number][] = series
+    .map((v, i) => v !== null ? [xOf(i), yOf(v)] as [number, number] : null)
+    .filter((p): p is [number, number] => p !== null)
+
+  const linePath = buildPath(pts)
+  const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOf(5)]
+  const firstPt = pts[0] ?? [xOf(0), yOf(5)]
+
+  // Area fill path: line + close to bottom
+  const areaPath = pts.length > 0
+    ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
+    : ''
+
+  // Baseline Y
+  const baselineY = yOf(pillar.baseline)
+
+  // Annotation rail: first 3 + most recent (if 4+)
+  const annotationCards = milestones.length <= 4
+    ? milestones.map((m, i) => ({ milestone: m, milestoneIndex: i, displayNumber: i + 1 }))
+    : [
+        { milestone: milestones[0], milestoneIndex: 0, displayNumber: 1 },
+        { milestone: milestones[1], milestoneIndex: 1, displayNumber: 2 },
+        { milestone: milestones[2], milestoneIndex: 2, displayNumber: 3 },
+        { milestone: milestones[milestones.length - 1], milestoneIndex: milestones.length - 1, displayNumber: milestones.length },
+      ]
+
+  return (
+    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <p className="font-sans text-[10px] font-bold tracking-[0.16em] uppercase text-aubergine/35 mb-0.5">
+            Trend over time
+          </p>
+          <h2 className="font-display text-[26px] leading-tight text-aubergine">
+            {pillar.name} over time
+          </h2>
+        </div>
+        <PillarDropdown
+          pillars={data.pillars}
+          active={activePillar}
+          onChange={k => { setActivePillar(k); setHoveredPin(null) }}
+        />
+      </div>
+
+      {/* SVG Chart */}
+      <div className="w-full overflow-visible">
+        <svg
+          viewBox={`0 0 ${VB_W} ${VB_H}`}
+          preserveAspectRatio="none"
+          style={{ width: '100%', height: 'auto', minHeight: 200, display: 'block' }}
+        >
+          <defs>
+            {/* Area gradient */}
+            <linearGradient id={`grad-${gradId}-${activePillar}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {/* ── Y-axis gridlines ── */}
+          {[0, 2, 4, 6, 8, 10].map(v => {
+            const gy = yOf(v)
+            return (
+              <g key={v}>
+                <line
+                  x1={PAD.l} y1={gy} x2={PAD.l + CHART_W} y2={gy}
+                  stroke={`rgba(66,42,31,0.07)`} strokeWidth={1}
+                />
+                <text
+                  x={PAD.l - 8} y={gy + 4}
+                  textAnchor="end"
+                  fontFamily="'Plus Jakarta Sans', sans-serif"
+                  fontSize={10}
+                  fontWeight={600}
+                  fill={`rgba(66,42,31,0.5)`}
+                >
+                  {v}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* ── Baseline marker ── */}
+          <line
+            x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY}
+            stroke={`rgba(66,42,31,0.45)`}
+            strokeWidth={1}
+            strokeDasharray="3 4"
+          />
+          <text
+            x={PAD.l + 6} y={baselineY - 6}
+            fontFamily="'Plus Jakarta Sans', sans-serif"
+            fontSize={10}
+            fontWeight={700}
+            letterSpacing="0.1em"
+            fill={`rgba(66,42,31,0.6)`}
+          >
+            {`BASELINE · ${pillar.baseline.toFixed(1)}`}
+          </text>
+
+          {/* ── Area fill ── */}
+          {areaPath && (
+            <path
+              d={areaPath}
+              fill={`url(#grad-${gradId}-${activePillar})`}
+            />
+          )}
+
+          {/* ── Series line ── */}
+          {linePath && (
+            <path
+              d={linePath}
+              fill="none"
+              stroke={accent}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+
+          {/* ── Milestone stems + data dots ── */}
+          {milestones.map((m, i) => {
+            const mx = xOf(Math.min(WEEKS - 1, m.wk))
+            const my = series[Math.min(WEEKS - 1, m.wk)] !== null
+              ? yOf(series[Math.min(WEEKS - 1, m.wk)]!)
+              : yOf(5)
+            return (
+              <g key={i}>
+                {/* Stem */}
+                <line
+                  x1={mx} y1={my}
+                  x2={mx} y2={PAD.t - 18}
+                  stroke={AUBERGINE}
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                  opacity={0.6}
+                />
+                {/* Data point dot */}
+                <circle cx={mx} cy={my} r={4.5} fill="white" stroke={accent} strokeWidth={2} />
+              </g>
+            )
+          })}
+
+          {/* ── Medallions (above stems, interactive) ── */}
+          {milestones.map((m, i) => {
+            const mx = xOf(Math.min(WEEKS - 1, m.wk))
+            const my = PAD.t - 30
+            const isHovered = hoveredPin === i
+            const r = isHovered ? 15 : 13
+            return (
+              <g
+                key={i}
+                style={{ cursor: 'default' }}
+                onMouseEnter={() => setHoveredPin(i)}
+                onMouseLeave={() => setHoveredPin(null)}
+              >
+                <circle
+                  cx={mx} cy={my} r={r}
+                  fill={isHovered ? accent : 'white'}
+                  stroke={accent}
+                  strokeWidth={1.8}
+                  style={{ transition: 'r 200ms, fill 200ms' }}
+                />
+                <text
+                  x={mx} y={my + 4.5}
+                  textAnchor="middle"
+                  fontFamily="'Playfair Display', serif"
+                  fontSize={12}
+                  fontStyle="italic"
+                  fill={isHovered ? 'white' : accent}
+                  style={{ transition: 'fill 200ms', userSelect: 'none', pointerEvents: 'none' }}
+                >
+                  {i + 1}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* ── Current week dot ── */}
+          {pts.length > 0 && (
+            <g>
+              <circle
+                cx={lastPt[0]} cy={lastPt[1]}
+                r={14}
+                fill={accent}
+                opacity={0.15}
+              />
+              <circle
+                cx={lastPt[0]} cy={lastPt[1]}
+                r={6}
+                fill="white"
+                stroke={accent}
+                strokeWidth={2.5}
+              />
+            </g>
+          )}
+
+          {/* ── X-axis labels ── */}
+          {X_TICKS.map(({ wk, label }) => (
+            <text
+              key={wk}
+              x={xOf(wk)}
+              y={PAD.t + CHART_H + 20}
+              textAnchor="middle"
+              fontFamily="'Plus Jakarta Sans', sans-serif"
+              fontSize={10}
+              fontWeight={700}
+              letterSpacing="0.12em"
+              fill={`rgba(66,42,31,0.45)`}
+            >
+              {label}
+            </text>
+          ))}
+        </svg>
+      </div>
+
+      {/* ── Annotation rail ── */}
+      {annotationCards.length > 0 && (
+        <div
+          className="mt-4 grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${Math.min(4, annotationCards.length)}, 1fr)` }}
+        >
+          {annotationCards.map(({ milestone, milestoneIndex, displayNumber }) => (
+            <AnnotationCard
+              key={milestoneIndex}
+              milestone={milestone}
+              milestoneIndex={milestoneIndex}
+              displayNumber={displayNumber}
+              accent={accent}
+              highlighted={hoveredPin === milestoneIndex}
+              onHover={setHoveredPin}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -18,7 +18,7 @@ import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
 import PatientOverview from '@/components/provider/PatientOverview'
 import DashboardHero from '@/components/patient/DashboardHero'
-import SymptomTrendChart from '@/components/patient/SymptomTrendChart'
+import PillarTrendChart from '@/components/patient/PillarTrendChart'
 import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
@@ -851,7 +851,7 @@ export default function PatientDashboardPage() {
                   onDomainsChange={setChartDomains}
                 />
 
-                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} activeDomains={chartDomains} />
+                <PillarTrendChart patientId={patient.patientId} initialPillar="sleep" />
 
                 <TimelineStrip markers={timelineMarkers} />
 
@@ -1144,7 +1144,7 @@ export default function PatientDashboardPage() {
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
                 />
-                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} activeDomains={chartDomains} />
+                <PillarTrendChart patientId={patient.patientId} initialPillar="vasomotor" />
               </>
             )}
 
