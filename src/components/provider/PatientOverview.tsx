@@ -46,6 +46,7 @@ interface PatientOverviewProps {
     wmi_scores?: WMIScores | null
   } | null
   onCheckinComplete?: () => void
+  showCheckin?: boolean
 }
 
 const ALL_DOMAINS = [
@@ -98,12 +99,13 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete, showCheckin = false }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [checkinModal, setCheckinModal] = useState(false)
   const [todayCheckedIn, setTodayCheckedIn] = useState<boolean | null>(null)
+  const [checkinDismissed, setCheckinDismissed] = useState(false)
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -197,8 +199,8 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
   return (
     <div className="space-y-8">
 
-      {/* ── Daily check-in CTA (patient view only) ── */}
-      {view === 'patient' && todayCheckedIn !== null && (
+      {/* ── Daily check-in CTA (symptom tracker only) ── */}
+      {showCheckin && todayCheckedIn !== null && !checkinDismissed && (
         <div className={`rounded-2xl px-5 py-4 flex items-center justify-between gap-4 border ${
           todayCheckedIn
             ? 'bg-emerald-50 border-emerald-200'
@@ -223,11 +225,21 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
                 {todayCheckedIn ? 'Checked in today' : "Log today's symptoms"}
               </p>
               <p className={`font-sans text-xs ${todayCheckedIn ? 'text-emerald-600/70' : 'text-aubergine/40'}`}>
-                {todayCheckedIn ? 'Your tracker is up to date' : 'Track how you\'re feeling — 2 minutes'}
+                {todayCheckedIn ? 'Your tracker is up to date' : "Track how you're feeling — 2 minutes"}
               </p>
             </div>
           </div>
-          {!todayCheckedIn && (
+          {todayCheckedIn ? (
+            <button
+              onClick={() => setCheckinDismissed(true)}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-emerald-100 transition-colors shrink-0 text-emerald-600/60 hover:text-emerald-700"
+              aria-label="Dismiss"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          ) : (
             <button
               onClick={() => setCheckinModal(true)}
               className="font-sans font-semibold text-xs text-white bg-aubergine rounded-full px-4 py-2 hover:bg-aubergine/90 transition-colors shrink-0"

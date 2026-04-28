@@ -1147,6 +1147,7 @@ export default function PatientDashboardPage() {
                 prescriptions={overviewPrescriptions}
                 latestIntake={overviewIntake}
                 view="patient"
+                showCheckin
                 onCheckinComplete={handleCheckinComplete}
               />
             )}
