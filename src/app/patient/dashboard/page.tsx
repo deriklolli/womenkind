@@ -18,7 +18,7 @@ import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
 import PatientOverview from '@/components/provider/PatientOverview'
 import DashboardHero from '@/components/patient/DashboardHero'
-import SymptomTrendChart, { type TrendPoint } from '@/components/patient/SymptomTrendChart'
+import SymptomTrendChart from '@/components/patient/SymptomTrendChart'
 import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
@@ -545,25 +545,6 @@ export default function PatientDashboardPage() {
     }
   }, [heroAction])
 
-  const trendSeries: TrendPoint[] = useMemo(() => {
-    const w = patient?.wmiScores
-    const points: TrendPoint[] = []
-    if (w) {
-      const inv = (raw: number | undefined, max: number) =>
-        typeof raw === 'number' ? Math.round(10 - (raw / max) * 10) : undefined
-      points.push({
-        weekIndex: 0,
-        date: patient?.intakeSubmittedAt ?? new Date().toISOString(),
-        vasomotor: inv(w.vms, 20),
-        sleep: inv(w.sleep, 13),
-        mood: inv(w.mams, 12),
-        energy: inv(w.cardio, 4),
-        cognition: inv(w.cog, 8),
-        gsm: inv(w.gsm, 12),
-      })
-    }
-    return points
-  }, [patient])
 
   const timelineMarkers: TimelineMarker[] = useMemo(() => {
     const out: TimelineMarker[] = []
@@ -861,7 +842,7 @@ export default function PatientDashboardPage() {
                   onCheckinComplete={handleCheckinComplete}
                 />
 
-                <SymptomTrendChart series={trendSeries} />
+                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} />
 
                 <TimelineStrip markers={timelineMarkers} />
 
@@ -1142,14 +1123,17 @@ export default function PatientDashboardPage() {
 
             {/* Score Tracker / WMI view */}
             {activeView === 'scorecard' && (
-              <PatientOverview
-                visits={overviewVisits}
-                prescriptions={overviewPrescriptions}
-                latestIntake={overviewIntake}
-                view="patient"
-                showCheckin
-                onCheckinComplete={handleCheckinComplete}
-              />
+              <>
+                <PatientOverview
+                  visits={overviewVisits}
+                  prescriptions={overviewPrescriptions}
+                  latestIntake={overviewIntake}
+                  view="patient"
+                  showCheckin
+                  onCheckinComplete={handleCheckinComplete}
+                />
+                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} />
+              </>
             )}
 
             {/* Intake Summary view */}

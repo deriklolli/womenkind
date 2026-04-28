@@ -19,6 +19,7 @@ interface Prescription {
   dosage: string
   frequency: string
   status: string
+  prescribed_at?: string | null
 }
 
 interface WMIScores {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles, intakes, subscriptions, care_presentations, providers, visits } from '@/lib/db/schema'
+import { profiles, intakes, subscriptions, care_presentations, providers, visits, prescriptions } from '@/lib/db/schema'
 import { eq, and, ne, desc } from 'drizzle-orm'
 
 /**
@@ -86,6 +86,13 @@ export async function GET() {
       wmi_scores: true,
     },
     orderBy: [desc(intakes.submitted_at)],
+  })
+
+  // Prescriptions
+  const patientPrescriptions = await db.query.prescriptions.findMany({
+    where: eq(prescriptions.patient_id, patientId),
+    columns: { id: true, medication_name: true, dosage: true, frequency: true, status: true, prescribed_at: true },
+    orderBy: [desc(prescriptions.prescribed_at)],
   })
 
   // Visits (for symptom tracker domain cards)
@@ -177,5 +184,9 @@ export async function GET() {
     wmiScores,
     aiBrief: (intake as any)?.ai_brief ?? null,
     visits: patientVisits,
+    prescriptions: patientPrescriptions.map(rx => ({
+      ...rx,
+      prescribed_at: rx.prescribed_at?.toISOString() ?? null,
+    })),
   })
 }
