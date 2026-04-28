@@ -678,6 +678,11 @@ export default function PatientDashboardPage() {
       if (me.aiBrief || me.wmiScores) {
         setOverviewIntake({ ai_brief: me.aiBrief ?? null, wmi_scores: me.wmiScores ?? null } as any)
       }
+
+      // Load visits for symptom tracker domain cards
+      if (me.visits?.length) {
+        setOverviewVisits(me.visits)
+      }
     } catch (err) {
       console.error('Error loading patient data:', err)
     } finally {

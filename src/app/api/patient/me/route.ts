@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles, intakes, subscriptions, care_presentations, providers } from '@/lib/db/schema'
+import { profiles, intakes, subscriptions, care_presentations, providers, visits } from '@/lib/db/schema'
 import { eq, and, ne, desc } from 'drizzle-orm'
 
 /**
@@ -88,6 +88,13 @@ export async function GET() {
     orderBy: [desc(intakes.submitted_at)],
   })
 
+  // Visits (for symptom tracker domain cards)
+  const patientVisits = await db.query.visits.findMany({
+    where: eq(visits.patient_id, patientId),
+    columns: { id: true, visit_type: true, visit_date: true, symptom_scores: true },
+    orderBy: [desc(visits.visit_date)],
+  })
+
   // Membership
   const sub = await db.query.subscriptions.findFirst({
     where: and(
@@ -169,5 +176,6 @@ export async function GET() {
     intakeId: intake?.id ?? null,
     wmiScores,
     aiBrief: (intake as any)?.ai_brief ?? null,
+    visits: patientVisits,
   })
 }
