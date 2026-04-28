@@ -38,6 +38,7 @@ interface PatientOverviewProps {
     ai_brief?: {
       metadata?: { symptom_burden?: string; menopausal_stage?: string }
       summary?: string
+      patient_blueprint?: { overview?: string }
     }
     wmi_scores?: WMIScores | null
   } | null
@@ -129,7 +130,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
 
   const stage   = latestIntake?.ai_brief?.metadata?.menopausal_stage
   const burden  = latestIntake?.ai_brief?.metadata?.symptom_burden
-  const summary = latestIntake?.ai_brief?.summary
+  const summary = latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
 
   const wmiScores    = latestIntake?.wmi_scores
   const overallNow   = wmiScores?.wmi ?? latest?.symptom_scores?.overall
