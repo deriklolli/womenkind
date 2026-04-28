@@ -21,7 +21,7 @@ export interface WMIScores {
   phenotype: string
 
   // Patient-facing interpretation
-  wmi_band: '80-100' | '70-79' | '55-69' | '40-54' | '<40'
+  wmi_band: '80-90' | '70-79' | '55-69' | '40-54' | '<40'
   wmi_label: string
   wmi_message: string
 
@@ -163,7 +163,7 @@ function computePhenotype(scores: {
 
 function wmiInterpretation(wmi: number): { band: WMIScores['wmi_band']; label: string; message: string } {
   if (wmi >= 80) return {
-    band: '80-100',
+    band: '80-90',
     label: 'Stable / Optimized',
     message: 'Your system is showing strong stability. The goal now is to protect this rhythm.',
   }
@@ -247,18 +247,18 @@ export function computeWMI(answers: Record<string, unknown>): WMIScores {
   const gaba   = q17 + q18 + q19 + q22                                    // 0–16
   const se     = (vms / 2) + q20 + q21 + q23 + q24                       // ~0–20
 
-  // ── WMI penalties ──
-  const vmsP    = 18 * (vms / 20)
-  const sleepP  = 18 * (sleep / 13)
-  const mamsP   = 15 * (mams / 12)
-  const cogP    = 10 * (cog / 8)
-  const gsmP    = 10 * (gsm / 12)
-  const hsddP   = 6  * (hsdd / 4)
-  const mskP    = 6  * (msk / 4)
-  const cardioP = 5  * (cardio / 4)
+  // ── WMI penalties (base 90, weights sum 60) ──
+  const vmsP    = 12 * (vms / 20)
+  const sleepP  = 12 * (sleep / 13)
+  const mamsP   = 10 * (mams / 12)
+  const cogP    = 7  * (cog / 8)
+  const gsmP    = 7  * (gsm / 12)
+  const hsddP   = 4  * (hsdd / 4)
+  const mskP    = 4  * (msk / 4)
+  const cardioP = 4  * (cardio / 4)
 
-  const rawWmi = 100 - vmsP - sleepP - mamsP - cogP - gsmP - hsddP - mskP - cardioP
-  const wmi = Math.round(Math.max(0, Math.min(100, rawWmi)))
+  const rawWmi = 90 - vmsP - sleepP - mamsP - cogP - gsmP - hsddP - mskP - cardioP
+  const wmi = Math.round(Math.max(0, Math.min(90, rawWmi)))
 
   // ── Safety & bleeding ──
   const { flags: safety_flags, bleedingBand: bleeding_band } = computeSafetyFlags(a)
@@ -284,6 +284,90 @@ export function computeWMI(answers: Record<string, unknown>): WMIScores {
     confidence,
     missing_fields,
   }
+}
+
+// ── Live WMI from daily check-ins + wearables ─────────────────────────────────
+
+export function computeLiveWMI(
+  visits: Array<{ symptom_scores: Record<string, number> | null; visit_date: string; source?: string | null }>,
+  wearableMetrics?: Array<{ metric_type: string; value: number; metric_date: string }>
+): number | null {
+  // Filter to daily check-ins from the last 7 days
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 7)
+  const recent = visits.filter((v) => {
+    if (v.source !== 'daily') return false
+    if (!v.symptom_scores) return false
+    return new Date(v.visit_date) >= cutoff
+  })
+
+  if (recent.length < 2) return null
+
+  // Average each domain across available check-ins
+  const avg = (key: string) => {
+    const vals = recent.map((v) => v.symptom_scores?.[key]).filter((n): n is number => typeof n === 'number')
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 1
+  }
+
+  const aVms    = avg('vasomotor')
+  const aSleep  = avg('sleep')
+  const aMood   = avg('mood')
+  const aCog    = avg('cognition')
+  const aEnergy = avg('energy')
+  const aGsm    = avg('gsm')
+  const aLibido = avg('libido')
+  const aCardio = avg('cardio')
+  const aBone   = avg('bone')
+
+  // Convert 1–5 burden scale to WMI domain equivalents (0 = best, max = domain max)
+  const scale = (val: number, max: number) => ((val - 1) / 4) * max
+  const vms_eq    = scale(aVms, 20)
+  const sleep_eq  = scale(aSleep, 13)
+  const mams_eq   = scale(aMood, 12)
+  const cog_eq    = scale((aCog + aEnergy) / 2, 8)
+  const gsm_eq    = scale(aGsm, 12)
+  const hsdd_eq   = scale(aLibido, 4)
+  const cardio_eq = scale(aCardio, 4)
+  const msk_eq    = scale(aBone, 4)
+
+  // Same recalibrated penalty weights (base 90, sum 60)
+  let vmsP    = 12 * (vms_eq / 20)
+  let sleepP  = 12 * (sleep_eq / 13)
+  const mamsP   = 10 * (mams_eq / 12)
+  const cogP    = 7  * (cog_eq / 8)
+  const gsmP    = 7  * (gsm_eq / 12)
+  const hsddP   = 4  * (hsdd_eq / 4)
+  const mskP    = 4  * (msk_eq / 4)
+  const cardioP = 4  * (cardio_eq / 4)
+
+  // Oura modifiers (last 7 days average)
+  if (wearableMetrics && wearableMetrics.length > 0) {
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
+    const recent7 = wearableMetrics.filter((m) => m.metric_date >= cutoffStr)
+
+    const metricAvg = (type: string) => {
+      const vals = recent7.filter((m) => m.metric_type === type).map((m) => m.value)
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    }
+
+    const sleepScore = metricAvg('sleep_score')
+    const tempDev    = metricAvg('temperature_deviation')
+
+    if (sleepScore !== null) {
+      if (sleepScore < 70) {
+        sleepP += Math.min(3, ((70 - sleepScore) / 10) * 3)
+      } else if (sleepScore > 85) {
+        sleepP = Math.max(0, sleepP - Math.min(2, ((sleepScore - 85) / 10) * 2))
+      }
+    }
+
+    if (tempDev !== null && tempDev > 0.3) {
+      vmsP += Math.min(3, (tempDev - 0.3) * 4)
+    }
+  }
+
+  const rawLive = 90 - vmsP - sleepP - mamsP - cogP - gsmP - hsddP - mskP - cardioP
+  return Math.round(Math.max(0, Math.min(90, rawLive)))
 }
 
 // ── Domain display helpers ────────────────────────────────────────────────────

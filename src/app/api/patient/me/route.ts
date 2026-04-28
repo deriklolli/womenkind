@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles, intakes, subscriptions, care_presentations, providers, visits, prescriptions } from '@/lib/db/schema'
-import { eq, and, ne, desc } from 'drizzle-orm'
+import { profiles, intakes, subscriptions, care_presentations, providers, visits, prescriptions, wearable_metrics } from '@/lib/db/schema'
+import { eq, and, ne, desc, gte } from 'drizzle-orm'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 /**
  * GET /api/patient/me
@@ -95,12 +96,24 @@ export async function GET() {
     orderBy: [desc(prescriptions.prescribed_at)],
   })
 
-  // Visits (for symptom tracker domain cards)
+  // Visits (for symptom tracker domain cards + live WMI)
   const patientVisits = await db.query.visits.findMany({
     where: eq(visits.patient_id, patientId),
-    columns: { id: true, visit_type: true, visit_date: true, symptom_scores: true },
+    columns: { id: true, visit_type: true, visit_date: true, symptom_scores: true, source: true },
     orderBy: [desc(visits.visit_date)],
   })
+
+  // Wearable metrics — last 7 days for live WMI modifiers
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
+  const recentWearables = await db
+    .select({ metric_type: wearable_metrics.metric_type, value: wearable_metrics.value, metric_date: wearable_metrics.metric_date })
+    .from(wearable_metrics)
+    .where(and(
+      eq(wearable_metrics.patient_id, patientId),
+      gte(wearable_metrics.metric_date, sevenDaysAgoStr)
+    ))
 
   // Membership
   const sub = await db.query.subscriptions.findFirst({
@@ -164,7 +177,8 @@ export async function GET() {
   const provider = providerRows[0] ?? null
 
   const wmiScores = (intake as any)?.wmi_scores ?? null
-  console.log('[patient/me] intakeId:', intake?.id, 'wmi_scores type:', typeof wmiScores, 'wmi:', (wmiScores as any)?.wmi ?? 'null')
+  const liveWmi = computeLiveWMI(patientVisits as any, recentWearables)
+  console.log('[patient/me] intakeId:', intake?.id, 'wmi_scores type:', typeof wmiScores, 'wmi:', (wmiScores as any)?.wmi ?? 'null', 'liveWmi:', liveWmi)
 
   return NextResponse.json({
     patientId,
@@ -182,6 +196,7 @@ export async function GET() {
     presentationStatus: (validPresentation?.status as 'sent' | 'viewed') ?? null,
     intakeId: intake?.id ?? null,
     wmiScores,
+    liveWmi,
     aiBrief: (intake as any)?.ai_brief ?? null,
     visits: patientVisits,
     prescriptions: patientPrescriptions.map(rx => ({

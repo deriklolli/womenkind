@@ -3,9 +3,10 @@ import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import {
   patients, intakes, visits, subscriptions,
-  prescriptions, lab_orders, provider_notes, encounter_notes,
+  prescriptions, lab_orders, provider_notes, encounter_notes, wearable_metrics,
 } from '@/lib/db/schema'
-import { eq, desc, ne, and, sql } from 'drizzle-orm'
+import { eq, desc, ne, and, sql, gte } from 'drizzle-orm'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 export async function GET(
   _req: NextRequest,
@@ -74,6 +75,7 @@ export async function GET(
         visit_type: true,
         visit_date: true,
         symptom_scores: true,
+        source: true,
       },
       orderBy: [desc(visits.visit_date)],
     }),
@@ -154,10 +156,25 @@ export async function GET(
     }),
   ])
 
+  // Wearable metrics — last 7 days for live WMI modifiers
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10)
+  const recentWearables = await db
+    .select({ metric_type: wearable_metrics.metric_type, value: wearable_metrics.value, metric_date: wearable_metrics.metric_date })
+    .from(wearable_metrics)
+    .where(and(
+      eq(wearable_metrics.patient_id, patientId),
+      gte(wearable_metrics.metric_date, sevenDaysAgoStr)
+    ))
+
+  const liveWmi = computeLiveWMI(visitsRows as any, recentWearables)
+
   return NextResponse.json({
     patient,
     intakes: intakesRows,
     visits: visitsRows,
+    liveWmi,
     subscriptions: subscriptionsRows,
     prescriptions: prescriptionsRows,
     labOrders: labOrdersRows,

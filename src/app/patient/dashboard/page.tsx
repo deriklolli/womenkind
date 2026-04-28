@@ -277,6 +277,7 @@ export default function PatientDashboardPage() {
   const [overviewIntake, setOverviewIntake] = useState<typeof DEMO_INTAKE | null>(
     process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null
   )
+  const [overviewLiveWmi, setOverviewLiveWmi] = useState<number | null>(null)
   const [chartDomains, setChartDomains] = useState<string[]>(['vasomotor', 'sleep', 'energy', 'mood'])
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
@@ -665,6 +666,10 @@ export default function PatientDashboardPage() {
       if (me.visits?.length) {
         setOverviewVisits(me.visits)
       }
+
+      if (me.liveWmi != null) {
+        setOverviewLiveWmi(me.liveWmi)
+      }
     } catch (err) {
       console.error('Error loading patient data:', err)
     } finally {
@@ -678,6 +683,7 @@ export default function PatientDashboardPage() {
       if (res.ok) {
         const me = await res.json()
         if (me.visits?.length) setOverviewVisits(me.visits)
+        if (me.liveWmi != null) setOverviewLiveWmi(me.liveWmi)
       }
     } catch {}
   }
@@ -839,6 +845,7 @@ export default function PatientDashboardPage() {
                   visits={overviewVisits}
                   prescriptions={overviewPrescriptions}
                   latestIntake={overviewIntake}
+                  liveWmi={overviewLiveWmi}
                   view="patient"
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
@@ -1130,6 +1137,7 @@ export default function PatientDashboardPage() {
                   visits={overviewVisits}
                   prescriptions={overviewPrescriptions}
                   latestIntake={overviewIntake}
+                  liveWmi={overviewLiveWmi}
                   view="patient"
                   showCheckin
                   compact

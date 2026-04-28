@@ -11,6 +11,7 @@ interface Visit {
   symptom_scores?: Record<string, number>
   provider_notes?: string | null
   treatment_updates?: string | null
+  source?: string | null
 }
 
 interface Prescription {
@@ -46,6 +47,7 @@ interface PatientOverviewProps {
     }
     wmi_scores?: WMIScores | null
   } | null
+  liveWmi?: number | null
   onCheckinComplete?: () => void
   onDomainsChange?: (keys: string[]) => void
   showCheckin?: boolean
@@ -118,7 +120,7 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false, compact = false }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false, compact = false }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -175,9 +177,21 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
     : undefined
 
   const wmiScores    = latestIntake?.wmi_scores
-  const overallNow   = wmiScores?.wmi ?? latest?.symptom_scores?.overall
+  const isLiveScore  = liveWmi != null
+  const overallNow   = liveWmi ?? wmiScores?.wmi ?? latest?.symptom_scores?.overall
   const overallPrev  = prev?.symptom_scores?.overall
   const overallDelta = overallNow !== undefined && overallPrev !== undefined ? overallNow - overallPrev : null
+
+  const lastCheckinDate = useMemo(() => {
+    const daily = visits
+      .filter(v => v.source === 'daily' || v.visit_type === 'daily_checkin')
+      .sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime())[0]
+    if (!daily) return null
+    const d = new Date(daily.visit_date + 'T00:00:00')
+    const today = new Date(); today.setHours(0,0,0,0)
+    if (d.getTime() === today.getTime()) return 'Today'
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }, [visits])
 
   const overallStatus = getStatus(overallDelta, false)
 
@@ -327,12 +341,19 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
           <div className="w-px self-stretch bg-aubergine/8 shrink-0" />
 
           {/* Headline */}
-          <p className="font-serif text-base text-aubergine truncate min-w-0">
-            {isInitialState && wmiScores
-              ? <>{wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span></>
-              : <>{headline.prefix} <span className="italic text-violet">{headline.suffix}</span></>
-            }
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="font-serif text-base text-aubergine truncate">
+              {isInitialState && wmiScores
+                ? <>{wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span></>
+                : <>{headline.prefix} <span className="italic text-violet">{headline.suffix}</span></>
+              }
+            </p>
+            {isLiveScore && lastCheckinDate && (
+              <p className="text-[10px] font-sans text-aubergine/40 mt-0.5">
+                Live · Last check-in: {lastCheckinDate}
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
@@ -379,6 +400,12 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
                 )}
               </div>
             ) : null}
+
+            {isLiveScore && lastCheckinDate && (
+              <p className="text-[10px] font-sans text-aubergine/40 -mt-2 mb-3 tracking-wide">
+                Live score · Last check-in: {lastCheckinDate}
+              </p>
+            )}
 
             {isInitialState && wmiScores ? (
               <>

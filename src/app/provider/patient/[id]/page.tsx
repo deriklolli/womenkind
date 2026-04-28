@@ -107,6 +107,7 @@ export default function PatientProfilePage() {
   const [messageThreadCount, setMessageThreadCount] = useState(0)
   const [encounterNotesCount, setEncounterNotesCount] = useState(0)
   const [latestEncounterNote, setLatestEncounterNote] = useState<{ assessment: string | null; plan: string | null } | null>(null)
+  const [liveWmi, setLiveWmi] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as ProfileTab) || 'overview'
@@ -163,6 +164,7 @@ export default function PatientProfilePage() {
       setProviderNotes(data.providerNotes || [])
       setEncounterNotesCount(data.encounterNotesCount ?? 0)
       setLatestEncounterNote(data.latestEncounterNote ?? null)
+      setLiveWmi(data.liveWmi ?? null)
 
       // Fetch message thread count
       try {
@@ -408,6 +410,7 @@ export default function PatientProfilePage() {
             visits={visits}
             prescriptions={prescriptions}
             latestIntake={latestIntake}
+            liveWmi={liveWmi}
           />
         )}
 
