@@ -136,7 +136,7 @@ Return this exact JSON structure:
     "plan": "Specific treatment plan with drug/dose/route, monitoring, labs, follow-up, patient education"
   },
   "symptom_summary": {
-    "overview": "2-3 sentence clinical snapshot",
+    "overview": "Exactly 2-3 sentences. Clinical snapshot only. No preamble.",
     "domains": [
       {
         "domain": "Domain name",

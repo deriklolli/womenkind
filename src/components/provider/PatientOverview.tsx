@@ -162,9 +162,12 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
 
   const stage   = latestIntake?.ai_brief?.metadata?.menopausal_stage
   const burden  = latestIntake?.ai_brief?.metadata?.symptom_burden
-  const body = view === 'provider'
+  const rawBody = view === 'provider'
     ? latestIntake?.ai_brief?.symptom_summary?.overview
     : latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
+  const body = rawBody
+    ? (rawBody.match(/[^.!?]+[.!?]+/g) ?? [rawBody]).slice(0, 3).join(' ').trim()
+    : undefined
 
   const wmiScores    = latestIntake?.wmi_scores
   const overallNow   = wmiScores?.wmi ?? latest?.symptom_scores?.overall
