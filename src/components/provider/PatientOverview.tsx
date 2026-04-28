@@ -500,6 +500,27 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
               steady:    { label: '→ Steady',    cls: 'bg-aubergine/5 text-aubergine/40' },
             }[status]
 
+            // Domain-specific value display
+            const domainDisplay = (key: string, val: number) => {
+              if (key === 'vasomotor') {
+                // Count format if any value > 5 or === 0, otherwise legacy 1–5
+                const isCount = data.some(v => v === 0 || v > 5)
+                if (isCount) return { value: String(val), unit: val === 1 ? 'episode' : 'episodes' }
+                return { value: String(val), unit: '/ 5' }
+              }
+              if (key === 'sleep') {
+                const isHours = data.some(v => v > 5)
+                if (isHours) return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: 'hrs' }
+                return { value: String(val), unit: '/ 5' }
+              }
+              if (key === 'cardio') {
+                const isCount = data.some(v => v === 0)
+                if (isCount) return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
+                return { value: String(val), unit: '/ 5' }
+              }
+              return { value: String(val), unit: '/ 5' }
+            }
+
             return (
               <div
                 key={domain.key}
@@ -518,12 +539,15 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
                   {/* Score + subtitle */}
                   <div className="mb-2">
-                    {current !== undefined ? (
-                      <span className="font-serif text-5xl text-aubergine leading-none">
-                        {current}
-                        <span className="font-serif text-xl italic ml-0.5" style={{ color: '#C4A87A' }}>/10</span>
-                      </span>
-                    ) : (
+                    {current !== undefined ? (() => {
+                      const { value, unit } = domainDisplay(domain.key, current)
+                      return (
+                        <span className="font-serif text-5xl text-aubergine leading-none">
+                          {value}
+                          {unit && <span className="font-serif text-xl italic ml-1.5" style={{ color: '#C4A87A' }}>{unit}</span>}
+                        </span>
+                      )
+                    })() : (
                       <span className="font-serif text-4xl text-aubergine/20 leading-none">—</span>
                     )}
                     <p className="text-xs font-sans text-aubergine/40 mt-1">{domain.subtitle}</p>
