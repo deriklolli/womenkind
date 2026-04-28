@@ -16,6 +16,8 @@ import PatientLabResults from '@/components/patient/PatientLabResults'
 import HealthBlueprintList from '@/components/patient/HealthBlueprintList'
 import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
+import PatientOverview from '@/components/provider/PatientOverview'
+import { devFixtures } from '@/lib/dev-fixtures'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
@@ -92,6 +94,13 @@ const DEMO_PATIENT: PatientData = {
   presentationStatus: 'viewed',
   intakeId: 'demo-intake-id',
   wmiScores: null,
+}
+
+const DEMO_INTAKE = {
+  ai_brief: {
+    metadata: { symptom_burden: 'moderate', menopausal_stage: 'Perimenopause' },
+    summary: 'Your vasomotor symptoms continue to improve on your current estradiol regimen, and your energy is trending upward. Sleep and mood remain areas to watch — your provider will review your progress at your next visit.',
+  },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -250,6 +259,11 @@ export default function PatientDashboardPage() {
   const [hasInitialConsultation, setHasInitialConsultation] = useState(true)
   const [hasEverHadInitial, setHasEverHadInitial] = useState(false)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
+  const [overviewVisits, setOverviewVisits] = useState<any[]>([])
+  const [overviewPrescriptions, setOverviewPrescriptions] = useState<any[]>([])
+  const [overviewIntake, setOverviewIntake] = useState<typeof DEMO_INTAKE | null>(
+    process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null
+  )
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
   const [cancelingBanner, setCancelingBanner] = useState(false)
@@ -453,12 +467,15 @@ export default function PatientDashboardPage() {
     fetchCheckIns()
   }, [appointments])
 
-  // Derive dashboard phase from patient journey state
+  // Derive dashboard phase from patient journey state.
+  // Patients see the full dashboard immediately after intake — no longer gated by viewing the presentation.
+  // Phases drive which banner shows; all four states are still represented in the JSX below.
   const dashboardPhase: DashboardPhase = (() => {
     if (!patient) return 'intake_done'
-    if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
-    if (patient.presentationId) return 'care_plan_ready'
+    if (!patient.intakeStatus || patient.intakeStatus === 'draft') return 'intake_done'
     if (appointments.length > 0) return 'appointment_booked'
+    if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
+    if (patient.presentationStatus === 'sent') return 'care_plan_ready'
     return 'intake_done'
   })()
 
@@ -474,6 +491,19 @@ export default function PatientDashboardPage() {
   }, [menuOpen])
 
   const loadPatientData = async () => {
+    // Dev shortcut: always show demo patient in development
+    if (process.env.NODE_ENV === 'development') {
+      setPatient(DEMO_PATIENT)
+      const fixture = devFixtures.patientProfile?.['fx-p-1']
+      if (fixture) {
+        setOverviewVisits(fixture.visits || [])
+        setOverviewPrescriptions(fixture.prescriptions || [])
+      }
+      setOverviewIntake(DEMO_INTAKE)
+      setLoading(false)
+      return
+    }
+
     try {
       // Check Supabase auth session (Auth only — no app table queries)
       const {
@@ -564,7 +594,7 @@ export default function PatientDashboardPage() {
     <div className="min-h-screen bg-cream">
       {/* Top nav */}
       <nav className="bg-white border-b border-aubergine/5">
-        <div className="max-w-5xl mx-auto px-6 py-[3px] flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-[3px] flex items-center justify-between">
           <Image
             src="/womenkind-logo-dark.png"
             alt="Womenkind"
@@ -630,13 +660,13 @@ export default function PatientDashboardPage() {
       </nav>
 
       <div
-        className={`max-w-5xl mx-auto px-6 py-10 transition-all duration-700 ease-out
+        className={`max-w-7xl mx-auto px-6 py-10 transition-all duration-700 ease-out
           ${fadeIn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
       >
         {/* Welcome header */}
         <div className="mb-8">
           <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
-            Welcome back, {patient.name.split(' ')[0]}
+            Welcome back, <span className="italic text-violet">{patient.name.split(' ')[0]}</span>
           </h1>
           <p className="text-sm font-sans text-aubergine/40">
             Here's the latest on your care journey.
@@ -644,27 +674,6 @@ export default function PatientDashboardPage() {
         </div>
 
         {/* Smart banner — adapts to dashboard phase */}
-        {dashboardPhase === 'intake_done' && (
-          <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-1">
-              <h2 className="font-serif font-normal text-lg text-aubergine mb-1">
-                Begin your health journey
-              </h2>
-              <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
-                Your intake is complete. Schedule your initial consultation with your provider to review your results and start your personalized care plan.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/patient/schedule')}
-              className="shrink-0 flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Schedule Appointment
-            </button>
-          </div>
-        )}
 
         {dashboardPhase === 'appointment_booked' && appointments[0] && (
           <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -812,7 +821,7 @@ export default function PatientDashboardPage() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-4 gap-6">
           {/* Left column: status/actions + membership */}
           <div className="md:col-span-1 space-y-6">
             {/* Phase 1-3: Intake status tracker */}
@@ -957,15 +966,42 @@ export default function PatientDashboardPage() {
           </div>
 
           {/* Right column: view-switchable content */}
-          <div className="md:col-span-2 space-y-6">
+          <div className="md:col-span-3 space-y-6">
 
             {/* Dashboard view — upcoming appointment + intake summary */}
             {(activeView === 'dashboard' || dashboardPhase !== 'care_plan_viewed') && (
               <>
-                {/* Upcoming appointment — always at top of dashboard */}
-                {dashboardPhase !== 'appointment_booked' && (
-                  <UpcomingAppointments key={appointments.length} patientId={patient.patientId} />
+                {/* Schedule appointment prompt — shown when no upcoming appointment */}
+                {appointments.length === 0 && !appointmentsLoading && (
+                  <div className="relative rounded-card overflow-hidden p-6" style={{ background: 'linear-gradient(135deg, #2d1b4e 0%, #3d2060 60%, #4a2575 100%)' }}>
+                    <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+                    <div className="relative z-10 flex items-center gap-6">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-sans font-semibold tracking-widest text-white/50 uppercase mb-2">
+                          Initial Consultation
+                        </p>
+                        <h2 className="font-serif font-normal text-2xl text-white mb-1">
+                          Begin your health <span className="italic" style={{ color: '#C4A87A' }}>journey</span>
+                        </h2>
+                        <p className="text-sm font-sans text-white/50 leading-relaxed">
+                          Your intake is complete. Schedule your initial consultation with your provider to review your results and start your personalized care plan.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setActiveView('schedule')}
+                        className="shrink-0 flex items-center gap-2 px-6 py-2.5 bg-violet/80 hover:bg-violet text-white text-sm font-sans font-semibold rounded-pill transition-all"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Schedule Appointment
+                      </button>
+                    </div>
+                  </div>
                 )}
+
+                {/* Upcoming appointment — shown when one exists */}
+                <UpcomingAppointments key={appointments.length} patientId={patient.patientId} />
 
                 {/* New lab results / health blueprint alerts */}
                 <DashboardAlerts patientId={patient.patientId} onNavigate={(view) => setActiveView(view)} />
@@ -976,75 +1012,11 @@ export default function PatientDashboardPage() {
                   onRequestRefill={() => setActiveView('refill')}
                 />
 
-                {patient.intakeSummary ? (
-                  <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
-                    <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
-                      Your Intake Summary
-                    </h3>
-
-                    <div className="mb-6 p-4 rounded-brand bg-cream border border-aubergine/5">
-                      <p className="text-xs font-sans font-semibold text-aubergine/30 mb-1.5">
-                        Primary concern
-                      </p>
-                      <p className="text-sm font-sans text-aubergine/70 italic">
-                        &ldquo;{patient.intakeSummary.topConcern}&rdquo;
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span className="px-3 py-1 rounded-full bg-violet/5 border border-violet/10 text-xs font-sans text-violet">
-                        {patient.intakeSummary.menopausalStage}
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-sans ${
-                          SEVERITY_COLORS[patient.intakeSummary.symptomBurden] || SEVERITY_COLORS.moderate
-                        }`}
-                      >
-                        Symptom burden: {patient.intakeSummary.symptomBurden.charAt(0).toUpperCase() + patient.intakeSummary.symptomBurden.slice(1)}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 mt-8">
-                      <p className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider">
-                        Symptom domains assessed
-                      </p>
-                      {patient.intakeSummary.domains.map((d, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between py-2.5 border-b border-aubergine/5 last:border-0"
-                        >
-                          <span className="text-sm font-sans text-aubergine/70">{d.domain}</span>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-sans ${
-                              SEVERITY_COLORS[d.severity] || SEVERITY_COLORS.mild
-                            }`}
-                          >
-                            {d.severity.charAt(0).toUpperCase() + d.severity.slice(1)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-6 p-4 rounded-brand bg-violet/5 border border-violet/10">
-                      <p className="text-xs font-sans text-violet/70 leading-relaxed">
-                        This is a summary of your intake responses — not a diagnosis. Your provider will
-                        review your full clinical brief and discuss findings during your consultation.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8 text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/5 mb-4">
-                      <svg className="w-8 h-8 text-violet/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                      </svg>
-                    </div>
-                    <h3 className="font-sans font-semibold text-lg text-aubergine mb-2">No intake summary yet</h3>
-                    <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
-                      Once you complete your intake and it&apos;s been processed, your summary will appear here.
-                    </p>
-                  </div>
-                )}
+                <PatientOverview
+                  visits={overviewVisits}
+                  prescriptions={overviewPrescriptions}
+                  latestIntake={overviewIntake}
+                />
 
               </>
             )}

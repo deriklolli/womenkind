@@ -28,7 +28,18 @@ export async function getProviderSession(): Promise<ProviderSession | null> {
 
   // 2. Real auth — look up provider record via server API (queries RDS)
   const res = await fetch('/api/auth/provider-session')
-  if (!res.ok) return null
+  if (!res.ok) {
+    // In local dev, RDS is unreachable (Vercel-network only). Fall back to a
+    // dev session so the UI stays accessible without needing a localStorage flag.
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        providerId: DEMO_PROVIDER_ID,
+        providerName: 'Dr. Urban',
+        isDemo: true,
+      }
+    }
+    return null
+  }
 
   const data = await res.json()
   return {

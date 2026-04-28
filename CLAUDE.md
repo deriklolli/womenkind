@@ -42,6 +42,23 @@
 - Signup flow is fully server-side (`/api/auth/signup`): admin client with `email_confirm: true` skips Supabase SMTP, creates RDS `profiles` + `patients` rows immediately, signs in server-side, sends welcome email via Resend
 - Patient signup link on the login page goes to `womenkindhealth.com/signup` (marketing site), not the in-app `/signup` route
 
+## Patient Dashboard
+- Entry: `src/app/patient/dashboard/page.tsx` — `PatientLayout` (`src/app/patient/layout.tsx`) gates auth; dev bypass via `process.env.NODE_ENV === 'development'` in both files
+- Demo data: `DEMO_PATIENT` constant in the page; fixture visits/prescriptions from `devFixtures.patientProfile['fx-p-1']` (NOT `devFixtures.patients`)
+- Dashboard phase logic: any submitted intake (`intakeStatus !== 'draft'`) → full dashboard immediately. Patients no longer need to view the presentation first (removed gate per patient feedback)
+- Schedule appointment card: dark aubergine card at top of right column; only renders when `appointments.length === 0 && !appointmentsLoading`; calls `setActiveView('schedule')` on click
+- Right column main content: `PatientOverview` (`src/components/provider/PatientOverview.tsx`) — shared between provider patient profile and patient dashboard
+- `overviewIntake` state initialized with `DEMO_INTAKE` via lazy initializer (`process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null`) to avoid async timing issues where state would be null on first render
+- Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Score Tracker, Schedule Appointment, Request Rx Refill, Message Dr. Urban
+
+## PatientOverview component (`src/components/provider/PatientOverview.tsx`)
+- Shared between provider patient profile and patient dashboard
+- `ALL_DOMAINS`: 10 health topics (Vasomotor, Sleep, Energy, Mood, Hormonal, Cognition, Bone Health, Metabolism, Libido, Cardiovascular)
+- Default 4 shown: `DEFAULT_DOMAIN_KEYS = ['vasomotor', 'sleep', 'energy', 'mood']`
+- `+` button next to "Areas of focus" opens a multi-select dropdown to customize which topics display
+- Section heading: "Areas *of focus*" (italic violet)
+- Score summary copy driven by `latestIntake.ai_brief.summary` — pass a seeded intake from the patient dashboard to show copy below the trend chip
+
 ## Working style
 - User is a solo, non-developer founder. Keep explanations short. Do the work, don't narrate plans.
 - Never ask the user to edit `.env.local` or paste keys into Vercel UI — do it from the CLI.

@@ -12,7 +12,7 @@ export interface SectionImage {
 export const SECTION_IMAGES: Record<string, SectionImage> = {
   brain:    { src: '/presentation2.png', side: 'right', objectPosition: 'center top' },
   sleep:    { src: '/presentation3.png', side: 'left',  objectPosition: 'center 30%' },
-  hormonal: { src: '/presentation4.png', side: 'right', objectPosition: 'calc(50% + 15px) 40%' },
+  hormonal: { src: '/women/women-son.png', side: 'right', objectPosition: 'center 30%' },
   // Add more as images arrive, e.g.:
   // vasomotor:    { src: '/presentation5.png', side: 'left',  objectPosition: 'center top' },
   // mood:         { src: '/presentation6.png', side: 'right', objectPosition: 'center center' },

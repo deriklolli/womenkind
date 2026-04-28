@@ -50,14 +50,20 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected patient pages — anything under /patient except the login page
-  const isPatientProtected =
+  // Skip protection in local dev so we can build without a real session
+  const isPatientProtected = process.env.NODE_ENV !== 'development' &&
     path.startsWith('/patient') && !path.startsWith('/patient/login')
 
   // Protected provider pages — anything under /provider except the login page
   const isProviderProtected =
     path.startsWith('/provider') && !path.startsWith('/provider/login')
 
-  if ((isPatientProtected || isProviderProtected) && !user) {
+  // In local dev, allow access without a Supabase session — RDS isn't reachable
+  // anyway, so requiring login locally just blocks UI work. Components fall back
+  // to dev fixtures when API calls fail.
+  const isLocalDev = process.env.NODE_ENV === 'development'
+
+  if ((isPatientProtected || isProviderProtected) && !user && !isLocalDev) {
     const loginPath = isProviderProtected ? '/provider/login' : '/patient/login'
     const loginUrl = new URL(loginPath, request.url)
     // Preserve the original destination so we can redirect back after login

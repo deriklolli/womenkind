@@ -14,6 +14,42 @@ import { eq, and, ne, desc } from 'drizzle-orm'
  * Supabase table queries that broke after the RDS migration.
  */
 export async function GET() {
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.json({
+      patientId: 'fx-p-1',
+      providerId: 'b0000000-0000-0000-0000-000000000001',
+      name: 'Lauren Hayes',
+      email: 'lauren@example.com',
+      intakeStatus: 'reviewed',
+      intakeSubmittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      intakeReviewedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      membershipStatus: 'none',
+      membershipRenewal: null,
+      intakeSummary: {
+        topConcern: 'Hot flashes and sleep issues',
+        domains: [
+          { domain: 'Vasomotor', severity: 'severe' },
+          { domain: 'Sleep', severity: 'moderate' },
+          { domain: 'Mood & Anxiety', severity: 'moderate' },
+        ],
+        menopausalStage: 'Post-menopause',
+        symptomBurden: 'high',
+      },
+      presentationId: 'fx-presentation-1',
+      presentationStatus: 'viewed',
+      intakeId: 'fx-intake-1',
+      wmiScores: {
+        vms: 17, sleep: 7, mams: 5, cog: 4, gsm: 3, hsdd: 1, cardio: 0, msk: 0,
+        wmi: 60,
+        phenotype: 'VMS + SE',
+        wmi_band: '55-69',
+        wmi_label: 'Active Rebuild Zone',
+        wmi_message: 'Your body is under meaningful strain, but this is exactly the zone where structured treatment can create visible progress.',
+        safety_flags: [],
+      },
+    })
+  }
+
   const session = await getServerSession()
 
   if (!session) {

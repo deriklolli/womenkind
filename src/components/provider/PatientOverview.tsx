@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Flame, Moon, Zap, SmilePlus, Droplets } from 'lucide-react'
+import { useMemo, useState, useRef, useEffect } from 'react'
+import { Flame, Moon, Zap, SmilePlus, Droplets, Brain, Shield, Scale, Heart, Activity } from 'lucide-react'
 
 interface Visit {
   id: string
@@ -43,38 +43,20 @@ interface PatientOverviewProps {
   } | null
 }
 
-const DOMAINS = [
-  {
-    key: 'vasomotor', label: 'Vasomotor', Icon: Flame, color: '#d85623',
-    subtitle: 'Hot-flash frequency',
-    improvesDown: true,
-    tags: { improving: 'Slow taper', watch: 'Increasing', steady: 'Holding steady' },
-  },
-  {
-    key: 'sleep', label: 'Sleep', Icon: Moon, color: '#5d9ed5',
-    subtitle: 'Sleep quality score',
-    improvesDown: false,
-    tags: { improving: 'Deeper cycles', watch: 'Disrupted', steady: 'Consistent' },
-  },
-  {
-    key: 'energy', label: 'Energy', Icon: Zap, color: '#e8a838',
-    subtitle: 'Daily energy level',
-    improvesDown: false,
-    tags: { improving: 'Rising steadily', watch: 'Fatigue rising', steady: 'Steady energy' },
-  },
-  {
-    key: 'mood', label: 'Mood', Icon: SmilePlus, color: '#944fed',
-    subtitle: 'Self-rated, journaled',
-    improvesDown: false,
-    tags: { improving: 'Steadier days', watch: 'More variable', steady: 'Consistent' },
-  },
-  {
-    key: 'gsm', label: 'Hormonal', Icon: Droplets, color: '#c2796d',
-    subtitle: 'GSM symptom score',
-    improvesDown: true,
-    tags: { improving: 'On target', watch: 'Watch closely', steady: 'Stable' },
-  },
+const ALL_DOMAINS = [
+  { key: 'vasomotor', label: 'Vasomotor',     Icon: Flame,     color: '#d85623', subtitle: 'Hot-flash frequency',    improvesDown: true,  tags: { improving: 'Slow taper',      watch: 'Increasing',      steady: 'Holding steady' } },
+  { key: 'sleep',     label: 'Sleep',          Icon: Moon,      color: '#5d9ed5', subtitle: 'Sleep quality score',    improvesDown: false, tags: { improving: 'Deeper cycles',   watch: 'Disrupted',       steady: 'Consistent'     } },
+  { key: 'energy',    label: 'Energy',         Icon: Zap,       color: '#e8a838', subtitle: 'Daily energy level',     improvesDown: false, tags: { improving: 'Rising steadily', watch: 'Fatigue rising',  steady: 'Steady energy'  } },
+  { key: 'mood',      label: 'Mood',           Icon: SmilePlus, color: '#944fed', subtitle: 'Self-rated, journaled',  improvesDown: false, tags: { improving: 'Steadier days',   watch: 'More variable',   steady: 'Consistent'     } },
+  { key: 'gsm',       label: 'Hormonal',       Icon: Droplets,  color: '#c2796d', subtitle: 'GSM symptom score',      improvesDown: true,  tags: { improving: 'On target',       watch: 'Watch closely',   steady: 'Stable'         } },
+  { key: 'cognition', label: 'Cognition',      Icon: Brain,     color: '#6366f1', subtitle: 'Brain fog & clarity',    improvesDown: false, tags: { improving: 'Clearer focus',   watch: 'More fog',        steady: 'Consistent'     } },
+  { key: 'bone',      label: 'Bone Health',    Icon: Shield,    color: '#78716c', subtitle: 'Density indicators',     improvesDown: false, tags: { improving: 'Strengthening',   watch: 'Monitor closely', steady: 'Stable'         } },
+  { key: 'weight',    label: 'Metabolism',     Icon: Scale,     color: '#0891b2', subtitle: 'Weight & metabolic',     improvesDown: false, tags: { improving: 'Trending well',   watch: 'Needs attention', steady: 'Holding steady' } },
+  { key: 'libido',    label: 'Libido',         Icon: Heart,     color: '#e879f9', subtitle: 'Self-rated intimacy',    improvesDown: false, tags: { improving: 'Improving',       watch: 'Watch closely',   steady: 'Consistent'     } },
+  { key: 'cardio',    label: 'Cardiovascular', Icon: Activity,  color: '#ef4444', subtitle: 'Heart & circulation',    improvesDown: false, tags: { improving: 'Improving',       watch: 'Monitor closely', steady: 'Stable'         } },
 ]
+
+const DEFAULT_DOMAIN_KEYS = ['vasomotor', 'sleep', 'energy', 'mood']
 
 function getStatus(delta: number | null, improvesDown: boolean): 'improving' | 'watch' | 'steady' {
   if (delta === null || delta === 0) return 'steady'
@@ -112,6 +94,28 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
 }
 
 export default function PatientOverview({ visits, prescriptions, latestIntake }: PatientOverviewProps) {
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [dropdownOpen])
+
+  const toggleKey = (key: string) => {
+    setSelectedKeys(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  const activeDomains = ALL_DOMAINS.filter(d => selectedKeys.includes(d.key))
+
   const sortedVisits = useMemo(() =>
     [...visits]
       .filter(v => v.symptom_scores && Object.keys(v.symptom_scores).length > 0)
@@ -208,13 +212,61 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
         </div>
       </div>
 
-      {/* ── Five pillars ─────────────────────────────────────────── */}
+      {/* ── Symptom Tracker ───────────────────────────────────────── */}
       <div>
-        <p className="font-serif text-xl text-aubergine mb-4">
-          Patient's <span className="italic text-violet">five pillars</span>
-        </p>
-        <div className="grid grid-cols-5 gap-3">
-          {DOMAINS.map((domain) => {
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-serif text-xl text-aubergine">
+            Symptom <span className="italic text-violet">Tracker</span>
+          </p>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen(o => !o)}
+              className="w-8 h-8 rounded-full border-2 border-aubergine/20 flex items-center justify-center text-aubergine/40 hover:border-violet hover:text-violet transition-colors"
+              title="Customize topics"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 top-10 z-50 w-56 bg-white rounded-card shadow-xl shadow-aubergine/10 border border-aubergine/10 py-2 overflow-hidden">
+                <p className="text-[10px] font-sans font-semibold text-aubergine/40 uppercase tracking-wider px-4 pb-2 pt-1">
+                  Topics to monitor
+                </p>
+                {ALL_DOMAINS.map(domain => (
+                  <button
+                    key={domain.key}
+                    onClick={() => toggleKey(domain.key)}
+                    className="w-full flex items-center gap-3 px-4 py-2 hover:bg-aubergine/3 transition-colors text-left"
+                  >
+                    <div
+                      className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors ${
+                        selectedKeys.includes(domain.key)
+                          ? 'border-transparent'
+                          : 'border-aubergine/20 bg-transparent'
+                      }`}
+                      style={selectedKeys.includes(domain.key) ? { backgroundColor: domain.color } : {}}
+                    >
+                      {selectedKeys.includes(domain.key) && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <domain.Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: domain.color }} />
+                      <span className="text-sm font-sans text-aubergine/80 truncate">{domain.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={`grid gap-3 ${activeDomains.length <= 3 ? 'grid-cols-3' : activeDomains.length === 4 ? 'grid-cols-4' : 'grid-cols-4'}`}>
+          {activeDomains.map((domain) => {
             const data = sortedVisits
               .filter(v => v.symptom_scores?.[domain.key] !== undefined)
               .map(v => v.symptom_scores![domain.key])

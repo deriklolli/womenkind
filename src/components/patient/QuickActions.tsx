@@ -27,6 +27,14 @@ const primaryActions: ActionItem[] = [
     bg: 'rgba(40, 15, 73, 0.06)',
   },
   {
+    key: 'scorecard',
+    label: 'Score Tracker',
+    subtitle: 'Your health score',
+    icon: 'scorecard',
+    color: '#944fed',
+    bg: 'rgba(148, 79, 237, 0.08)',
+  },
+  {
     key: 'schedule',
     label: 'Schedule Appointment',
     subtitle: 'Book your next visit',
@@ -113,6 +121,13 @@ function ActionIcon({ type, color }: { type: string; color: string }) {
         <svg {...props}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      )
+    case 'scorecard':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
         </svg>
       )
     case 'calendar':

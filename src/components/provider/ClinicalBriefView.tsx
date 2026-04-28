@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useChatContext } from '@/lib/chat-context'
+import { useRecording } from '@/lib/recording-context'
+import { getProviderSession } from '@/lib/getProviderSession'
 import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
 import { devFixtures } from '@/lib/dev-fixtures'
 
@@ -32,6 +34,7 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
   const [activeTab, setActiveTab] = useState<Tab>('command')
   const [isMember, setIsMember] = useState(false)
   const { setPageContext } = useChatContext()
+  const { state: recordingState, startRecording } = useRecording()
 
   useEffect(() => {
     loadIntake()
@@ -304,6 +307,29 @@ ${[
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                   </svg>
                   Print Summary
+                </button>
+              )}
+              {intake.patient_id && (
+                <button
+                  onClick={async () => {
+                    const session = await getProviderSession()
+                    if (!session?.providerId) return
+                    startRecording(
+                      { id: intake.patient_id!, name: answers.full_name || 'Patient' },
+                      session.providerId
+                    )
+                  }}
+                  disabled={recordingState === 'recording' || recordingState === 'uploading'}
+                  className={`text-sm font-sans font-medium px-4 py-2.5 rounded-brand border transition-colors flex items-center gap-2
+                    ${recordingState === 'recording'
+                      ? 'text-red-600 bg-red-50 border-red-200'
+                      : 'text-aubergine/60 bg-white border-aubergine/15 hover:bg-aubergine/5 hover:text-aubergine'
+                    } disabled:opacity-50`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                  {recordingState === 'recording' ? 'Recording…' : 'Record Visit'}
                 </button>
               )}
               {intake.patient_id && (

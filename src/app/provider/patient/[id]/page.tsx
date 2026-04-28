@@ -339,15 +339,38 @@ export default function PatientProfilePage() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
-            className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white border border-violet/30 px-5 py-2.5 rounded-pill hover:bg-violet/5 transition-colors flex items-center gap-2 flex-shrink-0"
-          >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Create Care Presentation
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={async () => {
+                const session = await getProviderSession()
+                if (!session?.providerId) return
+                startRecording(
+                  { id: patientId, name },
+                  session.providerId
+                )
+              }}
+              disabled={recordingState === 'recording' || recordingState === 'uploading'}
+              className={`whitespace-nowrap text-sm font-sans font-medium px-4 py-2.5 rounded-pill border transition-colors flex items-center gap-2
+                ${recordingState === 'recording'
+                  ? 'text-red-600 bg-red-50 border-red-200'
+                  : 'text-aubergine/60 bg-white border-aubergine/15 hover:bg-aubergine/5 hover:text-aubergine'
+                } disabled:opacity-50`}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+              </svg>
+              {recordingState === 'recording' ? 'Recording…' : 'Record Visit'}
+            </button>
+            <button
+              onClick={() => router.push(`/provider/presentation/create/${patientId}`)}
+              className="whitespace-nowrap text-sm font-sans font-medium text-violet bg-white border border-violet/30 px-5 py-2.5 rounded-pill hover:bg-violet/5 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Create Care Presentation
+            </button>
+          </div>
         </div>
 
         {/* Tab navigation */}

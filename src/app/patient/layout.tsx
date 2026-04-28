@@ -24,6 +24,13 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     }
 
     const checkAccess = async () => {
+      // Dev shortcut: always allow access in development
+      if (process.env.NODE_ENV === 'development') {
+        setAuthorized(true)
+        setChecking(false)
+        return
+      }
+
       // Real session always takes priority — check it first
       const {
         data: { session },
