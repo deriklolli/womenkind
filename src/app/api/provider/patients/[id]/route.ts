@@ -59,6 +59,7 @@ export async function GET(
         status: true,
         answers: true,
         ai_brief: true,
+        wmi_scores: true,
         provider_notes: true,
         submitted_at: true,
         reviewed_at: true,
