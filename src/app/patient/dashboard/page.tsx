@@ -838,13 +838,13 @@ export default function PatientDashboardPage() {
                   patientFirstName={patient.name?.split(' ')[0]}
                 />
 
-                <SymptomTrendChart series={trendSeries} />
-
                 <PatientOverview
                   visits={overviewVisits}
                   prescriptions={overviewPrescriptions}
                   latestIntake={overviewIntake}
                 />
+
+                <SymptomTrendChart series={trendSeries} />
 
                 <TimelineStrip markers={timelineMarkers} />
 
