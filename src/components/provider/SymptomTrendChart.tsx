@@ -46,23 +46,16 @@ const GHOST_DATA = [
   { date: '', score: 3.1 },
 ]
 
-function GhostChart({ domain, label, color, currentScore }: {
+function GhostChart({ domain, label, color }: {
   domain: string
   label: string
   color: string
-  currentScore?: number
 }) {
   return (
     <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <h4 className="text-sm font-sans font-medium text-aubergine/40">{label}</h4>
-        {currentScore !== undefined && (
-          <div className="flex items-center gap-1">
-            <span className="text-lg font-sans font-semibold text-aubergine/40">{currentScore}</span>
-            <span className="text-xs font-sans text-aubergine/25">/5</span>
-          </div>
-        )}
       </div>
 
       {/* Ghost chart + overlay — full bleed */}
@@ -93,9 +86,7 @@ function GhostChart({ domain, label, color, currentScore }: {
         {/* Overlay message */}
         <div className="absolute inset-0 flex items-center justify-center pb-6">
           <p className="text-xs font-sans text-aubergine/50 text-center leading-snug">
-            {currentScore !== undefined
-              ? 'Trend appears after a second check-in'
-              : 'Trend appears after 2 check-ins'}
+            Trend appears after first check-in
           </p>
         </div>
       </div>
@@ -112,13 +103,12 @@ export default function SymptomTrendChart({ visits, domain, label, color }: Symp
       score: v.symptom_scores[domain],
     }))
 
-  if (data.length < 2) {
+  if (data.length < 1) {
     return (
       <GhostChart
         domain={domain}
         label={label}
         color={color}
-        currentScore={data.length === 1 ? data[0].score : undefined}
       />
     )
   }

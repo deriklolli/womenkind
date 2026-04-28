@@ -69,19 +69,36 @@ function getStatus(delta: number | null, improvesDown: boolean): 'improving' | '
   return (improvesDown ? delta < 0 : delta > 0) ? 'improving' : 'watch'
 }
 
+function smoothPath(pts: [number, number][]): string {
+  if (pts.length === 1) return `M${pts[0][0]},${pts[0][1]}`
+  let d = `M${pts[0][0]},${pts[0][1]}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] ?? p2
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6
+    const cp1y = p1[1] + (p2[1] - p0[1]) / 6
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6
+    const cp2y = p2[1] - (p3[1] - p1[1]) / 6
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0]},${p2[1]}`
+  }
+  return d
+}
+
 function GradientSparkline({ data, color, domainKey }: { data: number[]; color: string; domainKey: string }) {
-  if (data.length < 2) return null
+  if (data.length < 1) return null
   const W = 200, H = 40
   const min = Math.min(...data), max = Math.max(...data)
   const range = max - min || 1
   const pts = data.map((v, i): [number, number] => [
-    (i / (data.length - 1)) * W,
+    data.length === 1 ? W / 2 : (i / (data.length - 1)) * W,
     H - ((v - min) / range) * (H - 8) - 4,
   ])
-  const linePath = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
-  const areaPath = `${linePath} L${W},${H} L0,${H} Z`
   const gradId = `grad-${domainKey}`
   const last = pts[pts.length - 1]
+  const linePath = smoothPath(pts)
+  const areaPath = data.length >= 2 ? `${linePath} L${W},${H} L0,${H} Z` : ''
 
   return (
     <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="overflow-visible">
@@ -91,9 +108,8 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#${gradId})`} />
-      <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      {/* End dot — use fixed coords in viewBox space, rendered via a second non-stretched layer */}
+      {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}
+      {data.length >= 2 && <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />}
       <circle cx={last[0]} cy={last[1]} r="3" fill={color} stroke="white" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
     </svg>
   )
@@ -426,10 +442,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
 
                   {/* Sparkline */}
                   <div className="mt-2 mb-3">
-                    {data.length >= 2
+                    {data.length >= 1
                       ? <GradientSparkline data={data} color={domain.color} domainKey={domain.key} />
                       : <div className="h-9 flex items-center">
-                          <p className="text-xs font-sans text-aubergine/25 italic">Trend after 2nd visit</p>
+                          <p className="text-xs font-sans text-aubergine/25 italic">Check in to start tracking</p>
                         </div>
                     }
                   </div>

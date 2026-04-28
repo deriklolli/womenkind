@@ -15,8 +15,25 @@ interface Props {
   series: TrendPoint[]
 }
 
+function smoothCurvePath(pts: { x: number; y: number }[]): string {
+  if (pts.length === 1) return `M${pts[0].x},${pts[0].y}`
+  let d = `M${pts[0].x},${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] ?? p2
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x},${p2.y}`
+  }
+  return d
+}
+
 export default function SymptomTrendChart({ series }: Props) {
-  const hasData = series.length > 1
+  const hasData = series.length >= 1
   const width = 720
   const height = 220
   const padX = 40
@@ -48,11 +65,11 @@ export default function SymptomTrendChart({ series }: Props) {
             const pts = series
               .filter(p => typeof p[d.key] === 'number')
               .map(p => ({ x: xFor(p.weekIndex), y: yFor(p[d.key] as number) }))
-            if (pts.length < 2) return null
-            const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+            if (pts.length < 1) return null
+            const path = smoothCurvePath(pts)
             return (
               <g key={d.key}>
-                <path d={path} fill="none" stroke={d.color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                {pts.length >= 2 && <path d={path} fill="none" stroke={d.color} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
                 <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3.5} fill={d.color} stroke="#fff" strokeWidth={1.5} />
               </g>
             )
@@ -60,7 +77,7 @@ export default function SymptomTrendChart({ series }: Props) {
         </svg>
       ) : (
         <div className="h-[220px] flex items-center justify-center text-center">
-          <p className="font-sans text-sm text-aubergine/50 max-w-xs">Your trend will appear here after your first visit.</p>
+          <p className="font-sans text-sm text-aubergine/50 max-w-xs">Your trend will appear here after your first check-in.</p>
         </div>
       )}
     </div>
