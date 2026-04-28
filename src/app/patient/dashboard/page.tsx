@@ -690,6 +690,16 @@ export default function PatientDashboardPage() {
     }
   }
 
+  const handleCheckinComplete = async () => {
+    try {
+      const res = await fetch('/api/patient/me')
+      if (res.ok) {
+        const me = await res.json()
+        if (me.visits?.length) setOverviewVisits(me.visits)
+      }
+    } catch {}
+  }
+
   const handleLogout = async () => {
     localStorage.removeItem('womenkind_demo_patient')
     await supabase.auth.signOut()
@@ -847,6 +857,8 @@ export default function PatientDashboardPage() {
                   visits={overviewVisits}
                   prescriptions={overviewPrescriptions}
                   latestIntake={overviewIntake}
+                  view="patient"
+                  onCheckinComplete={handleCheckinComplete}
                 />
 
                 <SymptomTrendChart series={trendSeries} />
@@ -1134,6 +1146,8 @@ export default function PatientDashboardPage() {
                 visits={overviewVisits}
                 prescriptions={overviewPrescriptions}
                 latestIntake={overviewIntake}
+                view="patient"
+                onCheckinComplete={handleCheckinComplete}
               />
             )}
 

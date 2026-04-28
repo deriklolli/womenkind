@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { Flame, Moon, Zap, SmilePlus, Droplets, Brain, Shield, Scale, Heart, Activity } from 'lucide-react'
+import DailyCheckinModal from '@/components/patient/DailyCheckinModal'
 
 interface Visit {
   id: string
@@ -44,6 +45,7 @@ interface PatientOverviewProps {
     }
     wmi_scores?: WMIScores | null
   } | null
+  onCheckinComplete?: () => void
 }
 
 const ALL_DOMAINS = [
@@ -96,10 +98,12 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient' }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [checkinModal, setCheckinModal] = useState(false)
+  const [todayCheckedIn, setTodayCheckedIn] = useState<boolean | null>(null)
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -110,6 +114,14 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
     if (dropdownOpen) document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [dropdownOpen])
+
+  useEffect(() => {
+    if (view !== 'patient') return
+    fetch('/api/daily-checkin')
+      .then(r => r.json())
+      .then(d => setTodayCheckedIn(!!d.checkedIn))
+      .catch(() => setTodayCheckedIn(false))
+  }, [view])
 
   const toggleKey = (key: string) => {
     setSelectedKeys(prev =>
@@ -184,6 +196,59 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
 
   return (
     <div className="space-y-8">
+
+      {/* ── Daily check-in CTA (patient view only) ── */}
+      {view === 'patient' && todayCheckedIn !== null && (
+        <div className={`rounded-2xl px-5 py-4 flex items-center justify-between gap-4 border ${
+          todayCheckedIn
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-violet/5 border-violet/15'
+        }`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+              todayCheckedIn ? 'bg-emerald-100' : 'bg-violet/10'
+            }`}>
+              {todayCheckedIn ? (
+                <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                </svg>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className={`font-sans text-sm font-semibold truncate ${todayCheckedIn ? 'text-emerald-700' : 'text-aubergine'}`}>
+                {todayCheckedIn ? 'Checked in today' : "Log today's symptoms"}
+              </p>
+              <p className={`font-sans text-xs ${todayCheckedIn ? 'text-emerald-600/70' : 'text-aubergine/40'}`}>
+                {todayCheckedIn ? 'Your tracker is up to date' : 'Track how you\'re feeling — 2 minutes'}
+              </p>
+            </div>
+          </div>
+          {!todayCheckedIn && (
+            <button
+              onClick={() => setCheckinModal(true)}
+              className="font-sans font-semibold text-xs text-white bg-aubergine rounded-full px-4 py-2 hover:bg-aubergine/90 transition-colors shrink-0"
+            >
+              Start
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Daily check-in modal */}
+      {checkinModal && (
+        <DailyCheckinModal
+          onClose={() => setCheckinModal(false)}
+          onSuccess={() => {
+            setCheckinModal(false)
+            setTodayCheckedIn(true)
+            onCheckinComplete?.()
+          }}
+        />
+      )}
 
       {/* ── Score header ─────────────────────────────────────────── */}
       <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
