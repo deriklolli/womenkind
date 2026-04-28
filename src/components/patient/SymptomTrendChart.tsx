@@ -265,19 +265,19 @@ export default function SymptomTrendChart({
                   <path
                     d={path}
                     stroke={domain.color}
-                    strokeWidth={isHovered ? '3' : '2'}
+                    strokeWidth={isHovered ? '2' : '1.5'}
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     style={{ transition: 'stroke-width 0.15s' }}
                   />
                   {pts.slice(0, -1).map(([cx, cy], i) => (
-                    <circle key={i} cx={cx} cy={cy} r="2.5" fill={domain.color} />
+                    <circle key={i} cx={cx} cy={cy} r="1.5" fill={domain.color} />
                   ))}
                   <circle
                     cx={last[0]} cy={last[1]}
-                    r="4" fill={domain.color}
-                    stroke="white" strokeWidth="1.5"
+                    r="3" fill={domain.color}
+                    stroke="white" strokeWidth="1"
                   />
                 </g>
               )
