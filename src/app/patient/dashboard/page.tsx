@@ -830,7 +830,7 @@ export default function PatientDashboardPage() {
           <div className="md:col-span-3 space-y-6">
 
             {/* Dashboard view — action-first hero + health story stack */}
-            {(activeView === 'dashboard' || dashboardPhase !== 'care_plan_viewed') && (
+            {activeView === 'dashboard' && (
               <>
                 <DashboardHero
                   action={heroAction}
