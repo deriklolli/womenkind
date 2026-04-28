@@ -163,14 +163,14 @@ export default function SymptomTrendChart({
             className="block w-full h-auto"
             onMouseLeave={() => setHoveredDomain(null)}
           >
-            {/* "Better" label */}
+            {/* "Better" label — inside chart area, top-left */}
             <text
-              x={margin.left - 6}
-              y={margin.top - 12}
+              x={margin.left + 4}
+              y={margin.top + 9}
               fontSize="7"
               fill="#280f49"
-              fillOpacity={0.35}
-              textAnchor="end"
+              fillOpacity={0.3}
+              textAnchor="start"
             >
               Better ↑
             </text>
