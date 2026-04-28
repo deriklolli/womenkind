@@ -4,7 +4,7 @@ export async function generateClinicalBrief(answers: Record<string, any>, wmiSco
   const patientProfile = buildPatientProfile(answers, wmiScores)
 
   const text = await invokeModel({
-    maxTokens: 8192,
+    maxTokens: 16000,
     system: `You are the clinical AI engine for Womenkind, a menopause-specialist telehealth platform. You generate the MD Command Center — a comprehensive pre-visit clinical brief for the reviewing provider (MD/NP/APRN).
 
 CLINICAL FRAMEWORK
