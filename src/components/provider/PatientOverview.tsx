@@ -34,11 +34,13 @@ interface WMIScores {
 interface PatientOverviewProps {
   visits: Visit[]
   prescriptions: Prescription[]
+  view?: 'patient' | 'provider'
   latestIntake?: {
     ai_brief?: {
       metadata?: { symptom_burden?: string; menopausal_stage?: string }
       summary?: string
       patient_blueprint?: { overview?: string }
+      symptom_summary?: { overview?: string }
     }
     wmi_scores?: WMIScores | null
   } | null
@@ -94,7 +96,7 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient' }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -130,7 +132,9 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
 
   const stage   = latestIntake?.ai_brief?.metadata?.menopausal_stage
   const burden  = latestIntake?.ai_brief?.metadata?.symptom_burden
-  const summary = latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
+  const body = view === 'provider'
+    ? latestIntake?.ai_brief?.symptom_summary?.overview
+    : latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
 
   const wmiScores    = latestIntake?.wmi_scores
   const overallNow   = wmiScores?.wmi ?? latest?.symptom_scores?.overall
@@ -151,12 +155,6 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
   const wmiHeadline = wmiScores && wmiScores.wmi >= 60
     ? { prefix: "You're in a solid position.", suffix: "Let's build from here." }
     : { prefix: 'Real symptoms.', suffix: 'Real solutions ahead.' }
-
-  const wmiBodyText = wmiScores
-    ? wmiScores.wmi >= 60
-      ? `Based on your intake, your symptom profile reflects a ${wmiScores.wmi_label.toLowerCase()} pattern. Dr. Urban will use this as your baseline and focus on the areas most affecting your quality of life.`
-      : `Based on your intake, your symptoms are having a meaningful impact on your daily life. Dr. Urban will prioritize your ${wmiScores.phenotype} profile and build a plan targeting your highest-burden areas first.`
-    : null
 
 
 
@@ -238,16 +236,16 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
               <p className="font-serif text-2xl text-aubergine mb-2">
                 {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
               </p>
-              <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{wmiBodyText}</p>
+              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
             </>
-          ) : summary ? (
-              <>
-                <p className="font-serif text-2xl text-aubergine mb-2">
-                  {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
-                </p>
-                <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{summary}</p>
-              </>
-            ) : null}
+          ) : (
+            <>
+              <p className="font-serif text-2xl text-aubergine mb-2">
+                {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
+              </p>
+              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
+            </>
+          )}
         </div>
       </div>
 

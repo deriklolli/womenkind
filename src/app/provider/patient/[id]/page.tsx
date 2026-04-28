@@ -403,6 +403,7 @@ export default function PatientProfilePage() {
         {/* Tab content */}
         {activeTab === 'overview' && (
           <PatientOverview
+            view="provider"
             visits={visits}
             prescriptions={prescriptions}
             latestIntake={latestIntake}
