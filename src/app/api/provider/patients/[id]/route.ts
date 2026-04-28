@@ -53,7 +53,7 @@ export async function GET(
     latestEncounterNote,
   ] = await Promise.all([
     db.query.intakes.findMany({
-      where: eq(intakes.patient_id, patientId),
+      where: and(eq(intakes.patient_id, patientId), ne(intakes.status, 'draft')),
       columns: {
         id: true,
         status: true,
