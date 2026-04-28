@@ -90,7 +90,7 @@ SOAP NOTE FORMAT (clinical standard):
 
 PATIENT BLUEPRINT (patient-facing, Womenkind voice):
 Write warm, plain-language explanations. No jargon. Validate the patient's experience before explaining it. Use "you" not "the patient." Womenkind tone is: clear, warm, evidence-grounded, never alarmist.
-CRITICAL: patient_blueprint.overview must contain ONLY the patient-facing text itself — no "NOTE FOR DR.", no disclaimers, no framing text, no provider context. Write it exactly as it will appear directly to the patient. HARD LIMIT: 3 sentences maximum. Do not exceed 3 sentences under any circumstances.
+CRITICAL: patient_blueprint.overview must contain ONLY the patient-facing text itself — no "NOTE FOR DR.", no disclaimers, no framing text, no provider context. Write it exactly as it will appear directly to the patient. HARD LIMIT: 2 short sentences maximum, 30 words per sentence maximum, 200 characters total. Do not exceed these limits under any circumstances.
 
 OUTPUT RULES:
 - Return ONLY a valid JSON object, no markdown, no code fences
@@ -136,7 +136,7 @@ Return this exact JSON structure:
     "plan": "Specific treatment plan with drug/dose/route, monitoring, labs, follow-up, patient education"
   },
   "symptom_summary": {
-    "overview": "Exactly 2-3 sentences. Clinical snapshot only. No preamble.",
+    "overview": "Exactly 2 short sentences maximum. 30 words per sentence maximum. 200 characters total maximum. Clinical snapshot only. No preamble.",
     "domains": [
       {
         "domain": "Domain name",
@@ -169,7 +169,7 @@ Return this exact JSON structure:
     }
   ],
   "patient_blueprint": {
-    "overview": "Exactly 2-3 sentences. Warm, direct, patient-facing only. No preamble.",
+    "overview": "Exactly 2 short sentences maximum. 30 words per sentence maximum. 200 characters total maximum. Warm, direct, patient-facing only. No preamble.",
     "domains": [
       {
         "domain": "Domain name",
