@@ -784,142 +784,6 @@ export default function PatientDashboardPage() {
           </p>
         </div>
 
-        {/* Smart banner — adapts to dashboard phase */}
-
-        {dashboardPhase === 'appointment_booked' && appointments[0] && (
-          <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-1">
-              <h2 className="font-serif font-normal text-lg text-aubergine mb-1">
-                Your appointment is scheduled
-              </h2>
-              <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
-                {appointments[0].appointment_types?.name || 'Consultation'} on{' '}
-                {new Date(appointments[0].starts_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                {' at '}
-                {new Date(appointments[0].starts_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {cancelConfirmBanner ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-sans text-aubergine/50">Cancel this appointment?</span>
-                  <button
-                    onClick={handleCancelBannerAppointment}
-                    disabled={cancelingBanner}
-                    className="px-4 py-2 text-sm font-sans font-semibold text-white bg-red-500 rounded-pill hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {cancelingBanner ? 'Canceling...' : 'Yes, cancel'}
-                  </button>
-                  <button
-                    onClick={() => setCancelConfirmBanner(false)}
-                    className="px-4 py-2 text-sm font-sans font-medium text-aubergine/50 border border-aubergine/10 rounded-pill hover:bg-aubergine/5 transition-colors"
-                  >
-                    Keep
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <a
-                    href={`/api/scheduling/calendar-export?appointmentId=${appointments[0].id}`}
-                    className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/60 rounded-pill hover:bg-aubergine/5 transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                    </svg>
-                    Add to Calendar
-                  </a>
-                  <button
-                    onClick={() => setCancelConfirmBanner(true)}
-                    className="flex items-center gap-2 px-4 py-3 border border-aubergine/10 text-sm font-sans font-medium text-aubergine/40 rounded-pill hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all"
-                  >
-                    Cancel Appointment
-                  </button>
-                  {appointments[0].video_room_url && (
-                    <a
-                      href={appointments[0].video_room_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-3 bg-violet text-white text-sm font-sans font-semibold rounded-pill hover:bg-violet/90 transition-all"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                      </svg>
-                      Join Call
-                    </a>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Check-in prompt — show when there's an upcoming appointment without a check-in */}
-        {appointments.length > 0 && checkedInAppointmentIds !== null && !checkedInAppointmentIds.has(appointments[0].id) && (
-          <div className="mb-6 bg-white rounded-card shadow-sm shadow-aubergine/5 p-5 flex items-center gap-4 border-l-4 border-violet">
-            <div className="w-9 h-9 rounded-full bg-violet/10 flex items-center justify-center shrink-0">
-              <svg className="w-4.5 h-4.5 text-violet" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-sans text-sm font-semibold text-aubergine">Complete your pre-visit check-in</p>
-              <p className="font-sans text-xs text-aubergine/50 mt-0.5">
-                Takes 2 minutes. Helps your provider prepare for your visit.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push(`/patient/checkin/${appointments[0].id}`)}
-              className="shrink-0 font-sans font-semibold text-sm text-white bg-aubergine rounded-brand px-5 py-2.5 hover:bg-aubergine/90 transition-colors"
-            >
-              Start check-in
-            </button>
-          </div>
-        )}
-
-        {dashboardPhase === 'care_plan_ready' && patient.presentationId && (
-          <div
-            className="mb-6 relative rounded-[20px] overflow-hidden group cursor-pointer"
-            style={{ minHeight: '200px' }}
-            onClick={async () => {
-              window.open(`/presentation-blueprint.html?id=${patient.presentationId}`, '_blank')
-              setPatient(prev => prev ? { ...prev, presentationStatus: 'viewed' } : prev)
-              // Persist via API (service role) — patients cannot update care_presentations via RLS
-              await fetch('/api/presentations/viewed', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ presentationId: patient.presentationId }),
-              })
-            }}
-          >
-            <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-              style={{ backgroundImage: 'url(/care-presentation-bg.png)' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-aubergine/85 via-aubergine/60 to-transparent" />
-            <div className="relative z-10 flex flex-col justify-end h-full p-8 md:p-10" style={{ minHeight: '200px' }}>
-              <div className="max-w-[400px]">
-                <h2 className="font-serif font-normal text-2xl md:text-[28px] text-white leading-tight mb-3 tracking-tight">
-                  Your Future Health Blueprint is Ready
-                </h2>
-                <p className="text-sm font-sans text-white/70 leading-relaxed mb-5">
-                  Dr. Urban has put together a personalized blueprint based on your consultation.
-                </p>
-                <span
-                  className="inline-flex items-center gap-3 pl-6 pr-1.5 py-1.5 rounded-full font-sans text-sm font-semibold
-                             bg-violet text-white group-hover:bg-violet/90 transition-all duration-300"
-                >
-                  View Your Health Blueprint
-                  <span className="w-9 h-9 rounded-full bg-aubergine flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Membership notification */}
         {membershipParam === 'active' && (
           <div className="mb-6 px-4 py-3 rounded-brand bg-[#4ECDC4]/10 border border-[#4ECDC4]/20 flex items-center gap-3">
@@ -933,146 +797,28 @@ export default function PatientDashboardPage() {
         )}
 
         <div className="grid md:grid-cols-4 gap-6">
-          {/* Left column: status/actions + membership */}
+          {/* Left column: nav */}
           <div className="md:col-span-1 space-y-6">
-            {/* Phase 1-3: Intake status tracker */}
-            {dashboardPhase !== 'care_plan_viewed' && (
-              <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6">
-                <h3 className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-4">
-                  Intake Status
-                </h3>
-
-                {statusConfig ? (
-                  <>
-                    <div
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-sans ${
-                        dashboardPhase === 'care_plan_ready'
-                          ? STATUS_CONFIG.care_plan_sent.bg + ' ' + STATUS_CONFIG.care_plan_sent.color
-                          : statusConfig.bg + ' ' + statusConfig.color
-                      }`}
-                    >
-                      {patient.intakeStatus === 'submitted' && (
-                        <span className="w-2 h-2 rounded-full bg-violet animate-pulse" />
-                      )}
-                      {dashboardPhase === 'care_plan_ready' ? 'Care Plan Ready' : statusConfig.label}
-                    </div>
-
-                    <div className="mt-5 space-y-3">
-                      {[
-                        {
-                          label: 'Intake submitted',
-                          date: patient.intakeSubmittedAt,
-                          done: true,
-                        },
-                        {
-                          label: 'Provider review',
-                          date: patient.intakeReviewedAt,
-                          done: !!patient.intakeReviewedAt,
-                          active: !patient.intakeReviewedAt,
-                        },
-                        {
-                          label: 'Initial consult scheduled',
-                          date: null,
-                          done: hasInitialConsultation,
-                          // Active only if reviewed and no initial has ever been attempted.
-                          // If a prior initial was canceled, this stays inactive per spec.
-                          active: !!patient.intakeReviewedAt && !hasInitialConsultation && !hasEverHadInitial,
-                        },
-                        {
-                          label: 'Care plan ready',
-                          date: null,
-                          done: false,
-                          active: !!patient.presentationId,
-                        },
-                      ].map((step, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <div
-                            className={`w-5 h-5 mt-0.5 rounded-full flex items-center justify-center shrink-0 ${
-                              step.done
-                                ? 'bg-[#4ECDC4]/20'
-                                : step.active
-                                ? 'bg-violet/20'
-                                : 'bg-human'
-                            }`}
-                          >
-                            {step.done ? (
-                              <svg className="w-3 h-3 text-[#4ECDC4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            ) : step.active ? (
-                              <span className="w-1.5 h-1.5 rounded-full bg-violet animate-pulse" />
-                            ) : (
-                              <span className="w-1.5 h-1.5 rounded-full bg-aubergine/15" />
-                            )}
-                          </div>
-                          <div>
-                            <p
-                              className={`text-sm font-sans ${
-                                step.done ? 'text-aubergine/70' : step.active ? 'text-violet' : 'text-aubergine/30'
-                              }`}
-                            >
-                              {step.label}
-                            </p>
-                            {step.date && (
-                              <p className="text-xs font-sans text-aubergine/30 mt-0.5">
-                                {new Date(step.date).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <p className="text-sm font-sans text-aubergine/40 mb-4">
-                      You haven&apos;t started your intake yet.
-                    </p>
-                    <a
-                      href="/intake"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold
-                                 bg-violet text-white hover:bg-violet-dark shadow-sm
-                                 transition-all duration-300"
-                    >
-                      Begin Intake
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Phase 4: Quick Actions replaces intake status */}
-            {dashboardPhase === 'care_plan_viewed' && (
-              <QuickActions
-                presentationId={patient.presentationId}
-                activeView={activeView}
-                onSelectView={(view) => {
-                  if (activeView === 'schedule' && view !== 'schedule') {
-                    resetBookingFlow()
-                  }
-                  setActiveView(view)
-                }}
-              />
-            )}
-
-            {/* Phase 4: Secondary actions (blueprint, intake summary, billing) */}
-            {dashboardPhase === 'care_plan_viewed' && (
-              <SecondaryActions
-                presentationId={patient.presentationId}
-                activeView={activeView}
-                onSelectView={(view) => {
-                  if (activeView === 'schedule' && view !== 'schedule') {
-                    resetBookingFlow()
-                  }
-                  setActiveView(view)
-                }}
-              />
-            )}
+            <QuickActions
+              presentationId={patient.presentationId}
+              activeView={activeView}
+              onSelectView={(view) => {
+                if (activeView === 'schedule' && view !== 'schedule') {
+                  resetBookingFlow()
+                }
+                setActiveView(view)
+              }}
+            />
+            <SecondaryActions
+              presentationId={patient.presentationId}
+              activeView={activeView}
+              onSelectView={(view) => {
+                if (activeView === 'schedule' && view !== 'schedule') {
+                  resetBookingFlow()
+                }
+                setActiveView(view)
+              }}
+            />
 
           </div>
 
