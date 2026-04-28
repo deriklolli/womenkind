@@ -145,6 +145,12 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
   }
   const headline = headlineMap[overallStatus]
 
+  const isInitialState = visits.length === 0
+
+  const wmiHeadline = wmiScores && wmiScores.wmi >= 60
+    ? { prefix: "You're in a solid position.", suffix: "Let's build from here." }
+    : { prefix: 'Real symptoms.', suffix: 'Real solutions ahead.' }
+
   const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
 
   const capitalize = (s: string) =>
@@ -163,7 +169,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
         <div className="flex items-start justify-between gap-8">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
-              {wmiScores ? 'WMI Score' : 'Overall Score'} · {monthLabel}
+              Overall Score · {monthLabel}
             </p>
 
             <div className="flex items-end gap-2 mb-3">
@@ -177,7 +183,22 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
               )}
             </div>
 
-            {wmiScores ? (
+            {isInitialState && wmiScores ? (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
+                  Based on WMI
+                </span>
+              </div>
+            ) : overallDelta !== null ? (
+              <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
+                overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
+                overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
+                                               'bg-aubergine/5 text-aubergine/50'
+              }`}>
+                {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
+                {Math.abs(overallDelta)} since last visit
+              </span>
+            ) : wmiScores ? (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
                   {wmiScores.wmi_label}
@@ -188,18 +209,16 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
                   </span>
                 )}
               </div>
-            ) : overallDelta !== null && (
-              <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
-                overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
-                overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
-                                               'bg-aubergine/5 text-aubergine/50'
-              }`}>
-                {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} since last visit
-              </span>
-            )}
+            ) : null}
 
-            {summary ? (
+            {isInitialState && wmiScores ? (
+              <>
+                <p className="font-serif text-2xl text-aubergine mb-2">
+                  {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
+                </p>
+                <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{wmiScores.wmi_message}</p>
+              </>
+            ) : summary ? (
               <>
                 <p className="font-serif text-2xl text-aubergine mb-2">
                   {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
