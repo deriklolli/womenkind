@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase-browser'
@@ -17,6 +17,11 @@ import HealthBlueprintList from '@/components/patient/HealthBlueprintList'
 import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
 import PatientOverview from '@/components/provider/PatientOverview'
+import DashboardHero from '@/components/patient/DashboardHero'
+import WMIStrip from '@/components/patient/WMIStrip'
+import SymptomTrendChart, { type TrendPoint } from '@/components/patient/SymptomTrendChart'
+import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
+import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
 
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
@@ -93,7 +98,16 @@ const DEMO_PATIENT: PatientData = {
   presentationId: 'e3303689-bda9-4044-b695-37d8c075f2bb',
   presentationStatus: 'viewed',
   intakeId: 'demo-intake-id',
-  wmiScores: null,
+  wmiScores: {
+    wmi: 73,
+    wmi_label: 'Thriving',
+    wmi_message: 'Your symptoms are well-managed. Keep up your weekly check-ins.',
+    wmi_band: '70-79',
+    phenotype: 'VMS-dominant',
+    safety_flags: [],
+    vms: 6, sleep: 4, mams: 3, cog: 2,
+    gsm: 3, hsdd: 1, cardio: 1, msk: 1,
+  },
 }
 
 const DEMO_INTAKE = {
@@ -478,6 +492,103 @@ export default function PatientDashboardPage() {
     if (patient.presentationStatus === 'sent') return 'care_plan_ready'
     return 'intake_done'
   })()
+
+  // New: dashboard state snapshot + detection (action-first redesign)
+  const dashboardSnapshot = useMemo(() => ({
+    intake: patient
+      ? { status: patient.intakeStatus ?? 'draft', ai_brief: overviewIntake?.ai_brief ?? null, wmi_scores: patient.wmiScores }
+      : null,
+    appointments: appointments.map((a: any) => ({
+      starts_at: a.starts_at,
+      ends_at: a.ends_at,
+      encounterNoteFinalized: a.encounter_note_finalized ?? false,
+      daily_room_url: a.daily_room_url ?? null,
+    })),
+    prescriptions: overviewPrescriptions.map((p: any) => ({
+      runs_out_at: p.runs_out_at ?? null,
+      medication_name: p.medication_name ?? p.name ?? 'Prescription',
+    })),
+    messages: [] as { read_at: null; sender: 'provider' }[],
+    labs: [] as { posted_at: string }[],
+    blueprintVersionUpdatedAt: null,
+    lastBlueprintViewedAt: null,
+    lastLabsViewedAt: null,
+    lastCheckinAt: null,
+    recommendedFollowUpAt: null,
+    now: new Date(),
+  }), [patient, overviewIntake, appointments, overviewPrescriptions])
+
+  const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
+
+  const handleHero = useCallback(() => {
+    switch (heroAction.kind) {
+      case 'book_consult':
+      case 'prep_visit':
+      case 'followup_overdue':
+      case 'followup_recommended':
+        setActiveView('schedule'); break
+      case 'join_video':
+        if (heroAction.appointment.daily_room_url) {
+          window.open(heroAction.appointment.daily_room_url, '_blank')
+        }
+        break
+      case 'log_checkin':
+      case 'reengagement':
+        setActiveView('scorecard'); break
+      case 'refill_due':
+        setActiveView('refill'); break
+      case 'unread_message':
+        setActiveView('message'); break
+      case 'new_labs':
+        setActiveView('lab-results'); break
+      case 'care_plan_updated':
+        setActiveView('blueprint'); break
+    }
+  }, [heroAction])
+
+  const trendSeries: TrendPoint[] = useMemo(() => {
+    const w = patient?.wmiScores
+    const points: TrendPoint[] = []
+    if (w) {
+      const inv = (raw: number | undefined, max: number) =>
+        typeof raw === 'number' ? Math.round(10 - (raw / max) * 10) : undefined
+      points.push({
+        weekIndex: 0,
+        date: patient?.intakeSubmittedAt ?? new Date().toISOString(),
+        vasomotor: inv(w.vms, 20),
+        sleep: inv(w.sleep, 13),
+        mood: inv(w.mams, 12),
+        energy: inv(w.cardio, 4),
+        cognition: inv(w.cog, 8),
+        gsm: inv(w.gsm, 12),
+      })
+    }
+    return points
+  }, [patient])
+
+  const timelineMarkers: TimelineMarker[] = useMemo(() => {
+    const out: TimelineMarker[] = []
+    if (patient?.intakeSubmittedAt) {
+      out.push({ id: 'intake', label: 'Intake complete', date: patient.intakeSubmittedAt, status: 'past' })
+    }
+    appointments
+      .slice()
+      .sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+      .forEach((a: any, i: number) => {
+        const isPast = new Date(a.ends_at).getTime() < Date.now()
+        out.push({
+          id: `appt-${i}`,
+          label: i === 0 ? 'Initial consultation' : `Follow-up ${i}`,
+          date: a.starts_at,
+          status: isPast ? 'past' : 'scheduled',
+        })
+      })
+    if (out.length > 0) {
+      const lastPastIndex = [...out].map(m => m.status).lastIndexOf('past')
+      if (lastPastIndex >= 0) out[lastPastIndex] = { ...out[lastPastIndex], status: 'current' }
+    }
+    return out
+  }, [patient, appointments])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -968,55 +1079,30 @@ export default function PatientDashboardPage() {
           {/* Right column: view-switchable content */}
           <div className="md:col-span-3 space-y-6">
 
-            {/* Dashboard view — upcoming appointment + intake summary */}
+            {/* Dashboard view — action-first hero + health story stack */}
             {(activeView === 'dashboard' || dashboardPhase !== 'care_plan_viewed') && (
               <>
-                {/* Schedule appointment prompt — shown when no upcoming appointment */}
-                {appointments.length === 0 && !appointmentsLoading && (
-                  <div className="relative rounded-card overflow-hidden p-6" style={{ background: 'linear-gradient(135deg, #2d1b4e 0%, #3d2060 60%, #4a2575 100%)' }}>
-                    <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-20 pointer-events-none" style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-                    <div className="relative z-10 flex items-center gap-6">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-sans font-semibold tracking-widest text-white/50 uppercase mb-2">
-                          Initial Consultation
-                        </p>
-                        <h2 className="font-serif font-normal text-2xl text-white mb-1">
-                          Begin your health <span className="italic" style={{ color: '#C4A87A' }}>journey</span>
-                        </h2>
-                        <p className="text-sm font-sans text-white/50 leading-relaxed">
-                          Your intake is complete. Schedule your initial consultation with your provider to review your results and start your personalized care plan.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setActiveView('schedule')}
-                        className="shrink-0 flex items-center gap-2 px-6 py-2.5 bg-violet/80 hover:bg-violet text-white text-sm font-sans font-semibold rounded-pill transition-all"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Schedule Appointment
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Upcoming appointment — shown when one exists */}
-                <UpcomingAppointments key={appointments.length} patientId={patient.patientId} />
-
-                {/* New lab results / health blueprint alerts */}
-                <DashboardAlerts patientId={patient.patientId} onNavigate={(view) => setActiveView(view)} />
-
-                {/* Prescription refill reminders */}
-                <PrescriptionRefillReminders
-                  patientId={patient.patientId}
-                  onRequestRefill={() => setActiveView('refill')}
+                <DashboardHero
+                  action={heroAction}
+                  onPrimaryClick={handleHero}
+                  patientFirstName={patient.name?.split(' ')[0]}
                 />
+
+                <WMIStrip
+                  currentWMI={patient.wmiScores?.wmi ?? null}
+                  baselineWMI={patient.wmiScores?.wmi ?? null}
+                  label={patient.wmiScores?.wmi_label ?? null}
+                />
+
+                <SymptomTrendChart series={trendSeries} />
 
                 <PatientOverview
                   visits={overviewVisits}
                   prescriptions={overviewPrescriptions}
                   latestIntake={overviewIntake}
                 />
+
+                <TimelineStrip markers={timelineMarkers} />
 
               </>
             )}
