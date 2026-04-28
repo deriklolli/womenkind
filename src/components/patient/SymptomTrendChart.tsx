@@ -51,12 +51,18 @@ function smoothPath(pts: [number, number][]): string {
   return d
 }
 
+// Measure approximate text width in SVG units (fontSize 11, ~0.6 ratio)
+function labelWidth(text: string): number {
+  return text.length * 6.6 + 16
+}
+
 export default function SymptomTrendChart({
   visits,
   prescriptions = [],
   activeDomains = ['vasomotor', 'sleep', 'energy', 'mood'],
 }: Props) {
   const [dateRange, setDateRange] = useState<7 | 30 | 90>(30)
+  const [hoveredDomain, setHoveredDomain] = useState<string | null>(null)
 
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - dateRange)
@@ -66,7 +72,6 @@ export default function SymptomTrendChart({
     .filter(v => new Date(v.visit_date) >= cutoff)
     .sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())
 
-  // Chart dimensions
   const VB_W = 600
   const VB_H = 260
   const margin = { top: 24, right: 8, bottom: 36, left: 28 }
@@ -104,15 +109,26 @@ export default function SymptomTrendChart({
 
   const hasEnoughData = filtered.length >= 2
 
+  // Pre-compute points for all active domains so hover labels can reference them
+  const domainPoints: Record<string, [number, number][]> = {}
+  DOMAINS.filter(d => activeDomains.includes(d.key)).forEach(domain => {
+    domainPoints[domain.key] = filtered
+      .map((v, i) => {
+        const score = v.symptom_scores?.[domain.key]
+        if (typeof score !== 'number') return null
+        return [xPos(i), yPos(score)] as [number, number]
+      })
+      .filter((p): p is [number, number] => p !== null)
+  })
+
   return (
     <div>
-      {/* Header — outside the card, matches Symptom Tracker heading */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <p className="font-serif text-xl text-aubergine">
           Symptom <span className="italic text-violet">Trends</span>
         </p>
 
-        {/* Date range pills */}
         <div className="flex gap-2">
           {([7, 30, 90] as const).map(d => (
             <button
@@ -145,6 +161,7 @@ export default function SymptomTrendChart({
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             className="block w-full h-auto"
+            onMouseLeave={() => setHoveredDomain(null)}
           >
             {/* "Better" label */}
             <text
@@ -158,7 +175,7 @@ export default function SymptomTrendChart({
               Better ↑
             </text>
 
-            {/* Y-axis grid lines + score labels */}
+            {/* Y-axis grid lines + labels */}
             {[1, 2, 3, 4, 5].map(score => {
               const y = yPos(score)
               return (
@@ -186,23 +203,19 @@ export default function SymptomTrendChart({
             })}
 
             {/* X-axis date labels */}
-            {tickIndices.map(idx => {
-              const x = xPos(idx)
-              const label = formatDate(filtered[idx].visit_date)
-              return (
-                <text
-                  key={idx}
-                  x={x}
-                  y={margin.top + chartH + 22}
-                  fontSize="9"
-                  fill="#280f49"
-                  fillOpacity={0.4}
-                  textAnchor="middle"
-                >
-                  {label}
-                </text>
-              )
-            })}
+            {tickIndices.map(idx => (
+              <text
+                key={idx}
+                x={xPos(idx)}
+                y={margin.top + chartH + 22}
+                fontSize="9"
+                fill="#280f49"
+                fillOpacity={0.4}
+                textAnchor="middle"
+              >
+                {formatDate(filtered[idx].visit_date)}
+              </text>
+            ))}
 
             {/* Prescription markers */}
             {rxInRange.map(rx => {
@@ -215,21 +228,14 @@ export default function SymptomTrendChart({
               return (
                 <g key={rx.id}>
                   <line
-                    x1={rxX}
-                    x2={rxX}
-                    y1={margin.top}
-                    y2={margin.top + chartH}
-                    stroke="#944fed"
-                    strokeOpacity={0.35}
-                    strokeDasharray="3 3"
-                    strokeWidth="1.5"
+                    x1={rxX} x2={rxX}
+                    y1={margin.top} y2={margin.top + chartH}
+                    stroke="#944fed" strokeOpacity={0.35}
+                    strokeDasharray="3 3" strokeWidth="1.5"
                   />
                   <text
-                    x={rxX}
-                    y={margin.top - 8}
-                    fontSize="9"
-                    fill="#944fed"
-                    fillOpacity={0.7}
+                    x={rxX} y={margin.top - 8}
+                    fontSize="9" fill="#944fed" fillOpacity={0.7}
                     textAnchor="middle"
                   >
                     {rx.medication_name}
@@ -238,45 +244,92 @@ export default function SymptomTrendChart({
               )
             })}
 
-            {/* Domain lines */}
+            {/* Domain lines — rendered in two passes so hit areas sit on top */}
+            {/* Pass 1: visible lines + dots */}
             {DOMAINS.filter(d => activeDomains.includes(d.key)).map(domain => {
-              const pts: [number, number][] = filtered
-                .map((v, i) => {
-                  const score = v.symptom_scores?.[domain.key]
-                  if (typeof score !== 'number') return null
-                  return [xPos(i), yPos(score)] as [number, number]
-                })
-                .filter((p): p is [number, number] => p !== null)
-
-              if (pts.length < 2) return null
-
+              const pts = domainPoints[domain.key]
+              if (!pts || pts.length < 2) return null
               const path = smoothPath(pts)
               const last = pts[pts.length - 1]
+              const isHovered = hoveredDomain === domain.key
+              const isDimmed = hoveredDomain !== null && !isHovered
 
               return (
-                <g key={domain.key}>
+                <g
+                  key={domain.key}
+                  style={{ opacity: isDimmed ? 0.2 : 1, transition: 'opacity 0.15s' }}
+                >
                   <path
                     d={path}
                     stroke={domain.color}
-                    strokeWidth="2"
+                    strokeWidth={isHovered ? '3' : '2'}
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    style={{ transition: 'stroke-width 0.15s' }}
                   />
                   {pts.slice(0, -1).map(([cx, cy], i) => (
                     <circle key={i} cx={cx} cy={cy} r="2.5" fill={domain.color} />
                   ))}
                   <circle
-                    cx={last[0]}
-                    cy={last[1]}
-                    r="4"
-                    fill={domain.color}
-                    stroke="white"
-                    strokeWidth="1.5"
+                    cx={last[0]} cy={last[1]}
+                    r="4" fill={domain.color}
+                    stroke="white" strokeWidth="1.5"
                   />
                 </g>
               )
             })}
+
+            {/* Pass 2: invisible wide hit areas on top of lines */}
+            {DOMAINS.filter(d => activeDomains.includes(d.key)).map(domain => {
+              const pts = domainPoints[domain.key]
+              if (!pts || pts.length < 2) return null
+              return (
+                <path
+                  key={`hit-${domain.key}`}
+                  d={smoothPath(pts)}
+                  stroke="transparent"
+                  strokeWidth="16"
+                  fill="none"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredDomain(domain.key)}
+                />
+              )
+            })}
+
+            {/* Hover label — pill at terminal dot of hovered line */}
+            {hoveredDomain && (() => {
+              const domain = DOMAINS.find(d => d.key === hoveredDomain)
+              const pts = domainPoints[hoveredDomain]
+              if (!domain || !pts || pts.length < 2) return null
+              const last = pts[pts.length - 1]
+              const lw = labelWidth(domain.label)
+              const lh = 18
+              // Keep pill within the viewBox
+              let lx = last[0] + 8
+              if (lx + lw > VB_W - 4) lx = last[0] - lw - 8
+              const ly = Math.max(margin.top, Math.min(last[1] - lh / 2, margin.top + chartH - lh))
+              return (
+                <g key="hover-label" style={{ pointerEvents: 'none' }}>
+                  <rect
+                    x={lx} y={ly}
+                    width={lw} height={lh}
+                    rx="9" ry="9"
+                    fill={domain.color}
+                  />
+                  <text
+                    x={lx + lw / 2} y={ly + lh / 2 + 4}
+                    fontSize="11"
+                    fontWeight="600"
+                    fill="white"
+                    textAnchor="middle"
+                    fontFamily="sans-serif"
+                  >
+                    {domain.label}
+                  </text>
+                </g>
+              )
+            })()}
           </svg>
         )}
       </div>
