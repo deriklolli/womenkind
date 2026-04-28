@@ -35,3 +35,7 @@ next-env.d.ts
 
 # playwright-cli artifacts
 .playwright-cli/
+
+# Local Claude worktrees (embedded repos that should never be committed)
+.claude/worktrees/
+.env.prod.tmp
