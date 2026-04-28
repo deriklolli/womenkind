@@ -49,6 +49,7 @@
 - Schedule appointment card: dark aubergine card at top of right column; only renders when `appointments.length === 0 && !appointmentsLoading`; calls `setActiveView('schedule')` on click
 - Right column main content: `PatientOverview` (`src/components/provider/PatientOverview.tsx`) — shared between provider patient profile and patient dashboard
 - `overviewIntake` state initialized with `DEMO_INTAKE` via lazy initializer (`process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null`) to avoid async timing issues where state would be null on first render
+- `overviewVisits` is loaded from `/api/patient/me` response (`me.visits`) in production — dev uses fixtures. Both must stay in sync when adding new visit fields.
 - Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Score Tracker, Schedule Appointment, Request Rx Refill, Message Dr. Urban
 
 ## PatientOverview component (`src/components/provider/PatientOverview.tsx`)
@@ -56,8 +57,18 @@
 - `ALL_DOMAINS`: 10 health topics (Vasomotor, Sleep, Energy, Mood, Hormonal, Cognition, Bone Health, Metabolism, Libido, Cardiovascular)
 - Default 4 shown: `DEFAULT_DOMAIN_KEYS = ['vasomotor', 'sleep', 'energy', 'mood']`
 - `+` button next to "Areas of focus" opens a multi-select dropdown to customize which topics display
-- Section heading: "Areas *of focus*" (italic violet)
+- Overall score label: **"Your Womenkind Score"** (branded, no date) — `isInitialState` (no visits) shows "Based on WMI" pill + WMI-band headline; active state (visits exist) shows delta chip + treatment-progress headline
+- Domain cards are driven by visit `symptom_scores` (set via check-in), NOT WMI scores. WMI drives the top-level score number only.
 - Score summary copy driven by `latestIntake.ai_brief.summary` — pass a seeded intake from the patient dashboard to show copy below the trend chip
+
+## WMI Scoring
+- `src/lib/wmi-scoring.ts` — `computeWMI(answers)` deterministic scoring, called at `intake/submit` time and stored in `intakes.wmi_scores` (json column)
+- Intakes submitted before `computeWMI()` was added (before Apr 26 2026) will have `wmi_scores: null` — use `/api/debug/recompute-wmi-by-email` to backfill
+- `/api/debug/recompute-wmi-by-email` — POST `{"email": "..."}` — recomputes + persists WMI for a patient's most recent non-draft intake
+
+## PostgreSQL / Drizzle gotchas
+- `ORDER BY submitted_at DESC` puts NULLs **first** in PostgreSQL — always add `ne(intakes.status, 'draft')` when querying intakes to avoid a null-submitted_at draft masking the real intake
+- Both `/api/patient/me` and `/api/provider/patients/[id]` filter `ne(status, 'draft')` for this reason
 
 ## Working style
 - User is a solo, non-developer founder. Keep explanations short. Do the work, don't narrate plans.
