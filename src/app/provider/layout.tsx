@@ -70,7 +70,7 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
   useIdleTimeout({
     timeoutMs: IDLE_TIMEOUT_MS,
     onTimeout: () => signOutProvider('idle'),
-    enabled: authorized && pathname !== '/provider/login',
+    enabled: process.env.NODE_ENV !== 'development' && authorized && pathname !== '/provider/login',
   })
 
   if (checking && pathname !== '/provider/login') {

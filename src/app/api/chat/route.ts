@@ -205,7 +205,7 @@ export async function POST(req: Request) {
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
-      if (session.providerId) {
+      if (session.providerId && process.env.NODE_ENV !== 'development') {
         const intake = await db
           .select({ id: intakes.id })
           .from(intakes)
@@ -220,8 +220,11 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
       }
-      const data = await getPatientContext(context.patientId)
-      patientContext = `
+      if (process.env.NODE_ENV === 'development') {
+        patientContext = `CURRENT PATIENT CONTEXT:\nPatient ID: ${context.patientId}\nPage: ${context.page}\n(Patient data not available in local development — RDS is prod-only)`
+      } else {
+        const data = await getPatientContext(context.patientId)
+        patientContext = `
 CURRENT PATIENT CONTEXT:
 Patient: ${data.patient?.profiles?.first_name} ${data.patient?.profiles?.last_name}
 Patient ID: ${context.patientId}
@@ -248,6 +251,7 @@ ${data.labOrders.map((l: any) => `- ${l.test_name} — ${l.status}`).join('\n') 
 Provider Notes (${data.providerNotes.length}):
 ${data.providerNotes.map((n: any) => `- [${n.note_type}] ${n.title || '(untitled)'}: ${n.content?.substring(0, 100)}...`).join('\n') || 'None'}
 `
+      }
     }
 
     const systemPrompt = `You are Womenkind AI, an intelligent assistant embedded in the Womenkind provider portal. You help Dr. Joseph Urban Jr. manage his menopause care practice.

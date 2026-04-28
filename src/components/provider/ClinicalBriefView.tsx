@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useChatContext } from '@/lib/chat-context'
 import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
@@ -30,9 +30,6 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
   const [intake, setIntake] = useState<Intake | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('command')
-  const [notes, setNotes] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [isMember, setIsMember] = useState(false)
   const { setPageContext } = useChatContext()
 
@@ -48,7 +45,6 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
       const { intake: data, isMember: member } = await res.json()
 
       setIntake(data)
-      setNotes(data.provider_notes || '')
       setIsMember(member)
 
       setPageContext({
@@ -74,7 +70,6 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
           const found = (fx.intakes || []).find((i: any) => i.id === intakeId)
           if (found) {
             setIntake({ ...found, patient_id: pid })
-            setNotes(found.provider_notes || '')
             setIsMember(
               (fx.subscriptions || []).some(
                 (s: any) => s.plan_type === 'membership' && s.status === 'active'
@@ -90,24 +85,6 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
       setLoading(false)
     }
   }
-
-  const saveNotes = useCallback(async () => {
-    if (!intake) return
-    setSaving(true)
-    try {
-      await fetch(`/api/provider/intakes/${intake.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider_notes: notes }),
-      })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (err) {
-      console.error('Failed to save notes:', err)
-    } finally {
-      setSaving(false)
-    }
-  }, [intake, notes])
 
   if (loading) {
     return (
@@ -133,6 +110,134 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
     : null
 
   const hasMDCommand = !!brief.md_command
+
+  const printClinicalSummary = () => {
+    const cmd = brief.md_command
+    const soap = brief.soap_note
+    const patientName = answers.full_name || 'Unknown Patient'
+    const printDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+    const safeList = (arr: string[] | undefined) =>
+      arr?.length ? arr.map(i => `<li>${i}</li>`).join('') : '<li>None</li>'
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Clinical Summary — ${patientName}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; color: #1a0a2e; padding: 48px; max-width: 760px; margin: 0 auto; font-size: 13px; line-height: 1.6; }
+  .header { border-bottom: 2px solid #1a0a2e; padding-bottom: 16px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
+  .header .meta { font-family: -apple-system, sans-serif; font-size: 11px; color: #666; }
+  .badges { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .badge { font-family: -apple-system, sans-serif; font-size: 10px; border: 1px solid #ccc; border-radius: 20px; padding: 2px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  h2 { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c3aed; border-bottom: 1px solid #ede9fe; padding-bottom: 4px; margin: 24px 0 12px; }
+  h3 { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; color: #1a0a2e; margin: 12px 0 6px; }
+  .box { border: 1px solid #e8e3f0; border-radius: 6px; padding: 12px; margin-bottom: 10px; }
+  .box.violet { background: #f5f0ff; border-color: #ddd6fe; }
+  .box.cream { background: #faf7f4; border-color: #ede9e5; }
+  .box.green { background: #f0fdf4; border-color: #bbf7d0; }
+  .box.red { background: #fef2f2; border-color: #fecaca; }
+  .box.amber { background: #fffbeb; border-color: #fde68a; }
+  .box.blue { background: #eff6ff; border-color: #bfdbfe; }
+  .box.yellow { background: #fefce8; border-color: #fef08a; }
+  .label { font-family: -apple-system, sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 4px; }
+  .value { font-size: 14px; font-weight: bold; }
+  ul { padding-left: 16px; }
+  li { margin-bottom: 3px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hrt-eligible { font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
+  .soap-section { margin-bottom: 10px; }
+  .soap-label { font-family: -apple-system, sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-family: -apple-system, sans-serif; font-size: 10px; color: #aaa; text-align: center; }
+  @media print { body { padding: 24px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>${patientName}</h1>
+  <div class="meta">
+    ${age ? `${age} years old` : ''}${answers.height ? ` &bull; ${answers.height}` : ''}${answers.weight ? ` &bull; ${answers.weight}` : ''} &bull; Printed ${printDate}
+  </div>
+  ${brief.metadata ? `<div class="badges">
+    ${brief.metadata.menopausal_stage ? `<span class="badge">${brief.metadata.menopausal_stage}</span>` : ''}
+    ${brief.metadata.symptom_burden ? `<span class="badge">${brief.metadata.symptom_burden} Burden</span>` : ''}
+    ${brief.metadata.complexity ? `<span class="badge">${brief.metadata.complexity} Complexity</span>` : ''}
+  </div>` : ''}
+</div>
+
+${cmd ? `
+<h2>MD Command Center</h2>
+<div class="two-col">
+  <div class="box violet">
+    <div class="label">Phenotype</div>
+    <div class="value">${cmd.phenotype || '—'}</div>
+  </div>
+  <div class="box cream">
+    <div class="label">WMI Interpretation</div>
+    <p>${cmd.wmi_interpretation || '—'}</p>
+  </div>
+</div>
+
+${cmd.safety_decision ? `
+<h3>Safety Decision</h3>
+<div class="${cmd.safety_decision.hrt_eligible ? 'box green' : 'box red'}">
+  <span class="hrt-eligible">${cmd.safety_decision.hrt_eligible ? '✓ HRT Eligible' : '✗ HRT Contraindicated'}</span>
+  ${cmd.safety_decision.contraindications?.length ? `<div class="label">Contraindications</div><ul>${safeList(cmd.safety_decision.contraindications)}</ul>` : ''}
+  ${cmd.safety_decision.cautions?.length ? `<div class="label" style="margin-top:8px">Cautions</div><ul>${safeList(cmd.safety_decision.cautions)}</ul>` : ''}
+</div>` : ''}
+
+${cmd.treatment_options?.length ? `
+<h3>Treatment Recommendations</h3>
+${cmd.treatment_options.map((opt: any, i: number) => `
+<div class="box">
+  <strong>${opt.rank || i + 1}. ${opt.therapy}</strong>
+  ${opt.rationale ? `<p style="margin-top:4px;color:#555">${opt.rationale}</p>` : ''}
+  ${opt.monitoring ? `<p style="margin-top:4px;font-size:11px;color:#888"><em>Monitor: ${opt.monitoring}</em></p>` : ''}
+</div>`).join('')}` : ''}
+
+<div class="two-col">
+  ${cmd.labs_to_order?.length ? `
+  <div>
+    <h3>Labs to Order</h3>
+    <ul>${safeList(cmd.labs_to_order)}</ul>
+  </div>` : ''}
+  ${cmd.follow_up ? `
+  <div>
+    <h3>Follow-up</h3>
+    <p>${cmd.follow_up}</p>
+  </div>` : ''}
+</div>
+` : ''}
+
+${soap ? `
+<h2>SOAP Note</h2>
+${[
+  { key: 'subjective', label: 'S — Subjective', cls: 'violet' },
+  { key: 'objective',  label: 'O — Objective',  cls: 'blue' },
+  { key: 'assessment', label: 'A — Assessment', cls: 'yellow' },
+  { key: 'plan',       label: 'P — Plan',        cls: 'green' },
+].filter(s => soap[s.key]).map(s => `
+<div class="box ${s.cls} soap-section">
+  <div class="soap-label">${s.label}</div>
+  <p style="white-space:pre-wrap">${soap[s.key]}</p>
+</div>`).join('')}
+` : ''}
+
+<div class="footer">Womenkind — AI-generated pre-visit clinical summary. Provider reviews and makes all clinical decisions.</div>
+</body>
+</html>`
+
+    const win = window.open('', '_blank', 'width=860,height=1000')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 400)
+  }
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     ...(hasMDCommand ? [
       { key: 'command' as Tab, label: 'MD Command', icon: 'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18' },
@@ -189,8 +294,19 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
                 </div>
               )}
             </div>
-            {intake.patient_id && (
-              <div className="flex flex-col items-end flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {hasMDCommand && (
+                <button
+                  onClick={printClinicalSummary}
+                  className="text-sm font-sans font-medium text-aubergine/60 bg-white px-4 py-2.5 rounded-brand border border-aubergine/15 hover:bg-aubergine/5 hover:text-aubergine transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Print Summary
+                </button>
+              )}
+              {intake.patient_id && (
                 <button
                   onClick={() => router.push(`/provider/presentation/create/${intake.patient_id}`)}
                   className="text-sm font-sans font-medium text-violet bg-white px-5 py-2.5 rounded-brand border border-violet/30 hover:bg-violet/5 transition-colors flex items-center gap-2"
@@ -200,105 +316,41 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
                   </svg>
                   Create Care Presentation
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {brief.symptom_summary?.overview && (
-            <div className="mt-4 pt-4 border-t border-aubergine/5">
-              <p className="text-sm font-sans text-aubergine/70 leading-relaxed">
-                {brief.symptom_summary.overview}
-              </p>
-            </div>
-          )}
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8">
-          <div className="flex border-b border-aubergine/10 mb-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-sans font-medium border-b-2 -mb-px transition-all
-                  ${activeTab === tab.key
-                    ? 'border-violet text-violet'
-                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
-                  }`}
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
-                </svg>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-card shadow-sm p-6">
-            {activeTab === 'command' && <MDCommandTab brief={brief} />}
-            {activeTab === 'soap' && <SOAPNoteTab brief={brief} />}
-            {activeTab === 'symptoms' && <SymptomsTab brief={brief} />}
-            {activeTab === 'risks' && <RiskFlagsTab brief={brief} />}
-            {activeTab === 'treatment' && <TreatmentTab brief={brief} />}
-            {activeTab === 'questions' && <QuestionsTab brief={brief} />}
-            {activeTab === 'intake' && <IntakeAnswersTab answers={answers} patientName={answers.full_name || 'Patient'} />}
-          </div>
+      <div className="grid grid-cols-[160px_1fr] gap-6">
+        <div className="flex flex-col gap-1 pt-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-brand text-sm font-sans font-medium text-left w-full transition-all
+                ${activeTab === tab.key
+                  ? 'bg-violet text-white'
+                  : 'text-aubergine/50 hover:text-aubergine hover:bg-aubergine/5'
+                }`}
+            >
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
+              </svg>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="col-span-4">
-          <div className="bg-white rounded-card shadow-sm p-5 sticky top-6">
-            <h3 className="font-sans font-semibold text-base text-aubergine mb-3">Provider Notes</h3>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add your notes, observations, or follow-up items here..."
-              rows={12}
-              className="w-full p-3 rounded-brand border border-aubergine/10 text-sm font-sans text-aubergine
-                         placeholder:text-aubergine/25 resize-none
-                         focus:outline-none focus:border-violet focus:ring-1 focus:ring-violet/20
-                         transition-colors"
-            />
-            <button
-              onClick={saveNotes}
-              disabled={saving}
-              className="w-full mt-3 py-2.5 rounded-brand font-sans text-sm font-semibold
-                         bg-aubergine text-white hover:bg-aubergine-light
-                         disabled:opacity-50 transition-colors"
-            >
-              {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Notes'}
-            </button>
-
-            <div className="mt-6 pt-5 border-t border-aubergine/5">
-              <h4 className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider mb-3">
-                Quick Reference
-              </h4>
-              <div className="space-y-2 text-xs font-sans text-aubergine/60">
-                {answers.height && answers.weight && (() => {
-                  const hMatch = String(answers.height).match(/(\d+)'(\d+)/)
-                  if (!hMatch) return null
-                  const inches = parseInt(hMatch[1]) * 12 + parseInt(hMatch[2])
-                  const lbs = parseFloat(String(answers.weight).replace(/[^\d.]/g, ''))
-                  if (!inches || !lbs) return null
-                  const bmi = ((lbs / (inches * inches)) * 703).toFixed(1)
-                  const num = parseFloat(bmi)
-                  const label = num < 18.5 ? 'Underweight' : num < 25 ? 'Normal' : num < 30 ? 'Overweight' : 'Obese'
-                  const labelColor = num >= 25 ? 'text-red-600 font-semibold' : 'text-aubergine/30'
-                  return <p><span className="text-aubergine/30">BMI:</span> {bmi} <span className={labelColor}>({label})</span></p>
-                })()}
-                {answers.bp_known === 'Yes' && <p><span className="text-aubergine/30">BP:</span> {answers.bp_sys}/{answers.bp_dia}</p>}
-                {answers.smoking && <p><span className="text-aubergine/30">Smoking:</span> {answers.smoking}</p>}
-                {answers.pcp && <p><span className="text-aubergine/30">PCP:</span> {answers.pcp}</p>}
-                {answers.pharmacy && <p><span className="text-aubergine/30">Pharmacy:</span> {answers.pharmacy}</p>}
-                {answers.meds_detail && (
-                  <div>
-                    <p className="text-aubergine/30 mb-1">Medications:</p>
-                    <p className="text-aubergine/50 leading-relaxed">{answers.meds_detail}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-card shadow-sm p-6">
+          {activeTab === 'command' && <MDCommandTab brief={brief} />}
+          {activeTab === 'soap' && <SOAPNoteTab brief={brief} />}
+          {activeTab === 'symptoms' && <SymptomsTab brief={brief} />}
+          {activeTab === 'risks' && <RiskFlagsTab brief={brief} />}
+          {activeTab === 'treatment' && <TreatmentTab brief={brief} />}
+          {activeTab === 'questions' && <QuestionsTab brief={brief} />}
+          {activeTab === 'intake' && <IntakeAnswersTab answers={answers} patientName={answers.full_name || 'Patient'} />}
         </div>
       </div>
 
@@ -321,14 +373,15 @@ function MDCommandTab({ brief }: { brief: any }) {
 
   return (
     <div className="space-y-6">
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">MD Command Center</h2>
       {/* Phenotype + WMI */}
-      <div className="flex flex-wrap gap-3 items-start">
-        <div className="flex-1 min-w-[200px] p-4 rounded-brand bg-violet/5 border border-violet/10">
+      <div className="space-y-3">
+        <div className="w-full p-4 rounded-brand bg-violet/5 border border-violet/10">
           <p className="text-xs font-sans font-semibold text-violet/60 uppercase tracking-wider mb-1">Phenotype</p>
           <p className="font-sans font-semibold text-base text-aubergine">{cmd.phenotype || '—'}</p>
         </div>
         {cmd.wmi_interpretation && (
-          <div className="flex-[2] min-w-[260px] p-4 rounded-brand bg-cream border border-aubergine/5">
+          <div className="w-full p-4 rounded-brand bg-cream border border-aubergine/5">
             <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider mb-1">WMI Interpretation</p>
             <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{cmd.wmi_interpretation}</p>
           </div>
@@ -430,7 +483,7 @@ function SOAPNoteTab({ brief }: { brief: any }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-sans text-aubergine/40">AI-generated pre-visit SOAP note — provider reviews and finalizes at consultation.</p>
+      <h2 className="font-sans font-semibold text-lg text-aubergine mb-4">SOAP Note</h2>
       {sections.map(({ key, label, color }) => soap[key] && (
         <div key={key} className={`p-4 rounded-brand border ${color}`}>
           <p className={`text-xs font-sans font-semibold uppercase tracking-wider mb-2 ${color.split(' ')[0]}`}>{label}</p>
@@ -632,29 +685,6 @@ function formatAnswer(value: unknown): string {
 }
 
 function IntakeAnswersTab({ answers, patientName }: { answers: Record<string, any>; patientName: string }) {
-  const handlePrint = () => {
-    const printContent = document.getElementById('intake-print-area')
-    if (!printContent) return
-    const win = window.open('', '_blank', 'width=800,height=900')
-    if (!win) return
-    win.document.write(`<!DOCTYPE html><html><head><title>Intake — ${patientName}</title><style>
-      body { font-family: -apple-system, sans-serif; color: #1a0a2e; padding: 40px; max-width: 720px; margin: 0 auto; }
-      h1 { font-size: 18px; margin-bottom: 4px; }
-      .meta { font-size: 12px; color: #888; margin-bottom: 32px; }
-      h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c3aed;
-           border-bottom: 1px solid #ede9fe; padding-bottom: 6px; margin: 28px 0 14px; }
-      .row { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f3f0fa; }
-      .q { flex: 0 0 44%; font-size: 12px; color: #555; line-height: 1.5; }
-      .a { flex: 1; font-size: 12px; color: #1a0a2e; font-weight: 500; line-height: 1.5; white-space: pre-wrap; }
-      @media print { body { padding: 20px; } }
-    </style></head><body>`)
-    win.document.write(printContent.innerHTML)
-    win.document.write('</body></html>')
-    win.document.close()
-    win.focus()
-    setTimeout(() => { win.print() }, 400)
-  }
-
   const sectionsWithAnswers = SECTIONS.map((section) => {
     const sectionQs = QUESTIONS.filter((q) => q.sec === section && !SKIP_FIELDS.has(q.id))
     const answered = sectionQs.filter((q) => {
@@ -668,18 +698,6 @@ function IntakeAnswersTab({ answers, patientName }: { answers: Record<string, an
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-5">
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-4 py-2 rounded-brand border border-aubergine/15 text-sm font-sans font-medium text-aubergine/60 hover:text-aubergine hover:border-aubergine/30 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Export PDF
-        </button>
-      </div>
-
       {sectionsWithAnswers.length === 0 ? (
         <p className="text-sm font-sans text-aubergine/40">No intake responses recorded yet.</p>
       ) : (

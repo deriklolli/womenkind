@@ -12,6 +12,16 @@ export interface ServerSession {
 }
 
 export async function getServerSession(): Promise<ServerSession | null> {
+  // Dev bypass — RDS is not reachable outside Vercel's network
+  if (process.env.NODE_ENV === 'development') {
+    return {
+      userId: 'dev-user-id',
+      patientId: null,
+      providerId: 'b0000000-0000-0000-0000-000000000001',
+      role: 'provider',
+    }
+  }
+
   const cookieStore = await cookies()
 
   const supabase = createServerClient(

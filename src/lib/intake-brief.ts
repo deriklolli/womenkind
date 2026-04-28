@@ -10,6 +10,52 @@ export async function generateClinicalBrief(answers: Record<string, any>, wmiSco
 CLINICAL FRAMEWORK
 You apply the WomenKind Menopause Index (WMI) framework. WMI scores (0–100, higher = better) are provided pre-computed from intake data. Your role is clinical interpretation and narrative — the math is already done.
 
+WMI FRAMING RULES — apply in every interpretation:
+- WMI is a signal, not a judgment
+- WMI is a trend, not a snapshot
+- WMI is a system reading, not a measure of personal failure
+Use this language framework whenever explaining the WMI score to the patient.
+
+INTAKE COMPLETION & CLARIFICATION ENGINE
+Before generating any scoring interpretation or output, audit the intake for completeness and ambiguity.
+
+STEP 1 — AUDIT INPUT COMPLETENESS
+Evaluate whether the intake provides sufficient data to assess:
+- VMS (frequency + intensity + sleep impact)
+- Sleep (onset difficulty, maintenance, total sleep time)
+- Mood/anxiety
+- Cognition/energy
+- GSM
+- Sexual function + distress
+- Bleeding safety
+- Contraception/pregnancy relevance
+- Uterus/ovary status
+- Cardiovascular safety (BP)
+- Metabolic risk (weight, alcohol, strength training)
+- Bone health context
+
+If required fields are missing, incomplete, or ambiguous: document each gap in suggested_questions with clinical context about why it matters.
+
+STEP 2 — INFERENCE RULE (LIMITED USE)
+You may infer conservatively for non-critical missing values. You MUST state that a value was inferred and explain the impact on certainty.
+You may NOT infer: bleeding status, pregnancy risk, BP, cancer history, VTE history — these are safety-critical.
+
+STEP 3 — CLARIFICATION EXAMPLES
+If intake data is vague, flag it in suggested_questions:
+- "Moderate sleep issues" → clarify type (falling asleep vs. waking vs. both)
+- "Low libido" → clarify personal distress level
+- "Hot flashes" without frequency/intensity → clarify severity and frequency
+
+STEP 4 — PRIORITIZATION ORDER
+When documenting gaps, prioritize:
+1. Safety (bleeding, pregnancy, cancer, VTE, BP)
+2. Core scoring drivers (VMS, sleep, mood)
+3. Treatment decision drivers (HSDD distress, GSM severity)
+4. Optimization variables (stress, sleep hours, OSA risk)
+
+VMS + SLEEP MODIFIER RULE
+If VMS ≥ 1 AND hf_sleep (night awakening frequency) maps to ≥ 2 (i.e., 3–4 nights/week or more), apply a +1 sleep burden modifier in your interpretation. Document this modifier explicitly in the Assessment section of the SOAP note.
+
 PHENOTYPE SYSTEM
 Assign one phenotype from the patient's dominant symptom cluster:
 - VMS-dominant: Hot flash/sweat burden drives quality-of-life impairment (VMS ≥ 14/20, SE < 11)
@@ -216,7 +262,8 @@ Bleeding band: ${wmiScores.bleeding_band || 'NONE'}`)
 
   const vms: string[] = []
   if (answers.hf_freq) vms.push(`Hot flash frequency: ${answers.hf_freq}`)
-  if (answers.hf_severity) vms.push(`Hot flash severity: ${answers.hf_severity}`)
+  if (answers.hf_intensity) vms.push(`Hot flash physical intensity: ${answers.hf_intensity}`)
+  if (answers.hf_severity) vms.push(`Hot flash severity (functional): ${answers.hf_severity}`)
   if (answers.hf_sleep) vms.push(`Sleep disruption from VMS: ${answers.hf_sleep}`)
   if (answers.hf_duration) vms.push(`Hot flash duration: ${answers.hf_duration}`)
   if (answers.hf_interference) vms.push(`Daily interference: ${answers.hf_interference}`)
@@ -240,6 +287,7 @@ Bleeding band: ${wmiScores.bleeding_band || 'NONE'}`)
   for (const [key, label] of moodFields) {
     if (answers[key] && answers[key] !== 'None') mood.push(`${label}: ${answers[key]}`)
   }
+  if (answers.snoring) mood.push(`Snoring / OSA screening: ${answers.snoring}`)
   if (mood.length) sections.push(`MOOD, COGNITION & QUALITY OF LIFE:\n${mood.join('\n')}`)
 
   const gsm: string[] = []

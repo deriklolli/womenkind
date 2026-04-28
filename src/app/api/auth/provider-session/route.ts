@@ -6,6 +6,13 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function GET() {
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.json({
+      providerId: 'b0000000-0000-0000-0000-000000000001',
+      providerName: 'Dr. Urban',
+    })
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
