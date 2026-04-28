@@ -51,9 +51,9 @@ function smoothPath(pts: [number, number][]): string {
   return d
 }
 
-// Measure approximate text width in SVG units (fontSize 11, ~0.6 ratio)
+// Measure approximate text width in SVG units (fontSize 9, ~0.6 ratio)
 function labelWidth(text: string): number {
-  return text.length * 6.6 + 16
+  return text.length * 5.4 + 14
 }
 
 export default function SymptomTrendChart({
@@ -73,8 +73,8 @@ export default function SymptomTrendChart({
     .sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())
 
   const VB_W = 600
-  const VB_H = 260
-  const margin = { top: 24, right: 8, bottom: 36, left: 28 }
+  const VB_H = 200
+  const margin = { top: 32, right: 12, bottom: 28, left: 28 }
   const chartW = VB_W - margin.left - margin.right
   const chartH = VB_H - margin.top - margin.bottom
 
@@ -166,8 +166,8 @@ export default function SymptomTrendChart({
             {/* "Better" label */}
             <text
               x={margin.left - 6}
-              y={margin.top - 8}
-              fontSize="8"
+              y={margin.top - 12}
+              fontSize="7"
               fill="#280f49"
               fillOpacity={0.35}
               textAnchor="end"
@@ -190,8 +190,8 @@ export default function SymptomTrendChart({
                   />
                   <text
                     x={margin.left - 6}
-                    y={y + 3.5}
-                    fontSize="9"
+                    y={y + 3}
+                    fontSize="7"
                     fill="#280f49"
                     fillOpacity={0.3}
                     textAnchor="end"
@@ -203,19 +203,22 @@ export default function SymptomTrendChart({
             })}
 
             {/* X-axis date labels */}
-            {tickIndices.map(idx => (
-              <text
-                key={idx}
-                x={xPos(idx)}
-                y={margin.top + chartH + 22}
-                fontSize="9"
-                fill="#280f49"
-                fillOpacity={0.4}
-                textAnchor="middle"
-              >
-                {formatDate(filtered[idx].visit_date)}
-              </text>
-            ))}
+            {tickIndices.map((idx, i) => {
+              const anchor = i === 0 ? 'start' : i === tickIndices.length - 1 ? 'end' : 'middle'
+              return (
+                <text
+                  key={idx}
+                  x={xPos(idx)}
+                  y={margin.top + chartH + 18}
+                  fontSize="7"
+                  fill="#280f49"
+                  fillOpacity={0.4}
+                  textAnchor={anchor}
+                >
+                  {formatDate(filtered[idx].visit_date)}
+                </text>
+              )
+            })}
 
             {/* Prescription markers */}
             {rxInRange.map(rx => {
@@ -235,7 +238,7 @@ export default function SymptomTrendChart({
                   />
                   <text
                     x={rxX} y={margin.top - 8}
-                    fontSize="9" fill="#944fed" fillOpacity={0.7}
+                    fontSize="7" fill="#944fed" fillOpacity={0.7}
                     textAnchor="middle"
                   >
                     {rx.medication_name}
@@ -304,7 +307,7 @@ export default function SymptomTrendChart({
               if (!domain || !pts || pts.length < 2) return null
               const last = pts[pts.length - 1]
               const lw = labelWidth(domain.label)
-              const lh = 18
+              const lh = 15
               // Keep pill within the viewBox
               let lx = last[0] + 8
               if (lx + lw > VB_W - 4) lx = last[0] - lw - 8
@@ -318,8 +321,8 @@ export default function SymptomTrendChart({
                     fill={domain.color}
                   />
                   <text
-                    x={lx + lw / 2} y={ly + lh / 2 + 4}
-                    fontSize="11"
+                    x={lx + lw / 2} y={ly + lh / 2 + 3.5}
+                    fontSize="9"
                     fontWeight="600"
                     fill="white"
                     textAnchor="middle"
