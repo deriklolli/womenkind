@@ -101,6 +101,7 @@ export const visits = pgTable('visits', {
   appointment_id: uuid('appointment_id').references(() => appointments.id),
   visit_type:     text('visit_type').notNull(),
   visit_date:     text('visit_date').notNull(),
+  source:         text('source').notNull().default('appointment'),
   symptom_scores: json('symptom_scores'),
   checked_in_at:  timestamp('checked_in_at', { withTimezone: true }),
   created_at:     timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
