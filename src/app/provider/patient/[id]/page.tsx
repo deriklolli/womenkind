@@ -34,6 +34,7 @@ interface Intake {
   status: string
   answers: Record<string, any>
   ai_brief: any
+  wmi_scores?: any
   provider_notes: string | null
   submitted_at: string | null
   reviewed_at: string | null

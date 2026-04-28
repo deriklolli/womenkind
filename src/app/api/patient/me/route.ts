@@ -47,6 +47,7 @@ export async function GET() {
       submitted_at: true,
       ai_brief: true,
       answers: true,
+      wmi_scores: true,
     },
     orderBy: [desc(intakes.submitted_at)],
   })
@@ -127,5 +128,6 @@ export async function GET() {
     presentationId: validPresentation?.id ?? null,
     presentationStatus: (validPresentation?.status as 'sent' | 'viewed') ?? null,
     intakeId: intake?.id ?? null,
+    wmiScores: (intake as any)?.wmi_scores ?? null,
   })
 }

@@ -20,6 +20,17 @@ interface Prescription {
   status: string
 }
 
+interface WMIScores {
+  wmi: number
+  wmi_label: string
+  wmi_message: string
+  wmi_band: string
+  phenotype: string
+  safety_flags: string[]
+  vms: number; sleep: number; mams: number; cog: number
+  gsm: number; hsdd: number; cardio: number; msk: number
+}
+
 interface PatientOverviewProps {
   visits: Visit[]
   prescriptions: Prescription[]
@@ -28,6 +39,7 @@ interface PatientOverviewProps {
       metadata?: { symptom_burden?: string; menopausal_stage?: string }
       summary?: string
     }
+    wmi_scores?: WMIScores | null
   } | null
 }
 
@@ -115,7 +127,8 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
   const burden  = latestIntake?.ai_brief?.metadata?.symptom_burden
   const summary = latestIntake?.ai_brief?.summary
 
-  const overallNow   = latest?.symptom_scores?.overall
+  const wmiScores    = latestIntake?.wmi_scores
+  const overallNow   = wmiScores?.wmi ?? latest?.symptom_scores?.overall
   const overallPrev  = prev?.symptom_scores?.overall
   const overallDelta = overallNow !== undefined && overallPrev !== undefined ? overallNow - overallPrev : null
 
@@ -146,7 +159,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
         <div className="flex items-start justify-between gap-8">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
-              Overall Score · {monthLabel}
+              {wmiScores ? 'WMI Score' : 'Overall Score'} · {monthLabel}
             </p>
 
             <div className="flex items-end gap-2 mb-3">
@@ -160,7 +173,18 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
               )}
             </div>
 
-            {overallDelta !== null && (
+            {wmiScores ? (
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
+                  {wmiScores.wmi_label}
+                </span>
+                {wmiScores.phenotype && (
+                  <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-aubergine/5 text-aubergine/55">
+                    {wmiScores.phenotype}
+                  </span>
+                )}
+              </div>
+            ) : overallDelta !== null && (
               <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
                 overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
                 overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :

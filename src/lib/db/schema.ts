@@ -143,6 +143,7 @@ export const intakes = pgTable('intakes', {
   created_at:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   provider_notes:   text('provider_notes'),
   reviewed_at:      timestamp('reviewed_at', { withTimezone: true }),
+  wmi_scores:       json('wmi_scores'),
 })
 
 // ── Prescriptions ─────────────────────────────────────────────────────────────
