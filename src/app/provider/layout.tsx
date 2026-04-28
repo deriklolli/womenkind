@@ -3,20 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { ChatContextProvider, useChatContext } from '@/lib/chat-context'
+import { ChatContextProvider } from '@/lib/chat-context'
 import { RecordingProvider } from '@/lib/recording-context'
-import ChatWidget from '@/components/provider/ChatWidget'
 import RecordingBar from '@/components/provider/RecordingBar'
 import { useIdleTimeout } from '@/hooks/useIdleTimeout'
 import { signOutProvider } from '@/lib/signOut'
 
 // HIPAA §164.312(a)(2)(iii) automatic logoff — 20 min of inactivity.
 const IDLE_TIMEOUT_MS = 20 * 60 * 1000
-
-function ChatWidgetWithContext() {
-  const { pageContext } = useChatContext()
-  return <ChatWidget context={pageContext} />
-}
 
 export default function ProviderLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -92,7 +86,6 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
       <RecordingProvider>
         {children}
         <RecordingBar />
-        <ChatWidgetWithContext />
       </RecordingProvider>
     </ChatContextProvider>
   )

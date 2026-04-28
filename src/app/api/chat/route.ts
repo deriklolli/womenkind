@@ -161,6 +161,41 @@ async function executeAction(action: string, params: Record<string, any>, contex
         return { success: true, message: 'Provider note added successfully' }
       }
 
+      case 'update_ai_brief': {
+        const { intakeId: uIntakeId, field, operation, value } = params
+
+        const intakeRows = await db
+          .select({ ai_brief: intakes.ai_brief })
+          .from(intakes)
+          .where(eq(intakes.id, uIntakeId))
+          .limit(1)
+
+        const uIntake = intakeRows[0]
+        if (!uIntake?.ai_brief) return { success: false, error: 'No AI brief found' }
+
+        const ub = typeof uIntake.ai_brief === 'string' ? JSON.parse(uIntake.ai_brief) : uIntake.ai_brief as any
+
+        // Navigate to the nested field using dot-path
+        const parts = (field as string).split('.')
+        let target = ub
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!target[parts[i]]) target[parts[i]] = {}
+          target = target[parts[i]]
+        }
+        const lastKey = parts[parts.length - 1]
+
+        if (operation === 'append') {
+          if (!Array.isArray(target[lastKey])) target[lastKey] = []
+          target[lastKey].push(value)
+        } else {
+          target[lastKey] = value
+        }
+
+        await db.update(intakes).set({ ai_brief: ub }).where(eq(intakes.id, uIntakeId))
+
+        return { success: true, message: `Updated ${field} in AI brief` }
+      }
+
       case 'update_symptom_severity': {
         const { intakeId: sIntakeId, domain, severity } = params
 
@@ -254,13 +289,13 @@ ${data.providerNotes.map((n: any) => `- [${n.note_type}] ${n.title || '(untitled
       }
     }
 
-    const systemPrompt = `You are Womenkind AI, an intelligent assistant embedded in the Womenkind provider portal. You help Dr. Joseph Urban Jr. manage his menopause care practice.
+    const systemPrompt = `You are Womenkind AI, a clinical documentation assistant embedded in the Womenkind provider portal. You help Dr. Joseph Urban Jr. manage his menopause care practice.
 
-You have full access to patient data and can make changes when asked. You are speaking directly with Dr. Urban — use appropriate clinical terminology and be concise.
+Your PRIMARY role when viewing a patient is to capture clinical updates — allergies, reactions, treatment changes, observations — and persist them so they influence all future AI outputs for this patient. You are speaking directly with Dr. Urban. Use clinical terminology and be concise.
 
 ${patientContext}
 
-CAPABILITIES — You can take these actions when Dr. Urban requests them:
+CAPABILITIES — You can take these actions when Dr. Urban requests them. You may emit multiple action blocks in a single response when appropriate.
 
 1. ADD A RISK FLAG: To add a risk flag, respond with your message AND include this JSON block:
 \`\`\`action
@@ -282,14 +317,20 @@ CAPABILITIES — You can take these actions when Dr. Urban requests them:
 {"action": "update_symptom_severity", "params": {"intakeId": "<intake_id>", "domain": "domain name", "severity": "none|mild|moderate|severe"}}
 \`\`\`
 
-RULES:
-- Always confirm what you're about to do before executing destructive changes
-- When adding risk flags, choose the correct category (urgent, contraindications, or considerations)
-- Use the actual IDs from the patient context — never make up IDs
-- If you don't have enough context (no patient loaded), say so
-- Be concise — Dr. Urban is busy
-- For clinical questions, reference current menopause care guidelines (NAMS, IMS)
-- You can answer general questions even without patient context`
+5. UPDATE AI BRIEF FIELD: To update a specific field in the patient's AI clinical brief (affects visit prep, care presentations, and all future AI outputs):
+\`\`\`action
+{"action": "update_ai_brief", "params": {"intakeId": "<intake_id>", "field": "risk_flags.contraindications|risk_flags.considerations|risk_flags.urgent|treatment_pathway|md_command.treatment_options", "operation": "append|replace", "value": "<string or object>"}}
+\`\`\`
+
+CLINICAL UPDATE RULES (CRITICAL):
+- When Dr. Urban mentions an ALLERGY or ADVERSE REACTION to a medication: ALWAYS emit both add_provider_note (note_type: "clinical") AND add_risk_flag (flagType: "contraindications"). Optionally also emit update_ai_brief to remove the drug from treatment_options.
+- When Dr. Urban mentions a TREATMENT CHANGE or NEW MEDICATION PLAN: emit add_provider_note AND update_ai_brief to update treatment_pathway or md_command.treatment_options.
+- When Dr. Urban mentions a NEW CLINICAL FINDING or SAFETY CONCERN: emit add_provider_note AND add_risk_flag with the appropriate flagType.
+- Always acknowledge the update explicitly: "I've noted that [patient] had [update] and flagged it as [category]. This will be reflected in all future AI outputs for this patient."
+- Use the actual IDs from the patient context — never make up IDs.
+- If no patient is loaded, say so and decline to execute actions.
+- Be concise — Dr. Urban is busy.
+- For clinical questions, reference current menopause care guidelines (NAMS, IMS).`
 
     // Call Claude via Bedrock
     let responseText: string

@@ -15,6 +15,7 @@ import { useRecording } from '@/lib/recording-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { devFixtures } from '@/lib/dev-fixtures'
 import ClinicalBriefView from '@/components/provider/ClinicalBriefView'
+import ChatWidget from '@/components/provider/ChatWidget'
 
 interface PatientProfile {
   id: string
@@ -113,7 +114,7 @@ export default function PatientProfilePage() {
   const [providerId, setProviderId] = useState<string>('')
   const [notesRefreshing, setNotesRefreshing] = useState(false)
 
-  const { setPageContext } = useChatContext()
+  const { setPageContext, pageContext } = useChatContext()
   const { state: recordingState, startRecording, stopRecording } = useRecording()
 
   useEffect(() => {
@@ -473,6 +474,8 @@ export default function PatientProfilePage() {
         )}
 
       </div>
+
+      <ChatWidget context={pageContext} key={patientId} />
     </div>
   )
 }
