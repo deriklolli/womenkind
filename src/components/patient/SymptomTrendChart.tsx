@@ -172,7 +172,7 @@ export default function SymptomTrendChart({
               fillOpacity={0.3}
               textAnchor="start"
             >
-              Better ↑
+              Fewer symptoms ↑
             </text>
 
             {/* Y-axis grid lines + labels */}
