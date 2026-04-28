@@ -149,6 +149,9 @@ export async function GET() {
     .limit(1)
   const provider = providerRows[0] ?? null
 
+  const wmiScores = (intake as any)?.wmi_scores ?? null
+  console.log('[patient/me] intakeId:', intake?.id, 'wmi_scores type:', typeof wmiScores, 'wmi:', (wmiScores as any)?.wmi ?? 'null')
+
   return NextResponse.json({
     patientId,
     providerId: provider?.id ?? null,
@@ -164,7 +167,7 @@ export async function GET() {
     presentationId: validPresentation?.id ?? null,
     presentationStatus: (validPresentation?.status as 'sent' | 'viewed') ?? null,
     intakeId: intake?.id ?? null,
-    wmiScores: (intake as any)?.wmi_scores ?? null,
+    wmiScores,
     aiBrief: (intake as any)?.ai_brief ?? null,
   })
 }
