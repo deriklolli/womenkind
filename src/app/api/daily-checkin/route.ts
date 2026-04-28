@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { visits, providers } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 
-const REQUIRED_DOMAINS = ['vasomotor', 'sleep', 'energy', 'mood', 'gsm', 'overall']
+const REQUIRED_DOMAINS = ['vasomotor', 'sleep', 'energy', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
 
 /**
  * GET /api/daily-checkin

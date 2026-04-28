@@ -22,11 +22,31 @@ const QUESTIONS = [
   },
   {
     domain: 'mood',
-    question: 'How much have mood changes, anxiety, or brain fog affected you today?',
+    question: 'How much have mood changes, irritability, or anxiety affected you today?',
+  },
+  {
+    domain: 'cognition',
+    question: 'How much has brain fog, difficulty concentrating, or memory lapses affected you today?',
   },
   {
     domain: 'gsm',
     question: 'Have you noticed vaginal dryness, discomfort during intimacy, or urinary changes today?',
+  },
+  {
+    domain: 'bone',
+    question: 'How much have joint pain, stiffness, or muscle aches affected you today?',
+  },
+  {
+    domain: 'weight',
+    question: 'How much have bloating, appetite changes, or weight-related concerns affected you today?',
+  },
+  {
+    domain: 'libido',
+    question: 'How much have changes in sexual desire or intimacy affected your quality of life recently?',
+  },
+  {
+    domain: 'cardio',
+    question: 'Have you noticed heart palpitations, racing heart, or chest discomfort today?',
   },
   {
     domain: 'overall',
@@ -56,7 +76,12 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
     sleep: 3,
     energy: 3,
     mood: 3,
+    cognition: 3,
     gsm: 3,
+    bone: 3,
+    weight: 3,
+    libido: 3,
+    cardio: 3,
     overall: 3,
   })
   const [submitting, setSubmitting] = useState(false)
