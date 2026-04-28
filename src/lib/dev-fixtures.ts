@@ -445,6 +445,20 @@ export const devFixtures = {
           provider_notes: null,
           submitted_at: minutes(-20),
           reviewed_at: null,
+          // Pre-computed WMI scores for Lauren's profile (severe VMS + sleep, moderate mood/cog, mild GSM)
+          // VMS=17, SLEEP=7, MAMS=5, COG=4, GSM=3, HSDD=1, CARDIO=0, MSK=0
+          wmi_scores: {
+            vms: 17, sleep: 7, mams: 5, cog: 4, gsm: 3, hsdd: 1, cardio: 0, msk: 0, gaba: 8, se: 15.5,
+            wmi: 60,
+            phenotype: 'VMS + SE',
+            wmi_band: '55-69',
+            wmi_label: 'Active Rebuild Zone',
+            wmi_message: 'Your body is under meaningful strain, but this is exactly the zone where structured treatment can create visible progress.',
+            safety_flags: [],
+            bleeding_band: 'NONE',
+            confidence: 'moderate',
+            missing_fields: ['hf_freq', 'sleep_falling', 'sleep_waking', 'low_mood', 'anxiety', 'brain_fog', 'fatigue'],
+          },
         },
       ],
       visits: [

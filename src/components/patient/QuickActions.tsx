@@ -1,6 +1,6 @@
 'use client'
 
-export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables' | 'settings' | 'lab-results'
+export type DashboardView = 'dashboard' | 'schedule' | 'blueprint' | 'refill' | 'message' | 'billing' | 'intake-summary' | 'wearables' | 'settings' | 'lab-results' | 'scorecard'
 
 interface QuickActionsProps {
   presentationId?: string | null
@@ -53,6 +53,14 @@ const primaryActions: ActionItem[] = [
 ]
 
 const secondaryActions: ActionItem[] = [
+  {
+    key: 'scorecard',
+    label: 'My WMI Score',
+    subtitle: 'WomenKind Menopause Index',
+    icon: 'scorecard',
+    color: '#4ECDC4',
+    bg: 'rgba(78, 205, 196, 0.08)',
+  },
   {
     key: 'wearables',
     label: 'Health Trends',
@@ -162,6 +170,13 @@ function ActionIcon({ type, color }: { type: string; color: string }) {
       return (
         <svg {...props}>
           <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      )
+    case 'scorecard':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 3" />
         </svg>
       )
     default:

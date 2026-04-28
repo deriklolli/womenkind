@@ -20,6 +20,17 @@ import DashboardAlerts from '@/components/patient/DashboardAlerts'
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
 
+interface WMIScores {
+  wmi: number
+  wmi_label: string
+  wmi_message: string
+  wmi_band: string
+  phenotype: string
+  safety_flags: string[]
+  vms: number; sleep: number; mams: number; cog: number
+  gsm: number; hsdd: number; cardio: number; msk: number
+}
+
 interface PatientData {
   patientId: string
   providerId: string | null
@@ -39,6 +50,7 @@ interface PatientData {
   presentationId: string | null
   presentationStatus: 'sent' | 'viewed' | null
   intakeId: string | null
+  wmiScores: WMIScores | null
 }
 
 // Dashboard phases based on patient journey
@@ -47,6 +59,11 @@ interface PatientData {
 // 3. care_plan_ready — presentation sent but not viewed → "Health Blueprint" banner + intake status (care plan ready) left
 // 4. care_plan_viewed — presentation viewed → no banner, QuickActions left
 type DashboardPhase = 'intake_done' | 'appointment_booked' | 'care_plan_ready' | 'care_plan_viewed'
+
+function domainHealthPct(domain: keyof Pick<WMIScores, 'vms'|'sleep'|'mams'|'cog'|'gsm'|'hsdd'|'cardio'|'msk'>, score: number): number {
+  const maxes: Record<string, number> = { vms: 20, sleep: 13, mams: 12, cog: 8, gsm: 12, hsdd: 4, cardio: 4, msk: 4 }
+  return Math.round((1 - score / (maxes[domain] ?? 10)) * 100)
+}
 
 // Demo data for investor demo
 const DEMO_PATIENT: PatientData = {
@@ -74,6 +91,7 @@ const DEMO_PATIENT: PatientData = {
   presentationId: 'e3303689-bda9-4044-b695-37d8c075f2bb',
   presentationStatus: 'viewed',
   intakeId: 'demo-intake-id',
+  wmiScores: null,
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -513,6 +531,7 @@ export default function PatientDashboardPage() {
         presentationId: me.presentationId,
         presentationStatus: me.presentationStatus,
         intakeId: me.intakeId,
+        wmiScores: me.wmiScores ?? null,
       })
     } catch (err) {
       console.error('Error loading patient data:', err)
@@ -1300,6 +1319,116 @@ export default function PatientDashboardPage() {
             {/* Lab Results view */}
             {activeView === 'lab-results' && (
               <PatientLabResults patientId={patient.patientId} />
+            )}
+
+            {/* Score Tracker / WMI view */}
+            {activeView === 'scorecard' && (
+              <div className="space-y-6">
+                {patient.wmiScores ? (
+                  <>
+                    {/* Big score card */}
+                    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8">
+                      <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mb-4">
+                        WomenKind Menopause Index
+                      </p>
+                      <div className="flex items-end gap-3 mb-3">
+                        <span className="font-serif font-normal text-[96px] leading-none text-aubergine">
+                          {patient.wmiScores.wmi}
+                        </span>
+                        <span className="font-serif text-xl mb-2 italic" style={{ color: '#C4A87A' }}>/100</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        <span className="inline-flex items-center text-xs font-sans px-3 py-1.5 rounded-pill bg-violet/8 text-violet font-medium">
+                          {patient.wmiScores.wmi_label}
+                        </span>
+                        {patient.wmiScores.phenotype && (
+                          <span className="inline-flex items-center text-xs font-sans px-3 py-1.5 rounded-pill bg-aubergine/5 text-aubergine/55">
+                            {patient.wmiScores.phenotype}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-sans text-aubergine/60 leading-relaxed max-w-lg">
+                        {patient.wmiScores.wmi_message}
+                      </p>
+                    </div>
+
+                    {/* Domain breakdown */}
+                    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-6 md:p-8">
+                      <p className="text-xs font-sans font-semibold text-aubergine/65 uppercase tracking-wider mb-6">
+                        Domain Breakdown
+                      </p>
+                      <div className="space-y-4">
+                        {([
+                          { key: 'vms' as const,   label: 'Vasomotor',        color: '#d85623' },
+                          { key: 'sleep' as const,  label: 'Sleep',            color: '#5d9ed5' },
+                          { key: 'mams' as const,   label: 'Mood & Anxiety',   color: '#944fed' },
+                          { key: 'cog' as const,    label: 'Cognition',        color: '#e8a838' },
+                          { key: 'gsm' as const,    label: 'GSM / Hormonal',   color: '#c2796d' },
+                          { key: 'hsdd' as const,   label: 'Libido',           color: '#b06aae' },
+                          { key: 'cardio' as const, label: 'Cardiovascular',   color: '#e57373' },
+                          { key: 'msk' as const,    label: 'Joint & Muscle',   color: '#78909c' },
+                        ] as const).map(({ key, label, color }) => {
+                          const pct = domainHealthPct(key, patient.wmiScores![key])
+                          return (
+                            <div key={key}>
+                              <div className="flex justify-between items-baseline mb-1.5">
+                                <span className="text-sm font-sans text-aubergine/70">{label}</span>
+                                <span className="text-sm font-sans font-medium text-aubergine">{pct}%</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-aubergine/6 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${pct}%`, backgroundColor: color }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Safety flags */}
+                    {patient.wmiScores.safety_flags.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-card p-5 flex items-start gap-3">
+                        <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-sans font-semibold text-amber-800 mb-1">Flagged for your provider</p>
+                          <p className="text-xs font-sans text-amber-700 leading-relaxed">
+                            {patient.wmiScores.safety_flags.join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Future placeholder */}
+                    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 px-6 py-5 flex items-center gap-4">
+                      <div className="w-9 h-9 rounded-full bg-aubergine/5 flex items-center justify-center shrink-0">
+                        <svg className="w-4.5 h-4.5 text-aubergine/30" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-sans text-aubergine/40 italic">
+                        Score updates as you log daily symptoms — coming soon.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 p-8 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/5 mb-4">
+                      <svg className="w-8 h-8 text-violet/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <h3 className="font-sans font-semibold text-lg text-aubergine mb-2">Score not yet computed</h3>
+                    <p className="text-sm font-sans text-aubergine/40 max-w-sm mx-auto">
+                      Your WMI score will appear here after your intake is processed.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Intake Summary view */}

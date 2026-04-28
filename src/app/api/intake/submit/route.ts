@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { getServerSession } from '@/lib/getServerSession'
 import { generateClinicalBrief } from '@/lib/intake-brief'
+import { computeWMI } from '@/lib/wmi-scoring'
 import { generateComponentBodies } from '@/lib/intake-component-bodies'
 import { db } from '@/lib/db'
 import { intakes, providers, patients, profiles } from '@/lib/db/schema'
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest) {
         ...(patientId ? { patient_id: patientId } : {}),
         ...(providerId ? { provider_id: providerId } : {}),
       })
+      .where(eq(intakes.id, intakeId))
+
+    // 2a. Compute WMI scores deterministically (pure math — fast, no AI needed)
+    const wmiScores = computeWMI(answers)
+    await db
+      .update(intakes)
+      .set({ wmi_scores: wmiScores })
       .where(eq(intakes.id, intakeId))
 
     // 2. Generate AI clinical brief via Bedrock
