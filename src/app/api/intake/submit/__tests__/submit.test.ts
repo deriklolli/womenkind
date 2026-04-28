@@ -168,16 +168,18 @@ describe('POST /api/intake/submit', () => {
   })
 
   it('updates the intake status to submitted with answers and timestamp', async () => {
-    let capturedUpdateArgs: unknown = null
+    let callCount = 0
+    let firstCallArgs: unknown = null
     mockSet.mockImplementation((args: unknown) => {
-      capturedUpdateArgs = args
+      callCount++
+      if (callCount === 1) firstCallArgs = args
       return { where: mockWhere }
     })
 
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
 
-    expect(capturedUpdateArgs).toMatchObject({
+    expect(firstCallArgs).toMatchObject({
       status: 'submitted',
       answers: VALID_BODY.answers,
     })
@@ -220,12 +222,10 @@ describe('POST /api/intake/submit', () => {
   it('saves the AI brief to the intake record', async () => {
     mockBedrockSuccess()
 
-    let callCount = 0
     let aiBriefSaved: unknown = null
     mockSet.mockImplementation((args: unknown) => {
-      callCount++
-      if (callCount === 2) {
-        // Second set() call = saving the brief
+      // Capture whichever call saves ai_brief
+      if (args && typeof args === 'object' && 'ai_brief' in (args as object)) {
         aiBriefSaved = args
       }
       return { where: mockWhere }
