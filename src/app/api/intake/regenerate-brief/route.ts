@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { generateClinicalBrief } from '@/lib/intake-brief'
+import { computeWMI } from '@/lib/wmi-scoring'
 import { db } from '@/lib/db'
 import { intakes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -32,9 +33,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const aiBrief = await generateClinicalBrief(intake.answers as Record<string, any>)
+    const answers = intake.answers as Record<string, any>
+    const wmiScores = computeWMI(answers)
+    await db.update(intakes).set({ wmi_scores: wmiScores }).where(eq(intakes.id, intakeId))
+
+    const aiBrief = await generateClinicalBrief(answers, wmiScores)
     await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, intakeId))
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, wmi: wmiScores.wmi })
   } catch (err: any) {
     console.error('[regenerate-brief] error:', err)
     return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 })
