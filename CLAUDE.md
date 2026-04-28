@@ -50,7 +50,7 @@
 - Right column main content: `PatientOverview` (`src/components/provider/PatientOverview.tsx`) — shared between provider patient profile and patient dashboard
 - `overviewIntake` state initialized with `DEMO_INTAKE` via lazy initializer (`process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null`) to avoid async timing issues where state would be null on first render
 - `overviewVisits` is loaded from `/api/patient/me` response (`me.visits`) in production — dev uses fixtures. Both must stay in sync when adding new visit fields.
-- Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Score Tracker, Schedule Appointment, Request Rx Refill, Message Dr. Urban
+- Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Symptom Tracker, Schedule Appointment, Request Rx Refill, Message Dr. Urban
 
 ## PatientOverview component (`src/components/provider/PatientOverview.tsx`)
 - Shared between provider patient profile and patient dashboard
@@ -60,6 +60,28 @@
 - Overall score label: **"Your Womenkind Score"** (branded, no date) — `isInitialState` (no visits) shows "Based on WMI" pill + WMI-band headline; active state (visits exist) shows delta chip + treatment-progress headline
 - Domain cards are driven by visit `symptom_scores` (set via check-in), NOT WMI scores. WMI drives the top-level score number only.
 - Score summary copy driven by `latestIntake.ai_brief.summary` — pass a seeded intake from the patient dashboard to show copy below the trend chip
+- Body text below score capped at 2 sentences + `line-clamp-4` (patient view uses `patient_blueprint.overview`, provider view uses `symptom_summary.overview`)
+- Props: `showCheckin` (renders daily check-in CTA banner, patient view only), `onCheckinComplete` (refetch callback), `onDomainsChange` (fires with updated `string[]` when user toggles a topic — used to sync domain selection to SymptomTrendChart)
+
+## Daily Check-in
+- Route: `GET /api/daily-checkin` (has today checked in?), `POST /api/daily-checkin` (submit scores)
+- Component: `src/components/patient/DailyCheckinModal.tsx` — 11-question slider modal (1=Not at all → 5=Severe)
+- 11 domains: vasomotor, sleep, energy, mood, cognition, gsm, bone, weight, libido, cardio, overall — all phrased as **burden** questions, so 5 is always bad
+- Stored in `visits` table with `source='daily'`, `visit_type='daily_checkin'`, `appointment_id=null`
+- One check-in per day enforced by partial unique index: `visits_patient_daily_unique ON visits(patient_id, visit_date) WHERE source = 'daily'`
+- Provider is required for the visit row — POST handler queries the first active provider as a placeholder
+- **Dev bypass**: both GET and POST return mock data immediately when `NODE_ENV === 'development'` (session is provider-role in dev, not patient)
+- Debug: `POST /api/debug/reset-daily-checkin {"email": "..."}` — deletes today's daily check-in so the patient can re-answer
+
+## Symptom Trend Chart (`src/components/patient/SymptomTrendChart.tsx`)
+- Props: `visits: Visit[]`, `prescriptions?: RxMarker[]`, `activeDomains?: string[]`
+- `activeDomains` is lifted to dashboard state (`chartDomains`) — PatientOverview fires `onDomainsChange` on every toggle, dashboard updates `chartDomains`, chart re-renders. No domain toggles inside the chart itself.
+- Pure SVG, no charting library. Catmull-Rom splines. Inverted Y-axis: score 1 (best) at top, score 5 (worst) at bottom.
+- Date range tabs: 7d / 30d (default) / 90d — pill buttons in header outside the card
+- Hover: invisible wide hit paths (strokeWidth 16) sit above lines; hovered line gets a color-matched pill label at its terminal dot; all other lines dim to 20% opacity
+- Prescription markers: dashed vertical lines with medication name label, gated on `prescribed_at` in range
+- Empty state shown when fewer than 2 visits with scores exist in the selected range
+- `prescribed_at` is included in `/api/patient/me` prescriptions response and in the `Prescription` interface in PatientOverview
 
 ## WMI Scoring
 - `src/lib/wmi-scoring.ts` — `computeWMI(answers)` deterministic scoring, called at `intake/submit` time and stored in `intakes.wmi_scores` (json column)
