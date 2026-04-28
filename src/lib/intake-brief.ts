@@ -1,23 +1,60 @@
 import { invokeModel } from '@/lib/bedrock'
 
-export async function generateClinicalBrief(answers: Record<string, any>) {
-  const patientProfile = buildPatientProfile(answers)
+export async function generateClinicalBrief(answers: Record<string, any>, wmiScores?: any) {
+  const patientProfile = buildPatientProfile(answers, wmiScores)
 
   const text = await invokeModel({
     maxTokens: 8192,
-    system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Your role is to transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider (MD/NP).
+    system: `You are the clinical AI engine for Womenkind, a menopause-specialist telehealth platform. You generate the MD Command Center — a comprehensive pre-visit clinical brief for the reviewing provider (MD/NP/APRN).
 
-Key context:
-- Womenkind treats perimenopausal and postmenopausal patients
-- The brief is NOT a diagnosis — it is a structured pre-visit summary to save provider time
-- Providers are menopause-trained clinicians — use appropriate clinical terminology
-- Reference current menopause care guidelines (IMS, NAMS, Menopause Society) where relevant
-- Preserve the patient's own words when they add clinical value
-- Be specific to THIS patient — never use generic boilerplate`,
+CLINICAL FRAMEWORK
+You apply the WomenKind Menopause Index (WMI) framework. WMI scores (0–100, higher = better) are provided pre-computed from intake data. Your role is clinical interpretation and narrative — the math is already done.
+
+PHENOTYPE SYSTEM
+Assign one phenotype from the patient's dominant symptom cluster:
+- VMS-dominant: Hot flash/sweat burden drives quality-of-life impairment (VMS ≥ 14/20, SE < 11)
+- SE-dominant (Sympathetic Excess): Anxiety, irritability, brain fog, fatigue, palpitations cluster (SE ≥ 11, MAMS ≥ 8 or COG ≥ 5)
+- GABA-dominant: Sleep-onset/maintenance disorder with minimal daytime VMS (GABA ≥ 10, VMS < 6)
+- GSM-dominant: Genitourinary symptoms dominate, minimal systemic symptoms (GSM ≥ 8)
+- Mixed: Two or more domains co-dominant — name both (e.g., "VMS + SE")
+- Complex: Three or more domains simultaneously severe
+
+SAFETY DECISION TREE — apply before any treatment recommendation:
+1. Peanut allergy → flag: avoid peanut-oil based products (some progesterone formulations, Luvena)
+2. Hormone-sensitive cancer (breast, uterine, ovarian) → estrogen BLOCK; note if oncologist clearance required
+3. Active/recent VTE, DVT, PE, or hypercoagulable state → transdermal-only or no systemic estrogen; oral estrogen contraindicated
+4. Active liver disease → no oral estrogen; transdermal acceptable
+5. Undiagnosed/abnormal uterine bleeding → WORKUP REQUIRED before initiating HRT; flag as bleeding_redflag
+6. Current smoker → prefer transdermal over oral; increased VTE/CVD risk with oral
+7. Migraine with aura → transdermal preferred; oral estrogen may increase stroke risk
+
+TREATMENT ALGORITHM (apply after safety tree):
+- Systemic HRT first-line for VMS-dominant + eligible: Estradiol patch 0.025–0.1mg/day or gel 0.5–1g/day. Add progestogen if uterus intact (micronized progesterone 100–200mg/night preferred — fewer side effects than synthetic progestins).
+- GSM-only or adjunct: Vaginal estradiol (Estrace cream 0.5g 2–3x/week, or Imvexxy 4–10mcg insert). Ospemifene 60mg/day for dyspareunia if systemic estrogen declined. Vaginal DHEA (Intrarosa) option.
+- GABA-dominant/sleep-primary: Magnesium glycinate 300–400mg/night; consider low-dose trazodone 25–50mg; melatonin 0.5–3mg. Evaluate sleep apnea if wired-tired pattern prominent.
+- SE-dominant adjunct: Low-dose SSRI (escitalopram 5–10mg) or SNRI (venlafaxine 37.5–75mg) if HRT declined/contraindicated, or as adjunct.
+- Non-hormonal VMS alternatives: Fezolinetant (Veozah) 45mg/day — NK3 receptor antagonist, non-hormonal, effective for VMS if HRT declined.
+- Bone protection: If fracture risk elevated — calcium 1200mg/day, vitamin D3 2000IU/day, weight-bearing exercise. DEXA if not done in past 2 years for postmenopausal or perimenopausal >50.
+
+SOAP NOTE FORMAT (clinical standard):
+- S (Subjective): Chief complaint in patient's words, symptom duration and trajectory, functional impact on work/relationships/sleep, patient's stated priorities and treatment concerns
+- O (Objective): BMI, BP if known, reproductive status, current medications, WMI score and band, domain score summary
+- A (Assessment): Menopausal stage, phenotype, WMI interpretation, risk stratification, key safety flags
+- P (Plan): Specific treatment recommendation(s) with drug/dose/route/frequency, monitoring parameters, labs to order, follow-up interval, patient education points
+
+PATIENT BLUEPRINT (patient-facing, Womenkind voice):
+Write warm, plain-language explanations. No jargon. Validate the patient's experience before explaining it. Use "you" not "the patient." Womenkind tone is: clear, warm, evidence-grounded, never alarmist.
+
+OUTPUT RULES:
+- Return ONLY a valid JSON object, no markdown, no code fences
+- Be specific to THIS patient — never use generic boilerplate
+- Providers are menopause-trained clinicians — use appropriate clinical terminology in provider sections
+- Preserve patient's own words (quoted) when they add clinical value
+- The brief is NOT a diagnosis — it is a pre-visit summary for provider review`,
     messages: [
       {
         role: 'user',
-        content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
+        content: `Generate the MD Command Center brief for this patient. Return ONLY a JSON object.
 
 PATIENT INTAKE DATA:
 ${patientProfile}
@@ -25,14 +62,40 @@ ${patientProfile}
 Return this exact JSON structure:
 
 {
+  "md_command": {
+    "phenotype": "Phenotype label from the framework",
+    "wmi_interpretation": "2-3 sentence clinical interpretation of this patient's WMI score and what it means for treatment urgency",
+    "safety_decision": {
+      "hrt_eligible": true,
+      "contraindications": ["List specific contraindications — empty array if none"],
+      "cautions": ["List cautions requiring monitoring — empty if none"],
+      "flags": ["bleeding_redflag | peanut_flag | vte_flag | cancer_flag | liver_flag | smoking_flag — only include applicable"]
+    },
+    "treatment_options": [
+      {
+        "rank": 1,
+        "therapy": "Specific drug name + dose + route",
+        "rationale": "Why this fits this patient specifically",
+        "monitoring": "What to watch and when"
+      }
+    ],
+    "labs_to_order": ["Specific lab with rationale — e.g., TSH (rule out thyroid contribution to fatigue/mood)"],
+    "follow_up": "Recommended follow-up interval and what to assess"
+  },
+  "soap_note": {
+    "subjective": "Narrative S section using patient's words and reported symptoms",
+    "objective": "BMI, BP, reproductive status, medications, WMI score and domain summary",
+    "assessment": "Menopausal stage, phenotype, risk stratification, key clinical decision points",
+    "plan": "Specific treatment plan with drug/dose/route, monitoring, labs, follow-up, patient education"
+  },
   "symptom_summary": {
-    "overview": "2-3 sentence clinical snapshot of this patient",
+    "overview": "2-3 sentence clinical snapshot",
     "domains": [
       {
-        "domain": "Domain name (e.g., Vasomotor, Mood & Cognition)",
+        "domain": "Domain name",
         "severity": "none | mild | moderate | severe",
         "findings": "Specific findings from this patient's data",
-        "patient_language": "Direct quotes or paraphrases of patient's own words where relevant"
+        "patient_language": "Patient's own words if available"
       }
     ]
   },
@@ -42,15 +105,15 @@ Return this exact JSON structure:
     "considerations": ["Non-urgent but clinically relevant factors"]
   },
   "treatment_pathway": {
-    "recommended_approach": "Primary treatment direction based on symptom profile + risk factors",
+    "recommended_approach": "Primary treatment direction",
     "options": [
       {
-        "treatment": "Specific treatment option",
+        "treatment": "Specific treatment",
         "rationale": "Why this fits this patient",
-        "considerations": "Risks or monitoring needed for this patient specifically"
+        "considerations": "Risks or monitoring needed"
       }
     ],
-    "patient_preferences": "What the patient indicated about treatment openness and dosing preferences"
+    "patient_preferences": "What the patient indicated about treatment openness"
   },
   "suggested_questions": [
     {
@@ -58,6 +121,17 @@ Return this exact JSON structure:
       "context": "Why this question matters based on the intake data"
     }
   ],
+  "patient_blueprint": {
+    "overview": "2-3 sentence warm summary for the patient explaining their results",
+    "domains": [
+      {
+        "domain": "Domain name",
+        "explanation": "Plain-language explanation of what's happening in this domain for this patient",
+        "what_helps": "What treatment/lifestyle change addresses this domain"
+      }
+    ],
+    "next_step": "One clear next step in Womenkind's voice"
+  },
   "metadata": {
     "menopausal_stage": "Pre-menopause | Perimenopause | Post-menopause | Surgical menopause | Uncertain",
     "symptom_burden": "low | moderate | high | severe",
@@ -78,8 +152,18 @@ Return this exact JSON structure:
   }
 }
 
-function buildPatientProfile(answers: Record<string, any>): string {
+function buildPatientProfile(answers: Record<string, any>, wmiScores?: any): string {
   const sections: string[] = []
+
+  // WMI scores context (pre-computed, passed to Bedrock for interpretation)
+  if (wmiScores) {
+    sections.push(`WMI SCORES (pre-computed deterministically):
+WMI: ${wmiScores.wmi}/100 — ${wmiScores.wmi_label}
+Phenotype signal: ${wmiScores.phenotype}
+Domain scores: VMS=${wmiScores.vms}/20, SLEEP=${wmiScores.sleep}/13, MAMS=${wmiScores.mams}/12, COG=${wmiScores.cog}/8, GSM=${wmiScores.gsm}/12, HSDD=${wmiScores.hsdd}/4, CARDIO=${wmiScores.cardio}/4, MSK=${wmiScores.msk}/4
+Safety flags from scoring: ${wmiScores.safety_flags?.length ? wmiScores.safety_flags.join(', ') : 'none'}
+Bleeding band: ${wmiScores.bleeding_band || 'NONE'}`)
+  }
 
   const demo: string[] = []
   if (answers.full_name) demo.push(`Name: ${answers.full_name}`)

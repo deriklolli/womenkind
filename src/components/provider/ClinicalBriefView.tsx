@@ -6,7 +6,7 @@ import { useChatContext } from '@/lib/chat-context'
 import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
 import { devFixtures } from '@/lib/dev-fixtures'
 
-type Tab = 'symptoms' | 'risks' | 'treatment' | 'questions' | 'intake'
+type Tab = 'command' | 'soap' | 'symptoms' | 'risks' | 'treatment' | 'questions' | 'intake'
 
 interface Intake {
   id: string
@@ -29,7 +29,7 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
   const router = useRouter()
   const [intake, setIntake] = useState<Intake | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('symptoms')
+  const [activeTab, setActiveTab] = useState<Tab>('command')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -132,7 +132,12 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
     ? Math.floor((Date.now() - new Date(answers.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
 
+  const hasMDCommand = !!brief.md_command
   const tabs: { key: Tab; label: string; icon: string }[] = [
+    ...(hasMDCommand ? [
+      { key: 'command' as Tab, label: 'MD Command', icon: 'M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18' },
+      { key: 'soap' as Tab, label: 'SOAP Note', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    ] : []),
     { key: 'symptoms', label: 'Symptoms', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
     { key: 'risks', label: 'Risk Flags', icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z' },
     { key: 'treatment', label: 'Treatment', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
@@ -231,6 +236,8 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
           </div>
 
           <div className="bg-white rounded-card shadow-sm p-6">
+            {activeTab === 'command' && <MDCommandTab brief={brief} />}
+            {activeTab === 'soap' && <SOAPNoteTab brief={brief} />}
             {activeTab === 'symptoms' && <SymptomsTab brief={brief} />}
             {activeTab === 'risks' && <RiskFlagsTab brief={brief} />}
             {activeTab === 'treatment' && <TreatmentTab brief={brief} />}
@@ -303,6 +310,136 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
 }
 
 /* ───── TAB COMPONENTS ───── */
+
+function MDCommandTab({ brief }: { brief: any }) {
+  const cmd = brief.md_command
+  if (!cmd) return <p className="text-sm font-sans text-aubergine/40">MD Command Center not available for this intake.</p>
+
+  const safetyColor = cmd.safety_decision?.hrt_eligible
+    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+    : 'bg-red-50 border-red-200 text-red-700'
+
+  return (
+    <div className="space-y-6">
+      {/* Phenotype + WMI */}
+      <div className="flex flex-wrap gap-3 items-start">
+        <div className="flex-1 min-w-[200px] p-4 rounded-brand bg-violet/5 border border-violet/10">
+          <p className="text-xs font-sans font-semibold text-violet/60 uppercase tracking-wider mb-1">Phenotype</p>
+          <p className="font-sans font-semibold text-base text-aubergine">{cmd.phenotype || '—'}</p>
+        </div>
+        {cmd.wmi_interpretation && (
+          <div className="flex-[2] min-w-[260px] p-4 rounded-brand bg-cream border border-aubergine/5">
+            <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wider mb-1">WMI Interpretation</p>
+            <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{cmd.wmi_interpretation}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Safety Decision */}
+      {cmd.safety_decision && (
+        <div>
+          <h3 className="font-sans font-semibold text-sm text-aubergine mb-3">Safety Decision</h3>
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-pill border text-sm font-sans font-medium mb-3 ${safetyColor}`}>
+            {cmd.safety_decision.hrt_eligible
+              ? <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg> HRT Eligible</>
+              : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg> HRT Contraindicated</>
+            }
+          </div>
+          {cmd.safety_decision.contraindications?.length > 0 && (
+            <div className="mb-3 p-3 rounded-brand bg-red-50 border border-red-100">
+              <p className="text-xs font-sans font-semibold text-red-600 mb-1.5">Contraindications</p>
+              <ul className="space-y-1">{cmd.safety_decision.contraindications.map((c: string, i: number) => (
+                <li key={i} className="text-sm font-sans text-red-700 flex gap-2"><span className="text-red-400 mt-0.5">&#x2022;</span>{c}</li>
+              ))}</ul>
+            </div>
+          )}
+          {cmd.safety_decision.cautions?.length > 0 && (
+            <div className="mb-3 p-3 rounded-brand bg-amber-50 border border-amber-100">
+              <p className="text-xs font-sans font-semibold text-amber-700 mb-1.5">Cautions / Monitor</p>
+              <ul className="space-y-1">{cmd.safety_decision.cautions.map((c: string, i: number) => (
+                <li key={i} className="text-sm font-sans text-amber-700 flex gap-2"><span className="text-amber-400 mt-0.5">&#x26A0;</span>{c}</li>
+              ))}</ul>
+            </div>
+          )}
+          {cmd.safety_decision.flags?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {cmd.safety_decision.flags.map((f: string, i: number) => (
+                <span key={i} className="text-xs font-sans px-2.5 py-1 rounded-pill bg-aubergine/5 text-aubergine/60 border border-aubergine/10">{f}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Treatment Options */}
+      {cmd.treatment_options?.length > 0 && (
+        <div>
+          <h3 className="font-sans font-semibold text-sm text-aubergine mb-3">Treatment Recommendations</h3>
+          <div className="space-y-3">
+            {cmd.treatment_options.map((opt: any, i: number) => (
+              <div key={i} className="p-4 rounded-brand border border-aubergine/5 bg-cream/30">
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-violet/10 text-violet text-xs font-sans font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {opt.rank || i + 1}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-sans font-semibold text-sm text-aubergine mb-1">{opt.therapy}</p>
+                    {opt.rationale && <p className="text-sm font-sans text-aubergine/60 leading-relaxed mb-1">{opt.rationale}</p>}
+                    {opt.monitoring && <p className="text-xs font-sans text-aubergine/40 leading-relaxed italic">Monitor: {opt.monitoring}</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Labs + Follow-up */}
+      <div className="grid grid-cols-2 gap-4">
+        {cmd.labs_to_order?.length > 0 && (
+          <div className="p-4 rounded-brand border border-aubergine/5">
+            <h4 className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-2">Labs to Order</h4>
+            <ul className="space-y-1.5">
+              {cmd.labs_to_order.map((lab: string, i: number) => (
+                <li key={i} className="text-sm font-sans text-aubergine/70 flex gap-2"><span className="text-violet/40 mt-0.5">&#x2022;</span>{lab}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {cmd.follow_up && (
+          <div className="p-4 rounded-brand border border-aubergine/5">
+            <h4 className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider mb-2">Follow-up</h4>
+            <p className="text-sm font-sans text-aubergine/70 leading-relaxed">{cmd.follow_up}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SOAPNoteTab({ brief }: { brief: any }) {
+  const soap = brief.soap_note
+  if (!soap) return <p className="text-sm font-sans text-aubergine/40">SOAP note not available for this intake.</p>
+
+  const sections = [
+    { key: 'subjective', label: 'S — Subjective', color: 'text-violet border-violet/20 bg-violet/5' },
+    { key: 'objective',  label: 'O — Objective',  color: 'text-[#5d9ed5] border-[#5d9ed5]/20 bg-[#5d9ed5]/5' },
+    { key: 'assessment', label: 'A — Assessment', color: 'text-[#e8a838] border-[#e8a838]/20 bg-[#e8a838]/5' },
+    { key: 'plan',       label: 'P — Plan',        color: 'text-emerald-600 border-emerald-200 bg-emerald-50' },
+  ] as const
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-sans text-aubergine/40">AI-generated pre-visit SOAP note — provider reviews and finalizes at consultation.</p>
+      {sections.map(({ key, label, color }) => soap[key] && (
+        <div key={key} className={`p-4 rounded-brand border ${color}`}>
+          <p className={`text-xs font-sans font-semibold uppercase tracking-wider mb-2 ${color.split(' ')[0]}`}>{label}</p>
+          <p className="text-sm font-sans text-aubergine/75 leading-relaxed whitespace-pre-wrap">{soap[key]}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function SeverityBadge({ severity }: { severity: string }) {
   const s = severity.toLowerCase()
