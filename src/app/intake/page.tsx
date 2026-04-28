@@ -259,15 +259,10 @@ export default function IntakePage() {
 
       if (!res.ok) throw new Error(data.error || 'Submission failed')
 
-      const id = intakeId || data.intakeId
-      router.push(`/intake/payment?intake_id=${id}`)
+      router.push('/intake/complete')
     } catch (err) {
       console.error('Submit error:', err)
-      if (intakeId) {
-        router.push(`/intake/payment?intake_id=${intakeId}`)
-      } else {
-        setScreen({ type: 'complete' })
-      }
+      setScreen({ type: 'complete' })
     } finally {
       setIsSubmitting(false)
     }

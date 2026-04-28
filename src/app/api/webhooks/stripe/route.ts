@@ -180,13 +180,14 @@ async function handleIntakePayment(data: {
   stripeSessionId: string
   amountPaid: number | null
 }) {
-  // Mark intake as paid (status goes from 'draft' to 'submitted', record payment details)
+  // Record payment details on the intake. Do NOT change status here — in the
+  // new payment-first flow the intake is still a draft when payment fires.
+  // The intake submit API is responsible for marking status 'submitted'.
   if (data.intakeId) {
     try {
       await db
         .update(intakes)
         .set({
-          status: 'submitted',
           paid: true,
           paid_at: new Date(),
           stripe_session_id: data.stripeSessionId,
@@ -196,13 +197,15 @@ async function handleIntakePayment(data: {
       console.error('[STRIPE] Failed to update intake after payment:', err.message)
     }
 
-    // Generate AI brief now that intake is confirmed paid + submitted
+    // Generate AI brief only if the intake is already submitted with answers
+    // (legacy intake-first flow). In the new payment-first flow the intake is
+    // still a draft here; the submit API generates the brief instead.
     try {
       const intake = await db.query.intakes.findFirst({
         where: eq(intakes.id, data.intakeId),
-        columns: { answers: true, ai_brief: true },
+        columns: { answers: true, ai_brief: true, status: true },
       })
-      if (intake?.answers && !intake.ai_brief) {
+      if (intake?.status === 'submitted' && intake?.answers && !intake.ai_brief) {
         const aiBrief = await generateClinicalBrief(intake.answers as Record<string, any>)
         await db.update(intakes).set({ ai_brief: aiBrief }).where(eq(intakes.id, data.intakeId))
         console.log(`[STRIPE] AI brief generated for intake ${data.intakeId}`)

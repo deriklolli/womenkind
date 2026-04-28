@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
-export default function SignUpPage() {
+function SignUpContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = searchParams.get('next') || '/get-started'
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -44,9 +46,9 @@ export default function SignUpPage() {
         return
       }
 
-      // Session cookies are set server-side — refresh the client session then go to intake
+      // Session cookies are set server-side — refresh the client session then redirect
       await supabase.auth.refreshSession()
-      router.push('/intake')
+      router.push(nextPath)
     } catch (err: any) {
       setError(err.message || 'Sign up failed')
     } finally {
@@ -213,5 +215,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-cream" />}>
+      <SignUpContent />
+    </Suspense>
   )
 }

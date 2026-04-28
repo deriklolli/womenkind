@@ -1132,6 +1132,7 @@ export default function PatientDashboardPage() {
                   latestIntake={overviewIntake}
                   view="patient"
                   showCheckin
+                  compact
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
                 />
