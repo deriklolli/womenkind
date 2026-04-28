@@ -27,14 +27,6 @@ const primaryActions: ActionItem[] = [
     bg: 'rgba(40, 15, 73, 0.06)',
   },
   {
-    key: 'scorecard',
-    label: 'Score Tracker',
-    subtitle: 'Your health score',
-    icon: 'scorecard',
-    color: '#944fed',
-    bg: 'rgba(148, 79, 237, 0.08)',
-  },
-  {
     key: 'schedule',
     label: 'Schedule Appointment',
     subtitle: 'Book your next visit',
@@ -63,7 +55,7 @@ const primaryActions: ActionItem[] = [
 const secondaryActions: ActionItem[] = [
   {
     key: 'scorecard',
-    label: 'My WMI Score',
+    label: 'Score Tracker',
     subtitle: 'WomenKind Menopause Index',
     icon: 'scorecard',
     color: '#4ECDC4',
