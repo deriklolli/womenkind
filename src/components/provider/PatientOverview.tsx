@@ -157,7 +157,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
       : `Based on your intake, your symptoms are having a meaningful impact on your daily life. Dr. Urban will prioritize your ${wmiScores.phenotype} profile and build a plan targeting your highest-burden areas first.`
     : null
 
-  const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
+
 
   // Count-up animation for the score display
   const [displayScore, setDisplayScore] = useState(0)
@@ -190,7 +190,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
       <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
         <div className="flex flex-col items-center text-center">
           <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
-            Overall Score · {monthLabel}
+            Your Womenkind Score
           </p>
 
           <div className="flex items-end gap-2 mb-3">
