@@ -69,7 +69,7 @@ export default function SymptomTrendChart({
   // Chart dimensions
   const VB_W = 600
   const VB_H = 260
-  const margin = { top: 24, right: 16, bottom: 36, left: 32 }
+  const margin = { top: 24, right: 8, bottom: 36, left: 28 }
   const chartW = VB_W - margin.left - margin.right
   const chartH = VB_H - margin.top - margin.bottom
 
@@ -144,10 +144,7 @@ export default function SymptomTrendChart({
         ) : (
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
-            width="100%"
-            height="260"
-            overflow="visible"
-            className="block"
+            className="block w-full h-auto"
           >
             {/* "Better" label */}
             <text
@@ -261,21 +258,21 @@ export default function SymptomTrendChart({
                   <path
                     d={path}
                     stroke={domain.color}
-                    strokeWidth="4"
+                    strokeWidth="2"
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   {pts.slice(0, -1).map(([cx, cy], i) => (
-                    <circle key={i} cx={cx} cy={cy} r="5" fill={domain.color} />
+                    <circle key={i} cx={cx} cy={cy} r="2.5" fill={domain.color} />
                   ))}
                   <circle
                     cx={last[0]}
                     cy={last[1]}
-                    r="8"
+                    r="4"
                     fill={domain.color}
                     stroke="white"
-                    strokeWidth="2.5"
+                    strokeWidth="1.5"
                   />
                 </g>
               )
