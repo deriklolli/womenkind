@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const maxDuration = 60
 
 import { db } from '@/lib/db'
-import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles, appointments } from '@/lib/db/schema'
+import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
@@ -206,17 +206,17 @@ export async function POST(req: Request) {
     let patientContext = ''
     if (context?.patientId) {
       if (session.providerId) {
-        const relationship = await db
-          .select({ id: appointments.id })
-          .from(appointments)
+        const intake = await db
+          .select({ id: intakes.id })
+          .from(intakes)
           .where(
             and(
-              eq(appointments.provider_id, session.providerId),
-              eq(appointments.patient_id, context.patientId)
+              eq(intakes.provider_id, session.providerId),
+              eq(intakes.patient_id, context.patientId)
             )
           )
           .limit(1)
-        if (relationship.length === 0) {
+        if (intake.length === 0) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
       }
