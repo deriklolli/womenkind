@@ -30,5 +30,17 @@ export async function POST(req: NextRequest) {
   const wmiScores = computeWMI(intake.answers as Record<string, any>)
   await db.update(intakes).set({ wmi_scores: wmiScores }).where(eq(intakes.id, intake.id))
 
-  return NextResponse.json({ ok: true, intakeId: intake.id, wmi: wmiScores.wmi, wmi_label: wmiScores.wmi_label, phenotype: wmiScores.phenotype })
+  // Read back to verify the write persisted
+  const verify = await db.query.intakes.findFirst({
+    where: eq(intakes.id, intake.id),
+    columns: { id: true, wmi_scores: true },
+  })
+
+  return NextResponse.json({
+    ok: true,
+    intakeId: intake.id,
+    computed: { wmi: wmiScores.wmi, wmi_label: wmiScores.wmi_label, phenotype: wmiScores.phenotype },
+    persisted_wmi: (verify?.wmi_scores as any)?.wmi ?? null,
+    wmi_scores_null: verify?.wmi_scores === null,
+  })
 }
