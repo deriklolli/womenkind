@@ -18,7 +18,6 @@ import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
 import PatientOverview from '@/components/provider/PatientOverview'
 import DashboardHero from '@/components/patient/DashboardHero'
-import WMIStrip from '@/components/patient/WMIStrip'
 import SymptomTrendChart, { type TrendPoint } from '@/components/patient/SymptomTrendChart'
 import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
@@ -837,12 +836,6 @@ export default function PatientDashboardPage() {
                   action={heroAction}
                   onPrimaryClick={handleHero}
                   patientFirstName={patient.name?.split(' ')[0]}
-                />
-
-                <WMIStrip
-                  currentWMI={patient.wmiScores?.wmi ?? null}
-                  baselineWMI={patient.wmiScores?.wmi ?? null}
-                  label={patient.wmiScores?.wmi_label ?? null}
                 />
 
                 <SymptomTrendChart series={trendSeries} />
