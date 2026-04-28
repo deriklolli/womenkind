@@ -151,7 +151,29 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
     ? { prefix: "You're in a solid position.", suffix: "Let's build from here." }
     : { prefix: 'Real symptoms.', suffix: 'Real solutions ahead.' }
 
+  const wmiBodyText = wmiScores
+    ? wmiScores.wmi >= 60
+      ? `Based on your intake, your symptom profile reflects a ${wmiScores.wmi_label.toLowerCase()} pattern. Dr. Urban will use this as your baseline and focus on the areas most affecting your quality of life.`
+      : `Based on your intake, your symptoms are having a meaningful impact on your daily life. Dr. Urban will prioritize your ${wmiScores.phenotype} profile and build a plan targeting your highest-burden areas first.`
+    : null
+
   const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
+
+  // Count-up animation for the score display
+  const [displayScore, setDisplayScore] = useState(0)
+  useEffect(() => {
+    if (overallNow === undefined) return
+    const target = overallNow
+    const duration = 1200
+    const start = performance.now()
+    function step(now: number) {
+      const progress = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplayScore(Math.round(eased * target))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [overallNow])
 
   const capitalize = (s: string) =>
     s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -166,59 +188,58 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
 
       {/* ── Score header ─────────────────────────────────────────── */}
       <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
-        <div className="flex items-start justify-between gap-8">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
-              Overall Score · {monthLabel}
-            </p>
+        <div className="flex flex-col items-center text-center">
+          <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
+            Overall Score · {monthLabel}
+          </p>
 
-            <div className="flex items-end gap-2 mb-3">
-              {overallNow !== undefined ? (
-                <>
-                  <span className="font-serif font-normal text-[100px] leading-none text-aubergine">{overallNow}</span>
-                  <span className="font-serif text-xl mb-1.5 italic" style={{ color: '#C4A87A' }}>/100</span>
-                </>
-              ) : (
-                <span className="font-serif text-6xl leading-none text-aubergine/20">—</span>
+          <div className="flex items-end gap-2 mb-3">
+            {overallNow !== undefined ? (
+              <>
+                <span className="font-serif font-normal text-[100px] leading-none text-aubergine">{displayScore}</span>
+                <span className="font-serif text-xl mb-1.5 italic" style={{ color: '#C4A87A' }}>/100</span>
+              </>
+            ) : (
+              <span className="font-serif text-6xl leading-none text-aubergine/20">—</span>
+            )}
+          </div>
+
+          {isInitialState && wmiScores ? (
+            <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
+              <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
+                Based on WMI
+              </span>
+            </div>
+          ) : overallDelta !== null ? (
+            <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
+              overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
+              overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
+                                             'bg-aubergine/5 text-aubergine/50'
+            }`}>
+              {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
+              {Math.abs(overallDelta)} since last visit
+            </span>
+          ) : wmiScores ? (
+            <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
+              <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
+                {wmiScores.wmi_label}
+              </span>
+              {wmiScores.phenotype && (
+                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-aubergine/5 text-aubergine/55">
+                  {wmiScores.phenotype}
+                </span>
               )}
             </div>
+          ) : null}
 
-            {isInitialState && wmiScores ? (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  Based on WMI
-                </span>
-              </div>
-            ) : overallDelta !== null ? (
-              <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
-                overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
-                overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
-                                               'bg-aubergine/5 text-aubergine/50'
-              }`}>
-                {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} since last visit
-              </span>
-            ) : wmiScores ? (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  {wmiScores.wmi_label}
-                </span>
-                {wmiScores.phenotype && (
-                  <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-aubergine/5 text-aubergine/55">
-                    {wmiScores.phenotype}
-                  </span>
-                )}
-              </div>
-            ) : null}
-
-            {isInitialState && wmiScores ? (
-              <>
-                <p className="font-serif text-2xl text-aubergine mb-2">
-                  {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
-                </p>
-                <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{wmiScores.wmi_message}</p>
-              </>
-            ) : summary ? (
+          {isInitialState && wmiScores ? (
+            <>
+              <p className="font-serif text-2xl text-aubergine mb-2">
+                {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
+              </p>
+              <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{wmiBodyText}</p>
+            </>
+          ) : summary ? (
               <>
                 <p className="font-serif text-2xl text-aubergine mb-2">
                   {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
@@ -226,8 +247,6 @@ export default function PatientOverview({ visits, prescriptions, latestIntake }:
                 <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{summary}</p>
               </>
             ) : null}
-          </div>
-
         </div>
       </div>
 
