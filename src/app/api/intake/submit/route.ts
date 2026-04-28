@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     // 2. Generate AI clinical brief via Bedrock
     let aiBrief: any = null
     try {
-      aiBrief = await generateClinicalBrief(answers)
+      aiBrief = await generateClinicalBrief(answers, wmiScores)
 
       // Save brief to intake
       await db
