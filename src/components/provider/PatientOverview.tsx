@@ -170,7 +170,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
     ? latestIntake?.ai_brief?.symptom_summary?.overview
     : latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
   const body = rawBody
-    ? (rawBody.match(/[^.!?]+[.!?]+/g) ?? [rawBody]).slice(0, 3).join(' ').trim()
+    ? (rawBody.match(/[^.!?]+[.!?]+/g) ?? [rawBody]).slice(0, 2).join(' ').trim()
     : undefined
 
   const wmiScores    = latestIntake?.wmi_scores
@@ -336,14 +336,14 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
               <p className="font-serif text-2xl text-aubergine mb-2">
                 {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
               </p>
-              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
+              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg line-clamp-4">{body}</p>}
             </>
           ) : (
             <>
               <p className="font-serif text-2xl text-aubergine mb-2">
                 {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
               </p>
-              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
+              {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg line-clamp-4">{body}</p>}
             </>
           )}
         </div>
