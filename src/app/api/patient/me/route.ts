@@ -165,5 +165,6 @@ export async function GET() {
     presentationStatus: (validPresentation?.status as 'sent' | 'viewed') ?? null,
     intakeId: intake?.id ?? null,
     wmiScores: (intake as any)?.wmi_scores ?? null,
+    aiBrief: (intake as any)?.ai_brief ?? null,
   })
 }

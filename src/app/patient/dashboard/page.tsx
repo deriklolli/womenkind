@@ -674,6 +674,11 @@ export default function PatientDashboardPage() {
         intakeId: me.intakeId,
         wmiScores: me.wmiScores ?? null,
       })
+
+      // Feed PatientOverview (domain cards) with the real intake's brief + WMI scores
+      if (me.aiBrief || me.wmiScores) {
+        setOverviewIntake({ ai_brief: me.aiBrief ?? null, wmi_scores: me.wmiScores ?? null } as any)
+      }
     } catch (err) {
       console.error('Error loading patient data:', err)
     } finally {
