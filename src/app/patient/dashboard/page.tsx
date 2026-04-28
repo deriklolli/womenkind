@@ -277,6 +277,7 @@ export default function PatientDashboardPage() {
   const [overviewIntake, setOverviewIntake] = useState<typeof DEMO_INTAKE | null>(
     process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null
   )
+  const [chartDomains, setChartDomains] = useState<string[]>(['vasomotor', 'sleep', 'energy', 'mood'])
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
   const [cancelingBanner, setCancelingBanner] = useState(false)
@@ -840,9 +841,10 @@ export default function PatientDashboardPage() {
                   latestIntake={overviewIntake}
                   view="patient"
                   onCheckinComplete={handleCheckinComplete}
+                  onDomainsChange={setChartDomains}
                 />
 
-                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} />
+                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} activeDomains={chartDomains} />
 
                 <TimelineStrip markers={timelineMarkers} />
 
@@ -1131,8 +1133,9 @@ export default function PatientDashboardPage() {
                   view="patient"
                   showCheckin
                   onCheckinComplete={handleCheckinComplete}
+                  onDomainsChange={setChartDomains}
                 />
-                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} />
+                <SymptomTrendChart visits={overviewVisits} prescriptions={overviewPrescriptions} activeDomains={chartDomains} />
               </>
             )}
 

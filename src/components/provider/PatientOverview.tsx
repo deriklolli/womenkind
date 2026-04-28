@@ -47,6 +47,7 @@ interface PatientOverviewProps {
     wmi_scores?: WMIScores | null
   } | null
   onCheckinComplete?: () => void
+  onDomainsChange?: (keys: string[]) => void
   showCheckin?: boolean
 }
 
@@ -116,7 +117,7 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete, showCheckin = false }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -143,9 +144,11 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, v
   }, [view])
 
   const toggleKey = (key: string) => {
-    setSelectedKeys(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
+    setSelectedKeys(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+      onDomainsChange?.(next)
+      return next
+    })
   }
 
   const activeDomains = ALL_DOMAINS.filter(d => selectedKeys.includes(d.key))

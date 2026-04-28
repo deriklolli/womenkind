@@ -31,6 +31,7 @@ interface RxMarker {
 interface Props {
   visits: Visit[]
   prescriptions?: RxMarker[]
+  activeDomains?: string[]
 }
 
 function smoothPath(pts: [number, number][]): string {
@@ -50,8 +51,11 @@ function smoothPath(pts: [number, number][]): string {
   return d
 }
 
-export default function SymptomTrendChart({ visits, prescriptions = [] }: Props) {
-  const [selectedDomains, setSelectedDomains] = useState(['vasomotor', 'sleep', 'energy', 'mood'])
+export default function SymptomTrendChart({
+  visits,
+  prescriptions = [],
+  activeDomains = ['vasomotor', 'sleep', 'energy', 'mood'],
+}: Props) {
   const [dateRange, setDateRange] = useState<7 | 30 | 90>(30)
 
   const cutoff = new Date()
@@ -62,16 +66,10 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
     .filter(v => new Date(v.visit_date) >= cutoff)
     .sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())
 
-  const toggleDomain = (key: string) => {
-    setSelectedDomains(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
-  }
-
   // Chart dimensions
   const VB_W = 600
-  const VB_H = 220
-  const margin = { top: 20, right: 20, bottom: 30, left: 28 }
+  const VB_H = 260
+  const margin = { top: 24, right: 16, bottom: 36, left: 32 }
   const chartW = VB_W - margin.left - margin.right
   const chartH = VB_H - margin.top - margin.bottom
 
@@ -81,7 +79,6 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
   const xPos = (index: number) =>
     n <= 1 ? margin.left + chartW / 2 : margin.left + (index / (n - 1)) * chartW
 
-  // Date range for Rx markers
   const minDate = n > 0 ? new Date(filtered[0].visit_date).getTime() : cutoff.getTime()
   const maxDate = new Date().getTime()
 
@@ -90,14 +87,12 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
     return d >= cutoff.getTime() && d <= maxDate
   })
 
-  // X-axis tick indices: up to 7 evenly spaced
   const tickIndices: number[] = []
   if (n > 0) {
     const maxTicks = Math.min(7, n)
     for (let i = 0; i < maxTicks; i++) {
       tickIndices.push(Math.round((i / (maxTicks - 1 || 1)) * (n - 1)))
     }
-    // deduplicate
     const seen: Record<number, boolean> = {}
     const unique = tickIndices.filter(v => { if (seen[v]) return false; seen[v] = true; return true })
     tickIndices.length = 0
@@ -110,17 +105,23 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
   const hasEnoughData = filtered.length >= 2
 
   return (
-    <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 border border-aubergine/5 p-6">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-base text-aubergine">Symptom Trends</h3>
-        <div className="flex rounded-lg border border-aubergine/10 overflow-hidden">
+    <div>
+      {/* Header — outside the card, matches Symptom Tracker heading */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-serif text-xl text-aubergine">
+          Symptom <span className="italic text-violet">Trends</span>
+        </p>
+
+        {/* Date range pills */}
+        <div className="flex gap-2">
           {([7, 30, 90] as const).map(d => (
             <button
               key={d}
               onClick={() => setDateRange(d)}
-              className={`font-sans text-xs px-3 py-1.5 transition-colors ${
-                dateRange === d ? 'bg-aubergine text-white' : 'text-aubergine/50 hover:bg-aubergine/5'
+              className={`font-sans text-xs font-medium px-4 py-1.5 rounded-full transition-colors ${
+                dateRange === d
+                  ? 'bg-aubergine text-white'
+                  : 'bg-aubergine/8 text-aubergine/60 hover:bg-aubergine/12'
               }`}
             >
               {d}d
@@ -129,31 +130,10 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
         </div>
       </div>
 
-      {/* Domain pill toggles */}
-      <div className="flex flex-wrap gap-2 mt-4">
-        {DOMAINS.map(domain => {
-          const active = selectedDomains.includes(domain.key)
-          return (
-            <button
-              key={domain.key}
-              onClick={() => toggleDomain(domain.key)}
-              className={`font-sans text-xs font-medium px-3 py-1 rounded-full cursor-pointer transition-colors border ${
-                active
-                  ? 'text-white border-transparent'
-                  : 'bg-white border-gray-200 text-aubergine/50'
-              }`}
-              style={active ? { backgroundColor: domain.color } : undefined}
-            >
-              {domain.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Chart or empty state */}
-      <div className="mt-6">
+      {/* Card */}
+      <div className="bg-white rounded-card shadow-sm shadow-aubergine/5 border border-aubergine/5 overflow-hidden">
         {!hasEnoughData ? (
-          <div className="flex flex-col items-center justify-center py-14 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="font-sans text-sm text-aubergine/40">
               Check in daily to build your trend
             </p>
@@ -165,14 +145,15 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             width="100%"
-            height="220"
+            height="260"
             overflow="visible"
+            className="block"
           >
             {/* "Better" label */}
             <text
-              x={margin.left - 4}
-              y={margin.top - 6}
-              fontSize="7"
+              x={margin.left - 6}
+              y={margin.top - 8}
+              fontSize="8"
               fill="#280f49"
               fillOpacity={0.35}
               textAnchor="end"
@@ -194,9 +175,9 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
                     strokeWidth="0.5"
                   />
                   <text
-                    x={margin.left - 4}
-                    y={y + 3}
-                    fontSize="8"
+                    x={margin.left - 6}
+                    y={y + 3.5}
+                    fontSize="9"
                     fill="#280f49"
                     fillOpacity={0.3}
                     textAnchor="end"
@@ -215,8 +196,8 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
                 <text
                   key={idx}
                   x={x}
-                  y={margin.top + chartH + 18}
-                  fontSize="8"
+                  y={margin.top + chartH + 22}
+                  fontSize="9"
                   fill="#280f49"
                   fillOpacity={0.4}
                   textAnchor="middle"
@@ -248,7 +229,7 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
                   />
                   <text
                     x={rxX}
-                    y={margin.top - 6}
+                    y={margin.top - 8}
                     fontSize="9"
                     fill="#944fed"
                     fillOpacity={0.7}
@@ -261,7 +242,7 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
             })}
 
             {/* Domain lines */}
-            {DOMAINS.filter(d => selectedDomains.includes(d.key)).map(domain => {
+            {DOMAINS.filter(d => activeDomains.includes(d.key)).map(domain => {
               const pts: [number, number][] = filtered
                 .map((v, i) => {
                   const score = v.symptom_scores?.[domain.key]
@@ -280,23 +261,21 @@ export default function SymptomTrendChart({ visits, prescriptions = [] }: Props)
                   <path
                     d={path}
                     stroke={domain.color}
-                    strokeWidth="2"
+                    strokeWidth="4"
                     fill="none"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
-                  {/* Intermediate dots */}
                   {pts.slice(0, -1).map(([cx, cy], i) => (
-                    <circle key={i} cx={cx} cy={cy} r="2.5" fill={domain.color} />
+                    <circle key={i} cx={cx} cy={cy} r="5" fill={domain.color} />
                   ))}
-                  {/* Terminal dot */}
                   <circle
                     cx={last[0]}
                     cy={last[1]}
-                    r="4"
+                    r="8"
                     fill={domain.color}
                     stroke="white"
-                    strokeWidth="1.5"
+                    strokeWidth="2.5"
                   />
                 </g>
               )
