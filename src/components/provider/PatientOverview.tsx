@@ -126,6 +126,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [checkinModal, setCheckinModal] = useState(false)
   const [todayCheckedIn, setTodayCheckedIn] = useState<boolean | null>(null)
+  const [hasWearable, setHasWearable] = useState(false)
   const [checkinDismissed, setCheckinDismissed] = useState(false)
 
   useEffect(() => {
@@ -142,7 +143,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
     if (view !== 'patient') return
     fetch('/api/daily-checkin')
       .then(r => r.json())
-      .then(d => setTodayCheckedIn(!!d.checkedIn))
+      .then(d => {
+        setTodayCheckedIn(!!d.checkedIn)
+        setHasWearable(!!d.hasWearable)
+      })
       .catch(() => setTodayCheckedIn(false))
   }, [view])
 
@@ -291,6 +295,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
       {/* Daily check-in modal */}
       {checkinModal && (
         <DailyCheckinModal
+          hasWearable={hasWearable}
           onClose={() => setCheckinModal(false)}
           onSuccess={() => {
             setCheckinModal(false)

@@ -2,19 +2,45 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { db } from '@/lib/db'
-import { visits, providers } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { visits, providers, wearable_metrics } from '@/lib/db/schema'
+import { eq, and, gte } from 'drizzle-orm'
 
-const REQUIRED_DOMAINS = ['vasomotor', 'sleep', 'energy', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
+// Domains always required regardless of wearable
+const BASE_DOMAINS = ['vasomotor', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
+// Domains skipped when wearable data is present (Oura covers them)
+const WEARABLE_COVERED_DOMAINS = ['sleep', 'energy']
+
+// Per-domain validation ranges (defaults to 1–5 for unlisted)
+const DOMAIN_RANGES: Record<string, { min: number; max: number }> = {
+  vasomotor: { min: 0, max: 20 },  // count of hot flashes/night sweats
+  sleep:     { min: 0, max: 12 },  // hours slept
+  cardio:    { min: 0, max: 99 },  // episode count (0 = none)
+}
+const DEFAULT_RANGE = { min: 1, max: 5 }
+
+async function checkHasWearable(patientId: string): Promise<boolean> {
+  const twoDaysAgo = new Date()
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+  const cutoff = twoDaysAgo.toISOString().slice(0, 10)
+  const row = await db.query.wearable_metrics.findFirst({
+    where: and(
+      eq(wearable_metrics.patient_id, patientId),
+      gte(wearable_metrics.metric_date, cutoff),
+    ),
+    columns: { id: true },
+  })
+  return !!row
+}
 
 /**
  * GET /api/daily-checkin
- * Returns whether the patient has already logged a daily check-in today.
+ * Returns whether the patient has already logged a daily check-in today,
+ * and whether wearable data is available (which affects which questions to show).
  */
 export async function GET(req: NextRequest) {
   try {
     if (process.env.NODE_ENV === 'development') {
-      return NextResponse.json({ checkedIn: false, visit: null })
+      return NextResponse.json({ checkedIn: false, visit: null, hasWearable: false })
     }
 
     const session = await getServerSession()
@@ -26,16 +52,19 @@ export async function GET(req: NextRequest) {
 
     const today = new Date().toISOString().split('T')[0]
 
-    const visit = await db.query.visits.findFirst({
-      where: and(
-        eq(visits.patient_id, session.patientId),
-        eq(visits.visit_date, today),
-        eq(visits.source, 'daily')
-      ),
-      columns: { id: true, checked_in_at: true, symptom_scores: true, visit_date: true },
-    })
+    const [visit, hasWearable] = await Promise.all([
+      db.query.visits.findFirst({
+        where: and(
+          eq(visits.patient_id, session.patientId),
+          eq(visits.visit_date, today),
+          eq(visits.source, 'daily'),
+        ),
+        columns: { id: true, checked_in_at: true, symptom_scores: true, visit_date: true },
+      }),
+      checkHasWearable(session.patientId),
+    ])
 
-    return NextResponse.json({ checkedIn: !!visit, visit: visit ?? null })
+    return NextResponse.json({ checkedIn: !!visit, visit: visit ?? null, hasWearable })
   } catch (err: any) {
     console.error('Daily check-in GET error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -45,17 +74,8 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/daily-checkin
  * Creates a daily symptom check-in for the authenticated patient.
- *
- * Body: {
- *   scores: {
- *     vasomotor: number   // 1–5
- *     sleep: number
- *     energy: number
- *     mood: number
- *     gsm: number
- *     overall: number
- *   }
- * }
+ * Required domains vary: wearable users omit sleep + energy (covered by Oura).
+ * Vasomotor is a count (0–20), cardio is an episode count (0–99), others are 1–5 burden.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -63,7 +83,7 @@ export async function POST(req: NextRequest) {
       const { scores } = await req.json()
       return NextResponse.json(
         { visit: { id: 'dev-daily-visit', symptom_scores: scores } },
-        { status: 201 }
+        { status: 201 },
       )
     }
 
@@ -80,12 +100,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'scores is required' }, { status: 400 })
     }
 
-    for (const domain of REQUIRED_DOMAINS) {
+    // Determine which domains are required based on wearable availability
+    const hasWearable = await checkHasWearable(session.patientId)
+    const requiredDomains = hasWearable
+      ? BASE_DOMAINS
+      : [...BASE_DOMAINS, ...WEARABLE_COVERED_DOMAINS]
+
+    for (const domain of requiredDomains) {
       const val = scores[domain]
-      if (typeof val !== 'number' || val < 1 || val > 5) {
+      const range = DOMAIN_RANGES[domain] ?? DEFAULT_RANGE
+      if (typeof val !== 'number' || val < range.min || val > range.max) {
         return NextResponse.json(
-          { error: `Score for "${domain}" must be a number between 1 and 5` },
-          { status: 400 }
+          { error: `Score for "${domain}" must be a number between ${range.min} and ${range.max}` },
+          { status: 400 },
         )
       }
     }
@@ -96,7 +123,7 @@ export async function POST(req: NextRequest) {
       where: and(
         eq(visits.patient_id, session.patientId),
         eq(visits.visit_date, today),
-        eq(visits.source, 'daily')
+        eq(visits.source, 'daily'),
       ),
       columns: { id: true },
     })
@@ -104,7 +131,7 @@ export async function POST(req: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: 'You have already logged your symptoms today.' },
-        { status: 409 }
+        { status: 409 },
       )
     }
 
@@ -139,7 +166,7 @@ export async function POST(req: NextRequest) {
     if (err.code === '23505') {
       return NextResponse.json(
         { error: 'You have already logged your symptoms today.' },
-        { status: 409 }
+        { status: 409 },
       )
     }
     console.error('Daily check-in POST error:', err)

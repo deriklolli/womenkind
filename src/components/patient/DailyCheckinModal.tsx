@@ -3,54 +3,71 @@
 import { useState } from 'react'
 
 interface Props {
+  hasWearable?: boolean
   onSuccess: () => void
   onClose: () => void
 }
 
-const QUESTIONS = [
+// Questions always shown regardless of wearable
+const STANDARD_QUESTIONS = [
   {
     domain: 'vasomotor',
-    question: 'How bothersome have your hot flashes or night sweats been today?',
-  },
-  {
-    domain: 'sleep',
-    question: 'How much has poor sleep affected your daily life today?',
-  },
-  {
-    domain: 'energy',
-    question: 'How much has fatigue or low energy affected you today?',
+    question: 'How many hot flashes or night sweats did you have today?',
+    inputType: 'counter' as const,
   },
   {
     domain: 'mood',
     question: 'How much have mood changes, irritability, or anxiety affected you today?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'cognition',
     question: 'How much has brain fog, difficulty concentrating, or memory lapses affected you today?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'gsm',
     question: 'Have you noticed vaginal dryness, discomfort during intimacy, or urinary changes today?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'bone',
     question: 'How much have joint pain, stiffness, or muscle aches affected you today?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'weight',
     question: 'How much have bloating, appetite changes, or weight-related concerns affected you today?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'libido',
     question: 'How much have changes in sexual desire or intimacy affected your quality of life recently?',
+    inputType: 'slider' as const,
   },
   {
     domain: 'cardio',
-    question: 'Have you noticed heart palpitations, racing heart, or chest discomfort today?',
+    question: 'Did you experience heart palpitations, racing heart, or chest discomfort today?',
+    inputType: 'cardio' as const,
   },
   {
     domain: 'overall',
     question: 'Overall, how much are your symptoms affecting your quality of life right now?',
+    inputType: 'slider' as const,
+  },
+]
+
+// Questions skipped when wearable (Oura) is providing the data
+const WEARABLE_QUESTIONS = [
+  {
+    domain: 'sleep',
+    question: 'How many hours did you sleep last night?',
+    inputType: 'hours' as const,
+  },
+  {
+    domain: 'energy',
+    question: 'How much has fatigue or low energy affected you today?',
+    inputType: 'slider' as const,
   },
 ]
 
@@ -70,27 +87,33 @@ function scoreColor(val: number): string {
   return 'text-red-600'
 }
 
-export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
-  const [scores, setScores] = useState<Record<string, number>>({
-    vasomotor: 3,
-    sleep: 3,
-    energy: 3,
-    mood: 3,
-    cognition: 3,
-    gsm: 3,
-    bone: 3,
-    weight: 3,
-    libido: 3,
-    cardio: 3,
+function buildInitialScores(hasWearable: boolean): Record<string, number> {
+  const base: Record<string, number> = {
+    vasomotor: 0,
+    mood: 3, cognition: 3, gsm: 3, bone: 3, weight: 3, libido: 3,
+    cardio: 0,
     overall: 3,
-  })
+  }
+  if (!hasWearable) {
+    base.sleep = 7
+    base.energy = 3
+  }
+  return base
+}
+
+export default function DailyCheckinModal({ hasWearable = false, onSuccess, onClose }: Props) {
+  const [scores, setScores] = useState<Record<string, number>>(() => buildInitialScores(hasWearable))
+  const [cardioYes, setCardioYes] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSlider = (domain: string, value: number) => {
+  const set = (domain: string, value: number) =>
     setScores((prev) => ({ ...prev, [domain]: value }))
-  }
+
+  const questions = hasWearable
+    ? STANDARD_QUESTIONS
+    : [...STANDARD_QUESTIONS.slice(0, 1), ...WEARABLE_QUESTIONS, ...STANDARD_QUESTIONS.slice(1)]
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -119,7 +142,9 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
         <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-4 border-b border-gray-100 rounded-t-2xl">
           <div>
             <h2 className="font-display text-lg text-aubergine">Today's Check-In</h2>
-            <p className="font-sans text-xs text-aubergine/50">Takes about 2 minutes</p>
+            <p className="font-sans text-xs text-aubergine/50">
+              {hasWearable ? 'Your sleep & energy are tracked by your wearable · ~90 seconds' : 'Takes about 2 minutes'}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -145,47 +170,53 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
         ) : (
           <div className="px-6 py-6">
             <div className="space-y-4">
-              {QUESTIONS.map((q, idx) => {
-                const val = scores[q.domain]
-                const pct = ((val - 1) / 4) * 100
-                return (
-                  <div key={q.domain} className="rounded-xl p-4 border border-gray-100 bg-gray-50">
-                    <div className="flex items-start gap-3 mb-4">
-                      <span className="font-sans text-xs font-semibold text-aubergine/30 mt-0.5 w-4 shrink-0">
-                        {idx + 1}
-                      </span>
-                      <p className="font-sans text-sm font-medium text-aubergine leading-relaxed">
-                        {q.question}
-                      </p>
-                    </div>
-
-                    <div className="pl-7">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`font-sans text-sm font-semibold ${scoreColor(val)}`}>
-                          {SCORE_LABELS[val]}
-                        </span>
-                        <span className="font-sans text-xs text-aubergine/30 tabular-nums">{val} / 5</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={1}
-                        max={5}
-                        step={1}
-                        value={val}
-                        onChange={(e) => handleSlider(q.domain, Number(e.target.value))}
-                        className="daily-checkin-slider w-full h-1.5 appearance-none rounded-full cursor-pointer"
-                        style={{
-                          background: `linear-gradient(to right, #944fed ${pct}%, #e5e7eb ${pct}%)`,
-                        }}
-                      />
-                      <div className="flex justify-between mt-1.5">
-                        <span className="font-sans text-xs text-aubergine/30">Not at all</span>
-                        <span className="font-sans text-xs text-aubergine/30">Severe</span>
-                      </div>
-                    </div>
+              {questions.map((q, idx) => (
+                <div key={q.domain} className="rounded-xl p-4 border border-gray-100 bg-gray-50">
+                  <div className="flex items-start gap-3 mb-4">
+                    <span className="font-sans text-xs font-semibold text-aubergine/30 mt-0.5 w-4 shrink-0">
+                      {idx + 1}
+                    </span>
+                    <p className="font-sans text-sm font-medium text-aubergine leading-relaxed">
+                      {q.question}
+                    </p>
                   </div>
-                )
-              })}
+
+                  <div className="pl-7">
+                    {q.inputType === 'counter' && (
+                      <CounterInput
+                        value={scores[q.domain]}
+                        min={0}
+                        max={20}
+                        unit="today"
+                        onChange={(v) => set(q.domain, v)}
+                      />
+                    )}
+                    {q.inputType === 'hours' && (
+                      <HoursInput
+                        value={scores[q.domain]}
+                        onChange={(v) => set(q.domain, v)}
+                      />
+                    )}
+                    {q.inputType === 'cardio' && (
+                      <CardioInput
+                        value={scores[q.domain]}
+                        cardioYes={cardioYes}
+                        onToggle={(yes) => {
+                          setCardioYes(yes)
+                          set(q.domain, yes ? 1 : 0)
+                        }}
+                        onCount={(v) => set(q.domain, v)}
+                      />
+                    )}
+                    {q.inputType === 'slider' && (
+                      <SliderInput
+                        value={scores[q.domain]}
+                        onChange={(v) => set(q.domain, v)}
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {error && (
@@ -197,7 +228,7 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
               disabled={submitting}
               className="mt-6 w-full font-sans font-semibold text-sm text-white bg-aubergine rounded-xl py-3 hover:bg-aubergine/90 transition-colors disabled:opacity-50"
             >
-              {submitting ? 'Logging…' : 'Log today\'s symptoms'}
+              {submitting ? 'Logging…' : "Log today's symptoms"}
             </button>
           </div>
         )}
@@ -225,6 +256,137 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
           border: none;
         }
       `}</style>
+    </div>
+  )
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────────
+
+function SliderInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const pct = ((value - 1) / 4) * 100
+  return (
+    <>
+      <div className="flex items-center justify-between mb-2">
+        <span className={`font-sans text-sm font-semibold ${scoreColor(value)}`}>
+          {SCORE_LABELS[value]}
+        </span>
+        <span className="font-sans text-xs text-aubergine/30 tabular-nums">{value} / 5</span>
+      </div>
+      <input
+        type="range"
+        min={1} max={5} step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="daily-checkin-slider w-full h-1.5 appearance-none rounded-full cursor-pointer"
+        style={{ background: `linear-gradient(to right, #944fed ${pct}%, #e5e7eb ${pct}%)` }}
+      />
+      <div className="flex justify-between mt-1.5">
+        <span className="font-sans text-xs text-aubergine/30">Not at all</span>
+        <span className="font-sans text-xs text-aubergine/30">Severe</span>
+      </div>
+    </>
+  )
+}
+
+function CounterInput({
+  value, min, max, unit, onChange,
+}: {
+  value: number; min: number; max: number; unit: string; onChange: (v: number) => void
+}) {
+  const countColor = value === 0 ? 'text-emerald-600' : value <= 3 ? 'text-amber-600' : value <= 7 ? 'text-orange-600' : 'text-red-600'
+  return (
+    <div className="flex items-center gap-4">
+      <button
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        aria-label="Decrease"
+      >
+        −
+      </button>
+      <div className="flex-1 text-center">
+        <span className={`font-serif text-4xl leading-none ${countColor}`}>{value}</span>
+        <p className="font-sans text-xs text-aubergine/40 mt-1">
+          {value === 0 ? 'None today' : `${unit}`}
+        </p>
+      </div>
+      <button
+        onClick={() => onChange(Math.min(max, value + 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        aria-label="Increase"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
+function HoursInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const hoursColor = value >= 7 ? 'text-emerald-600' : value >= 5 ? 'text-amber-600' : 'text-red-600'
+  return (
+    <div className="flex items-center gap-4">
+      <button
+        onClick={() => onChange(Math.max(0, Math.round((value - 0.5) * 2) / 2))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        aria-label="Decrease"
+      >
+        −
+      </button>
+      <div className="flex-1 text-center">
+        <span className={`font-serif text-4xl leading-none ${hoursColor}`}>{value}</span>
+        <p className="font-sans text-xs text-aubergine/40 mt-1">hours</p>
+      </div>
+      <button
+        onClick={() => onChange(Math.min(12, Math.round((value + 0.5) * 2) / 2))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        aria-label="Increase"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
+function CardioInput({
+  value, cardioYes, onToggle, onCount,
+}: {
+  value: number; cardioYes: boolean; onToggle: (yes: boolean) => void; onCount: (v: number) => void
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <button
+          onClick={() => onToggle(false)}
+          className={`flex-1 py-2 rounded-lg border text-sm font-sans font-medium transition-colors ${
+            !cardioYes
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-white border-gray-200 text-aubergine/50 hover:border-aubergine/30'
+          }`}
+        >
+          None today
+        </button>
+        <button
+          onClick={() => onToggle(true)}
+          className={`flex-1 py-2 rounded-lg border text-sm font-sans font-medium transition-colors ${
+            cardioYes
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-white border-gray-200 text-aubergine/50 hover:border-aubergine/30'
+          }`}
+        >
+          Yes, I had some
+        </button>
+      </div>
+      {cardioYes && (
+        <div>
+          <p className="font-sans text-xs text-aubergine/50 mb-2">How many episodes?</p>
+          <CounterInput
+            value={value}
+            min={1}
+            max={20}
+            unit="episodes"
+            onChange={onCount}
+          />
+        </div>
+      )}
     </div>
   )
 }

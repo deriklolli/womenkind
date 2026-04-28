@@ -295,44 +295,102 @@ export function computeLiveWMI(
   // Filter to daily check-ins from the last 7 days
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 7)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+
   const recent = visits.filter((v) => {
     if (v.source !== 'daily') return false
     if (!v.symptom_scores) return false
-    return new Date(v.visit_date) >= cutoff
+    return new Date(v.visit_date + 'T00:00:00') >= cutoff
   })
 
-  if (recent.length < 2) return null
-
-  // Average each domain across available check-ins
-  const avg = (key: string) => {
-    const vals = recent.map((v) => v.symptom_scores?.[key]).filter((n): n is number => typeof n === 'number')
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 1
+  // Build wearable metric averager (last 7 days)
+  const metricAvg = (type: string): number | null => {
+    if (!wearableMetrics || wearableMetrics.length === 0) return null
+    const vals = wearableMetrics
+      .filter((m) => m.metric_type === type && m.metric_date >= cutoffStr)
+      .map((m) => m.value)
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
   }
 
-  const aVms    = avg('vasomotor')
-  const aSleep  = avg('sleep')
+  const wearableSleep    = metricAvg('sleep_score')
+  const wearableActivity = metricAvg('activity_score') ?? metricAvg('hrv_average')
+  const wearableCoversSlEn = wearableSleep !== null && wearableActivity !== null
+
+  // Wearable users need ≥1 check-in; non-wearable users need ≥2
+  const minCheckins = wearableCoversSlEn ? 1 : 2
+  if (recent.length < minCheckins) return null
+
+  // Average each domain across available check-ins
+  const avg = (key: string, fallback = 1) => {
+    const vals = recent.map((v) => v.symptom_scores?.[key]).filter((n): n is number => typeof n === 'number')
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : fallback
+  }
+
+  // ── Vasomotor: detect format ──
+  // New format: count 0–20 (any value of 0 or >5 means count)
+  // Legacy format: 1–5 burden slider
+  const vmsVals = recent.map((v) => v.symptom_scores?.vasomotor).filter((n): n is number => n !== undefined)
+  const vmsIsCount = vmsVals.some((v) => v === 0 || v > 5)
+  const aVms = avg('vasomotor')
+  const vmsNorm = vmsIsCount
+    ? Math.min(aVms, 15) / 15            // count: 0=no burden, 15+=max burden
+    : (aVms - 1) / 4                     // legacy: 1–5 burden
+
+  // ── Sleep: from wearable if available, else detect check-in format ──
+  let sleepP: number
+  if (wearableSleep !== null) {
+    // sleep_score 85+ = no penalty, 70 = moderate, <70 = significant
+    sleepP = 12 * Math.max(0, Math.min(1, (85 - wearableSleep) / 85))
+  } else {
+    const sleepVals = recent.map((v) => v.symptom_scores?.sleep).filter((n): n is number => n !== undefined)
+    const sleepIsHours = sleepVals.some((v) => v > 5)
+    const aSleep = avg('sleep', 7)
+    if (sleepIsHours) {
+      // Hours format: 7+ hrs = no burden, 0 hrs = full burden
+      sleepP = 12 * Math.max(0, Math.min(1, (7 - aSleep) / 7))
+    } else {
+      // Legacy 1–5 burden
+      sleepP = 12 * ((aSleep - 1) / 4)
+    }
+  }
+
+  // ── Energy: from wearable if available, else check-in 1–5 ──
+  let energyNorm: number
+  if (wearableActivity !== null) {
+    // activity_score: 70+ = good energy, below = burden
+    energyNorm = Math.max(0, Math.min(1, (70 - wearableActivity) / 70))
+  } else {
+    energyNorm = (avg('energy') - 1) / 4
+  }
+
+  // ── Cardio: detect format ──
+  // New: count 0–N (0 = no episodes), Legacy: 1–5 burden
+  const cardioVals = recent.map((v) => v.symptom_scores?.cardio).filter((n): n is number => n !== undefined)
+  const cardioIsCount = cardioVals.some((v) => v === 0)
+  const aCardio = avg('cardio')
+  const cardioNorm = cardioIsCount
+    ? Math.min(aCardio, 5) / 5           // count: 0=none, 5+=max burden
+    : (aCardio - 1) / 4                  // legacy: 1–5 burden
+
+  // ── Remaining 1–5 domains (unchanged format) ──
   const aMood   = avg('mood')
   const aCog    = avg('cognition')
-  const aEnergy = avg('energy')
   const aGsm    = avg('gsm')
   const aLibido = avg('libido')
-  const aCardio = avg('cardio')
   const aBone   = avg('bone')
 
-  // Convert 1–5 burden scale to WMI domain equivalents (0 = best, max = domain max)
-  const scale = (val: number, max: number) => ((val - 1) / 4) * max
-  const vms_eq    = scale(aVms, 20)
-  const sleep_eq  = scale(aSleep, 13)
-  const mams_eq   = scale(aMood, 12)
-  const cog_eq    = scale((aCog + aEnergy) / 2, 8)
-  const gsm_eq    = scale(aGsm, 12)
-  const hsdd_eq   = scale(aLibido, 4)
-  const cardio_eq = scale(aCardio, 4)
-  const msk_eq    = scale(aBone, 4)
+  // ── WMI equivalents ──
+  const vms_eq    = vmsNorm * 20
+  const mams_eq   = ((aMood - 1) / 4) * 12
+  const cogNorm   = (aCog - 1) / 4
+  const cog_eq    = ((cogNorm + energyNorm) / 2) * 8
+  const gsm_eq    = ((aGsm - 1) / 4) * 12
+  const hsdd_eq   = ((aLibido - 1) / 4) * 4
+  const cardio_eq = cardioNorm * 4
+  const msk_eq    = ((aBone - 1) / 4) * 4
 
-  // Same recalibrated penalty weights (base 90, sum 60)
-  let vmsP    = 12 * (vms_eq / 20)
-  let sleepP  = 12 * (sleep_eq / 13)
+  // ── Penalties (base 90, weights sum 60) ──
+  let vmsP      = 12 * (vms_eq / 20)
   const mamsP   = 10 * (mams_eq / 12)
   const cogP    = 7  * (cog_eq / 8)
   const gsmP    = 7  * (gsm_eq / 12)
@@ -340,30 +398,10 @@ export function computeLiveWMI(
   const mskP    = 4  * (msk_eq / 4)
   const cardioP = 4  * (cardio_eq / 4)
 
-  // Oura modifiers (last 7 days average)
-  if (wearableMetrics && wearableMetrics.length > 0) {
-    const cutoffStr = cutoff.toISOString().slice(0, 10)
-    const recent7 = wearableMetrics.filter((m) => m.metric_date >= cutoffStr)
-
-    const metricAvg = (type: string) => {
-      const vals = recent7.filter((m) => m.metric_type === type).map((m) => m.value)
-      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
-    }
-
-    const sleepScore = metricAvg('sleep_score')
-    const tempDev    = metricAvg('temperature_deviation')
-
-    if (sleepScore !== null) {
-      if (sleepScore < 70) {
-        sleepP += Math.min(3, ((70 - sleepScore) / 10) * 3)
-      } else if (sleepScore > 85) {
-        sleepP = Math.max(0, sleepP - Math.min(2, ((sleepScore - 85) / 10) * 2))
-      }
-    }
-
-    if (tempDev !== null && tempDev > 0.3) {
-      vmsP += Math.min(3, (tempDev - 0.3) * 4)
-    }
+  // ── Oura temperature modifier on VMS penalty ──
+  const tempDev = metricAvg('temperature_deviation')
+  if (tempDev !== null && tempDev > 0.3) {
+    vmsP += Math.min(3, (tempDev - 0.3) * 4)
   }
 
   const rawLive = 90 - vmsP - sleepP - mamsP - cogP - gsmP - hsddP - mskP - cardioP
