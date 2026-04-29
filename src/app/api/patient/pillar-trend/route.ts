@@ -26,6 +26,7 @@ interface TrendData {
   weeks: number
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
+  seriesRaw: Record<string, (number | null)[]>
   wearableSeries: Record<string, (number | null)[]>
   milestones: Milestone[]
 }
@@ -85,6 +86,18 @@ const DEV_RESPONSE: TrendData = {
     { key: 'cardio',    name: 'Cardiovascular', accent: '#ef4444', baseline: 8.0, current: 9.0 },
   ],
   series: {
+    vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
+    sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
+    energy:    [5.0, 4.8, 5.3, 5.5, 5.4, 5.7, 5.9, 6.0, 6.1, 6.3, 6.2, 6.5, 6.6, 6.7, 6.9, 7.0, 7.0, 7.1, 7.2, 7.3, 7.4, 7.4, 7.5, 7.5],
+    mood:      [5.0, 4.8, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.2, 6.4, 6.3, 6.6, 6.7, 6.8, 7.0, 7.1, 7.0, 7.2, 7.3, 7.4, 7.3, 7.5, 7.6, 7.7],
+    cognition: [4.5, 4.3, 4.7, 5.0, 4.8, 5.2, 5.5, 5.3, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.5, 6.4, 6.6, 6.7, 6.7, 6.8, 6.9, 7.0, 7.1],
+    gsm:       [5.0, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.3, 6.5, 6.4, 6.7, 6.8, 7.0, 7.0, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.6, 7.8, 7.9, 8.0],
+    bone:      [5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.3, 6.4, 6.5, 6.5, 6.6, 6.7, 6.8, 6.8, 6.9, 6.9, 7.0, 7.0, 7.0, 7.0, 7.0],
+    weight:    [5.0, 5.1, 5.2, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.1, 6.2, 6.3, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5, 6.5],
+    libido:    [4.5, 4.6, 4.7, 4.9, 5.0, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.2, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5],
+    cardio:    [8.0, 8.1, 8.2, 8.3, 8.4, 8.4, 8.5, 8.5, 8.6, 8.6, 8.7, 8.7, 8.8, 8.8, 8.8, 8.9, 8.9, 8.9, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0],
+  },
+  seriesRaw: {
     vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
     sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
     energy:    [5.0, 4.8, 5.3, 5.5, 5.4, 5.7, 5.9, 6.0, 6.1, 6.3, 6.2, 6.5, 6.6, 6.7, 6.9, 7.0, 7.0, 7.1, 7.2, 7.3, 7.4, 7.4, 7.5, 7.5],
@@ -200,6 +213,7 @@ export async function GET(req: NextRequest) {
 
   // ── Build per-domain check-in series ────────────────────────────────────────
   const series: Record<string, (number | null)[]> = {}
+  const seriesRaw: Record<string, (number | null)[]> = {}
   const domainsMeta: DomainMeta[] = []
 
   for (const [domainKey, meta] of Object.entries(ALL_DOMAIN_META)) {
@@ -211,6 +225,7 @@ export async function GET(req: NextRequest) {
         raw[w] = domainKey === 'vasomotor' ? avg : normalizeToDisplay(domainKey, avg)
       }
     }
+    seriesRaw[domainKey] = [...raw]
     const filled: (number | null)[] = [...raw]
     let last: number | null = null
     for (let w = 0; w < actualWeeks; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
@@ -283,5 +298,5 @@ export async function GET(req: NextRequest) {
 
   milestones.sort((a, b) => a.wk - b.wk)
 
-  return NextResponse.json({ weeks: actualWeeks, domains: domainsMeta, series, wearableSeries, milestones } satisfies TrendData)
+  return NextResponse.json({ weeks: actualWeeks, domains: domainsMeta, series, seriesRaw, wearableSeries, milestones } satisfies TrendData)
 }

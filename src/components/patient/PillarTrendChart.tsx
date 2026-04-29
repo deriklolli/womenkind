@@ -26,6 +26,7 @@ interface TrendData {
   weeks: number
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
+  seriesRaw: Record<string, (number | null)[]>
   wearableSeries: Record<string, (number | null)[]>
   milestones: Milestone[]
 }
@@ -271,6 +272,11 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
     .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
     .filter((p): p is [number, number] => p !== null)
 
+  const rawSeries = data.seriesRaw?.[domainKey] ?? []
+  const rawPts: [number, number][] = rawSeries
+    .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
+    .filter((p): p is [number, number] => p !== null)
+
   const linePath = buildPath(pts)
   const lastPt = pts[pts.length - 1] ?? [xOf(weeks - 1, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
   const firstPt = pts[0] ?? [xOf(0, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
@@ -348,6 +354,11 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
           {/* Series line — patient self-reported */}
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
+
+          {/* Check-in dots — hollow ring at each real data point (last point covered by current-week dot) */}
+          {rawPts.slice(0, -1).map(([cx, cy], i) => (
+            <circle key={i} cx={cx} cy={cy} r={4} fill="white" stroke={accent} strokeWidth={2} />
+          ))}
 
           {/* Wearable (Oura) overlay — dashed, dimmer */}
           {wearableLinePath && (
