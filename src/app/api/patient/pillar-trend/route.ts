@@ -10,6 +10,8 @@ interface DomainMeta {
   accent: string
   baseline: number
   current: number
+  rawScale?: number       // present for domains that plot raw values (not normalized 0–10)
+  lowerIsBetter?: boolean // true when a lower raw value means improvement
 }
 
 interface Milestone {
@@ -64,7 +66,7 @@ function normalizeToDisplay(domain: string, raw: number): number {
 // DEV FIXTURE ─────────────────────────────────────────────────────────────────
 const DEV_RESPONSE: TrendData = {
   domains: [
-    { key: 'vasomotor', name: 'Vasomotor',     accent: '#c97c5d', baseline: 3.5, current: 7.2 },
+    { key: 'vasomotor', name: 'Vasomotor', accent: '#c97c5d', baseline: 12, current: 3, rawScale: 20, lowerIsBetter: true },
     { key: 'sleep',     name: 'Sleep',          accent: '#5d9ed5', baseline: 5.5, current: 8.1 },
     { key: 'energy',    name: 'Energy',         accent: '#e8a838', baseline: 5.0, current: 7.5 },
     { key: 'mood',      name: 'Mood',           accent: '#7c6bc4', baseline: 5.0, current: 7.7 },
@@ -76,7 +78,7 @@ const DEV_RESPONSE: TrendData = {
     { key: 'cardio',    name: 'Cardiovascular', accent: '#ef4444', baseline: 8.0, current: 9.0 },
   ],
   series: {
-    vasomotor: [3.5, 4.0, 3.8, 4.2, 4.5, 4.3, 4.8, 5.0, 5.2, 5.5, 5.3, 5.8, 5.7, 6.0, 6.2, 6.1, 6.4, 6.5, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2],
+    vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
     sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
     energy:    [5.0, 4.8, 5.3, 5.5, 5.4, 5.7, 5.9, 6.0, 6.1, 6.3, 6.2, 6.5, 6.6, 6.7, 6.9, 7.0, 7.0, 7.1, 7.2, 7.3, 7.4, 7.4, 7.5, 7.5],
     mood:      [5.0, 4.8, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.2, 6.4, 6.3, 6.6, 6.7, 6.8, 7.0, 7.1, 7.0, 7.2, 7.3, 7.4, 7.3, 7.5, 7.6, 7.7],
@@ -120,7 +122,7 @@ export async function GET(req: NextRequest) {
   // ── Load check-ins + wearable data in parallel ─────────────────────────────
   const [checkins, wearableRows] = await Promise.all([
     db.select({ visit_date: visits.visit_date, symptom_scores: visits.symptom_scores })
-      .from(visits).where(and(eq(visits.patient_id, patientId), eq(visits.source, 'daily'), gte(visits.visit_date, startIso))),
+      .from(visits).where(and(eq(visits.patient_id, patientId), eq(visits.source, 'weekly'), gte(visits.visit_date, startIso))),
     db.select({ metric_type: wearable_metrics.metric_type, metric_date: wearable_metrics.metric_date, value: wearable_metrics.value })
       .from(wearable_metrics).where(and(
         eq(wearable_metrics.patient_id, patientId),
@@ -177,7 +179,8 @@ export async function GET(req: NextRequest) {
       const vals = weeklyBuckets[w][domainKey]
       if (vals && vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-        raw[w] = normalizeToDisplay(domainKey, avg)
+        // Raw-scale domains (e.g. vasomotor) skip normalization
+        raw[w] = domainKey === 'vasomotor' ? avg : normalizeToDisplay(domainKey, avg)
       }
     }
     // Forward-fill then backward-fill for a continuous line
@@ -198,15 +201,16 @@ export async function GET(req: NextRequest) {
       key: domainKey,
       name: meta.name,
       accent: meta.accent,
-      baseline: nonNull[0] ?? 5,
-      current: nonNull[nonNull.length - 1] ?? 5,
+      baseline: nonNull[0] ?? (domainKey === 'vasomotor' ? 10 : 5),
+      current: nonNull[nonNull.length - 1] ?? (domainKey === 'vasomotor' ? 10 : 5),
+      ...(domainKey === 'vasomotor' ? { rawScale: 20, lowerIsBetter: true } : {}),
     })
   }
 
   // ── Load milestones ─────────────────────────────────────────────────────────
   const [providerVisits, rxList] = await Promise.all([
     db.select({ id: visits.id, visit_date: visits.visit_date, visit_type: visits.visit_type })
-      .from(visits).where(and(eq(visits.patient_id, patientId), ne(visits.source, 'daily'), gte(visits.visit_date, startIso))),
+      .from(visits).where(and(eq(visits.patient_id, patientId), ne(visits.source, 'weekly'), gte(visits.visit_date, startIso))),
     db.select({ medication_name: prescriptions.medication_name, dosage: prescriptions.dosage, prescribed_at: prescriptions.prescribed_at })
       .from(prescriptions).where(and(eq(prescriptions.patient_id, patientId), gte(prescriptions.prescribed_at, startDate))),
   ])

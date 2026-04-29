@@ -10,6 +10,8 @@ interface DomainMeta {
   accent: string
   baseline: number
   current: number
+  rawScale?: number
+  lowerIsBetter?: boolean
 }
 
 interface Milestone {
@@ -232,20 +234,31 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const series = data.series[domainKey] ?? []
   const milestones = data.milestones
 
+  // Domain-aware y coordinate: raw-scale domains (e.g. vasomotor, lower=better) map
+  // 0 → top of chart, rawScale → bottom. Normalized domains map 10 → top, 0 → bottom.
+  const yOfDomain = (val: number): number => {
+    if (domain.rawScale) return PAD.t + (val / domain.rawScale) * CHART_H
+    return PAD.t + CHART_H - (val / 10) * CHART_H
+  }
+
+  const yTicks = domain.rawScale
+    ? [0, 5, 10, 15, 20].filter(v => v <= domain.rawScale!)
+    : [0, 2, 4, 6, 8, 10]
+
   // SVG points
   const pts: [number, number][] = series
-    .map((v, i) => v !== null ? [xOf(i), yOf(v)] as [number, number] : null)
+    .map((v, i) => v !== null ? [xOf(i), yOfDomain(v)] as [number, number] : null)
     .filter((p): p is [number, number] => p !== null)
 
   const linePath = buildPath(pts)
-  const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOf(5)]
-  const firstPt = pts[0] ?? [xOf(0), yOf(5)]
+  const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
+  const firstPt = pts[0] ?? [xOf(0), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
 
   const areaPath = pts.length > 0
     ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
     : ''
 
-  const baselineY = yOf(domain.baseline)
+  const baselineY = yOfDomain(domain.baseline)
 
   // Annotation rail: first 3 + most recent
   const annotationCards = milestones.length <= 4
@@ -291,8 +304,8 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           </defs>
 
           {/* Y-axis gridlines */}
-          {[0, 2, 4, 6, 8, 10].map(v => {
-            const gy = yOf(v)
+          {yTicks.map(v => {
+            const gy = yOfDomain(v)
             return (
               <g key={v}>
                 <line x1={PAD.l} y1={gy} x2={PAD.l + CHART_W} y2={gy} stroke="rgba(66,42,31,0.07)" strokeWidth={1} />
@@ -300,11 +313,16 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
               </g>
             )
           })}
+          {domain.lowerIsBetter && (
+            <text x={PAD.l - 8} y={PAD.t - 8} textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={9} fontWeight={700} fill="rgba(66,42,31,0.35)" letterSpacing="0.06em">↓ lower is better</text>
+          )}
 
           {/* Baseline marker */}
           <line x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY} stroke="rgba(66,42,31,0.45)" strokeWidth={1} strokeDasharray="3 4" />
           <text x={PAD.l + 6} y={baselineY - 6} fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.1em" fill="rgba(66,42,31,0.6)">
-            {`BASELINE · ${domain.baseline.toFixed(1)}`}
+            {domain.rawScale
+              ? `BASELINE · ${domain.baseline.toFixed(1)} / day`
+              : `BASELINE · ${domain.baseline.toFixed(1)}`}
           </text>
 
           {/* Area fill */}
@@ -317,7 +335,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {milestones.map((m, i) => {
             const mx = xOf(Math.min(WEEKS - 1, m.wk))
             const sv = series[Math.min(WEEKS - 1, m.wk)]
-            const my = sv !== null ? yOf(sv) : yOf(5)
+            const my = sv !== null ? yOfDomain(sv) : yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)
             return (
               <g key={i}>
                 <line x1={mx} y1={my} x2={mx} y2={PAD.t - 18} stroke={AUBERGINE} strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
