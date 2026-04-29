@@ -102,7 +102,7 @@ function buildInitialScores(hasWearable: boolean): Record<string, number> {
 
 export default function DailyCheckinModal({ hasWearable = false, onSuccess, onClose }: Props) {
   const [scores, setScores] = useState<Record<string, number>>(() => buildInitialScores(hasWearable))
-  const [cardioYes, setCardioYes] = useState(false)
+  const [cardioYes, setCardioYes] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -382,7 +382,7 @@ function HoursInput({ value, onChange }: { value: number; onChange: (v: number) 
 function CardioInput({
   value, cardioYes, onToggle, onCount,
 }: {
-  value: number; cardioYes: boolean; onToggle: (yes: boolean) => void; onCount: (v: number) => void
+  value: number; cardioYes: boolean | null; onToggle: (yes: boolean) => void; onCount: (v: number) => void
 }) {
   return (
     <div className="space-y-3">
@@ -390,7 +390,7 @@ function CardioInput({
         <button
           onClick={() => onToggle(false)}
           className={`flex-1 py-2 rounded-lg border text-sm font-sans font-medium transition-colors ${
-            !cardioYes
+            cardioYes === false
               ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
               : 'bg-white border-gray-200 text-aubergine/50 hover:border-aubergine/30'
           }`}
