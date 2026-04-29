@@ -533,24 +533,23 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             }[status]
 
             // Domain-specific value display
-            const BURDEN_LABELS: Record<number, string> = { 1: 'Not at all', 2: 'Mild', 3: 'Moderate', 4: 'Significant', 5: 'Severe' }
             const domainDisplay = (key: string, val: number) => {
               if (key === 'vasomotor') {
                 const isCount = data.some(v => v === 0 || v > 5)
                 if (isCount) return { value: String(val), unit: '' }
-                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
+                return { value: String(val), unit: '/ 5' }
               }
               if (key === 'sleep') {
                 const isHours = data.some(v => v > 5)
                 if (isHours) return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
-                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
+                return { value: String(val), unit: '/ 5' }
               }
               if (key === 'cardio') {
                 const isCount = data.some(v => v === 0)
                 if (isCount) return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
-                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
+                return { value: String(val), unit: '/ 5' }
               }
-              return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
+              return { value: String(val), unit: '/ 5' }
             }
 
             return (
