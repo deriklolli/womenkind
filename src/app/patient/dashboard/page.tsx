@@ -781,15 +781,17 @@ export default function PatientDashboardPage() {
         className={`max-w-7xl mx-auto px-6 py-10 transition-all duration-700 ease-out
           ${fadeIn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
       >
-        {/* Welcome header */}
-        <div className="mb-8">
-          <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
-            Welcome back, <span className="italic text-violet">{patient.name.split(' ')[0]}</span>
-          </h1>
-          <p className="text-sm font-sans text-aubergine/40">
-            Here's the latest on your care journey.
-          </p>
-        </div>
+        {/* Welcome header — dashboard only */}
+        {activeView === 'dashboard' && (
+          <div className="mb-8">
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
+              Welcome back, <span className="italic text-violet">{patient.name.split(' ')[0]}</span>
+            </h1>
+            <p className="text-sm font-sans text-aubergine/40">
+              Here&apos;s the latest on your care journey.
+            </p>
+          </div>
+        )}
 
         {/* Membership notification */}
         {membershipParam === 'active' && (
@@ -831,6 +833,29 @@ export default function PatientDashboardPage() {
 
           {/* Right column: view-switchable content */}
           <div className="md:col-span-3 space-y-6">
+
+            {/* Page title for subpages */}
+            {activeView !== 'dashboard' && (() => {
+              const titles: Partial<Record<DashboardView, { label: string; italic: string }>> = {
+                scorecard:        { label: 'Symptom',    italic: 'Tracker' },
+                schedule:         { label: 'Schedule an', italic: 'Appointment' },
+                refill:           { label: 'Request Rx', italic: 'Refill' },
+                message:          { label: 'Message',    italic: 'Dr. Urban' },
+                wearables:        { label: 'Health',     italic: 'Trends' },
+                blueprint:        { label: 'Your Health', italic: 'Blueprint' },
+                'lab-results':    { label: 'Your Lab',   italic: 'Results' },
+                'intake-summary': { label: 'Your Intake', italic: 'Summary' },
+              }
+              const t = titles[activeView]
+              if (!t) return null
+              return (
+                <div>
+                  <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine">
+                    {t.label} <span className="italic text-violet">{t.italic}</span>
+                  </h1>
+                </div>
+              )
+            })()}
 
             {/* Dashboard view — action-first hero + health story stack */}
             {activeView === 'dashboard' && (
