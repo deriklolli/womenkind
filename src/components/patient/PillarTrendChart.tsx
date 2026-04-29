@@ -40,7 +40,7 @@ interface Props {
 
 const AUBERGINE = '#280f49'
 const CREAM = '#f7f3ee'
-const OURA_COLOR = '#e8924a'
+const OURA_COLOR = 'rgba(66,42,31,0.35)'
 
 const DOMAIN_SUBTITLES: Record<string, string> = {
   vasomotor: 'Hot flashes / daily avg',
@@ -310,14 +310,6 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           )}
         </div>
         <div className="flex items-center gap-3">
-          {wearableLinePath && (
-            <div className="flex items-center gap-1.5">
-              <svg width="20" height="10" viewBox="0 0 20 10" fill="none">
-                <line x1="0" y1="5" x2="20" y2="5" stroke={OURA_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeDasharray="5 4" />
-              </svg>
-              <span className="font-sans text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: OURA_COLOR }}>Oura</span>
-            </div>
-          )}
           <DomainDropdown
             domains={visibleDomains}
             activeKey={activeDomainKey}
@@ -358,7 +350,25 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
 
           {/* Wearable (Oura) overlay — dashed, dimmer */}
-          {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />}
+          {wearableLinePath && (
+            <>
+              <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />
+              {wearablePts.length > 0 && (
+                <text
+                  x={wearablePts[0][0]}
+                  y={wearablePts[0][1] - 10}
+                  textAnchor="start"
+                  fontFamily="'Plus Jakarta Sans', sans-serif"
+                  fontSize={9}
+                  fontWeight={700}
+                  letterSpacing="0.14em"
+                  fill={OURA_COLOR}
+                >
+                  OURA
+                </text>
+              )}
+            </>
+          )}
 
           {/* Milestone stems + data dots */}
           {milestones.map((m, i) => {
