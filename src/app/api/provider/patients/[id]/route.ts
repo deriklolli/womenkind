@@ -176,7 +176,7 @@ export async function GET(
     // All visits (incl. daily) so PatientOverview domain cards reflect latest check-in
     visits: visitsRows,
     // Separate filtered list for the provider visits tab
-    providerVisits: visitsRows.filter(v => v.source !== 'daily'),
+    providerVisits: visitsRows.filter(v => v.source !== 'weekly'),
     liveWmi,
     subscriptions: subscriptionsRows,
     prescriptions: prescriptionsRows,

@@ -286,24 +286,25 @@ export function computeWMI(answers: Record<string, unknown>): WMIScores {
   }
 }
 
-// ── Live WMI from daily check-ins + wearables ─────────────────────────────────
+// ── Live WMI from weekly check-ins + wearables ───────────────────────────────
 
 export function computeLiveWMI(
   visits: Array<{ symptom_scores: Record<string, number> | null; visit_date: string; source?: string | null }>,
   wearableMetrics?: Array<{ metric_type: string; value: number; metric_date: string }>
 ): number | null {
-  // Filter to daily check-ins from the last 7 days
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 7)
-  const cutoffStr = cutoff.toISOString().slice(0, 10)
+  // Use the most recent weekly check-in — it already represents the week's average
+  const recent = visits
+    .filter((v) => v.source === 'weekly' && v.symptom_scores)
+    .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    .slice(0, 1)
 
-  const recent = visits.filter((v) => {
-    if (v.source !== 'daily') return false
-    if (!v.symptom_scores) return false
-    return new Date(v.visit_date + 'T00:00:00') >= cutoff
-  })
+  // Build wearable metric averager (last 14 days to cover up to 2 weekly cycles)
+  const cutoffStr = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 14)
+    return d.toISOString().slice(0, 10)
+  })()
 
-  // Build wearable metric averager (last 7 days)
   const metricAvg = (type: string): number | null => {
     if (!wearableMetrics || wearableMetrics.length === 0) return null
     const vals = wearableMetrics
@@ -314,13 +315,11 @@ export function computeLiveWMI(
 
   const wearableSleep    = metricAvg('sleep_score')
   const wearableActivity = metricAvg('activity_score') ?? metricAvg('hrv_average')
-  const wearableCoversSlEn = wearableSleep !== null && wearableActivity !== null
 
-  // Wearable users need ≥1 check-in; non-wearable users need ≥2
-  const minCheckins = wearableCoversSlEn ? 1 : 2
-  if (recent.length < minCheckins) return null
+  // Require at least 1 weekly check-in
+  if (recent.length < 1) return null
 
-  // Average each domain across available check-ins
+  // Read each domain from the single most-recent weekly check-in
   const avg = (key: string, fallback = 1) => {
     const vals = recent.map((v) => v.symptom_scores?.[key]).filter((n): n is number => typeof n === 'number')
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : fallback

@@ -21,15 +21,18 @@ export async function POST(req: NextRequest) {
 
   if (!patient) return NextResponse.json({ error: 'patient not found' }, { status: 404 })
 
-  const today = new Date().toISOString().split('T')[0]
+  const day = new Date().getDay()
+  const monday = new Date()
+  monday.setDate(monday.getDate() + (day === 0 ? -6 : 1 - day))
+  const weekStart = monday.toISOString().split('T')[0]
 
   const deleted = await db.delete(visits)
     .where(and(
       eq(visits.patient_id, patient.id),
-      eq(visits.visit_date, today),
-      eq(visits.source, 'daily')
+      eq(visits.visit_date, weekStart),
+      eq(visits.source, 'weekly')
     ))
     .returning({ id: visits.id })
 
-  return NextResponse.json({ deleted: deleted.length, date: today })
+  return NextResponse.json({ deleted: deleted.length, weekStart })
 }

@@ -12,47 +12,47 @@ interface Props {
 const STANDARD_QUESTIONS = [
   {
     domain: 'vasomotor',
-    question: 'How many hot flashes or night sweats did you have today?',
+    question: 'On average, how many hot flashes or night sweats did you have per day this week?',
     inputType: 'counter' as const,
   },
   {
     domain: 'mood',
-    question: 'How much have mood changes, irritability, or anxiety affected you today?',
+    question: 'How much have mood changes, irritability, or anxiety affected you this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'cognition',
-    question: 'How much has brain fog, difficulty concentrating, or memory lapses affected you today?',
+    question: 'How much has brain fog, difficulty concentrating, or memory lapses affected you this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'gsm',
-    question: 'Have you noticed vaginal dryness, discomfort during intimacy, or urinary changes today?',
+    question: 'Have you noticed vaginal dryness, discomfort during intimacy, or urinary changes this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'bone',
-    question: 'How much have joint pain, stiffness, or muscle aches affected you today?',
+    question: 'How much have joint pain, stiffness, or muscle aches affected you this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'weight',
-    question: 'How much have bloating, appetite changes, or weight-related concerns affected you today?',
+    question: 'How much have bloating, appetite changes, or weight-related concerns affected you this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'libido',
-    question: 'How much have changes in sexual desire or intimacy affected your quality of life recently?',
+    question: 'How much have changes in sexual desire or intimacy affected your quality of life this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'cardio',
-    question: 'Did you experience heart palpitations, racing heart, or chest discomfort today?',
+    question: 'Did you experience heart palpitations, racing heart, or chest discomfort this week?',
     inputType: 'cardio' as const,
   },
   {
     domain: 'overall',
-    question: 'Overall, how much are your symptoms affecting your quality of life right now?',
+    question: 'Overall, how much are your symptoms affecting your quality of life this week?',
     inputType: 'slider' as const,
   },
 ]
@@ -61,12 +61,12 @@ const STANDARD_QUESTIONS = [
 const WEARABLE_QUESTIONS = [
   {
     domain: 'sleep',
-    question: 'How many hours did you sleep last night?',
+    question: 'On average, how many hours of sleep per night did you get this week?',
     inputType: 'hours' as const,
   },
   {
     domain: 'energy',
-    question: 'How much has fatigue or low energy affected you today?',
+    question: 'How much has fatigue or low energy affected you this week?',
     inputType: 'slider' as const,
   },
 ]
@@ -119,7 +119,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/daily-checkin', {
+      const res = await fetch('/api/weekly-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scores }),
@@ -141,7 +141,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-4 border-b border-gray-100 rounded-t-2xl">
           <div>
-            <h2 className="font-display text-lg text-aubergine">Today's Check-In</h2>
+            <h2 className="font-display text-lg text-aubergine">This Week's Check-In</h2>
             <p className="font-sans text-xs text-aubergine/50">
               {hasWearable ? 'Your sleep & energy are tracked by your wearable · ~90 seconds' : 'Takes about 2 minutes'}
             </p>
@@ -164,7 +164,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
-            <h3 className="font-display text-xl text-aubergine mb-2">Logged for today</h3>
+            <h3 className="font-display text-xl text-aubergine mb-2">Logged for this week</h3>
             <p className="font-sans text-sm text-aubergine/50">Your tracker is updating.</p>
           </div>
         ) : (
@@ -187,7 +187,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
                         value={scores[q.domain]}
                         min={0}
                         max={20}
-                        unit="today"
+                        unit="per day avg"
                         onChange={(v) => set(q.domain, v)}
                       />
                     )}
@@ -228,7 +228,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
               disabled={submitting}
               className="mt-6 w-full font-sans font-semibold text-sm text-white bg-aubergine rounded-xl py-3 hover:bg-aubergine/90 transition-colors disabled:opacity-50"
             >
-              {submitting ? 'Logging…' : "Log today's symptoms"}
+              {submitting ? 'Logging…' : "Log this week's symptoms"}
             </button>
           </div>
         )}
@@ -306,7 +306,7 @@ function CounterInput({
       <div className="flex-1 text-center">
         <span className={`font-serif text-4xl leading-none ${countColor}`}>{value}</span>
         <p className="font-sans text-xs text-aubergine/40 mt-1">
-          {value === 0 ? 'None today' : `${unit}`}
+          {value === 0 ? 'None this week' : `${unit}`}
         </p>
       </div>
       <button
@@ -362,7 +362,7 @@ function CardioInput({
               : 'bg-white border-gray-200 text-aubergine/50 hover:border-aubergine/30'
           }`}
         >
-          None today
+          None this week
         </button>
         <button
           onClick={() => onToggle(true)}

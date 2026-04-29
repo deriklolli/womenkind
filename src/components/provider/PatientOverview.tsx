@@ -56,8 +56,8 @@ interface PatientOverviewProps {
 }
 
 const ALL_DOMAINS = [
-  { key: 'vasomotor', label: 'Vasomotor',     Icon: Flame,     color: '#d85623', subtitle: 'Hot-flash frequency',    improvesDown: true,  tags: { improving: 'Slow taper',      watch: 'Increasing',      steady: 'Holding steady' } },
-  { key: 'sleep',     label: 'Sleep',          Icon: Moon,      color: '#5d9ed5', subtitle: 'Sleep quality score',    improvesDown: false, tags: { improving: 'Deeper cycles',   watch: 'Disrupted',       steady: 'Consistent'     } },
+  { key: 'vasomotor', label: 'Vasomotor',     Icon: Flame,     color: '#d85623', subtitle: 'hot flashes / day avg',   improvesDown: true,  tags: { improving: 'Slow taper',      watch: 'Increasing',      steady: 'Holding steady' } },
+  { key: 'sleep',     label: 'Sleep',          Icon: Moon,      color: '#5d9ed5', subtitle: 'hrs per night avg',       improvesDown: false, tags: { improving: 'Deeper cycles',   watch: 'Disrupted',       steady: 'Consistent'     } },
   { key: 'energy',    label: 'Energy',         Icon: Zap,       color: '#e8a838', subtitle: 'Daily energy level',     improvesDown: false, tags: { improving: 'Rising steadily', watch: 'Fatigue rising',  steady: 'Steady energy'  } },
   { key: 'mood',      label: 'Mood',           Icon: SmilePlus, color: '#944fed', subtitle: 'Self-rated, journaled',  improvesDown: false, tags: { improving: 'Steadier days',   watch: 'More variable',   steady: 'Consistent'     } },
   { key: 'gsm',       label: 'Hormonal',       Icon: Droplets,  color: '#c2796d', subtitle: 'GSM symptom score',      improvesDown: true,  tags: { improving: 'On target',       watch: 'Watch closely',   steady: 'Stable'         } },
@@ -143,7 +143,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
   useEffect(() => {
     if (view !== 'patient') return
-    fetch('/api/daily-checkin')
+    fetch('/api/weekly-checkin')
       .then(r => r.json())
       .then(d => {
         setTodayCheckedIn(!!d.checkedIn)
@@ -189,14 +189,17 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const overallDelta = overallNow !== undefined && overallPrev !== undefined ? overallNow - overallPrev : null
 
   const lastCheckinDate = useMemo(() => {
-    const daily = visits
-      .filter(v => v.source === 'daily' || v.visit_type === 'daily_checkin')
+    const weekly = visits
+      .filter(v => v.source === 'weekly' || v.visit_type === 'weekly_checkin')
       .sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime())[0]
-    if (!daily) return null
-    const d = new Date(daily.visit_date + 'T00:00:00')
-    const today = new Date(); today.setHours(0,0,0,0)
-    if (d.getTime() === today.getTime()) return 'Today'
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (!weekly) return null
+    const d = new Date(weekly.visit_date + 'T00:00:00')
+    const thisWeekStart = new Date()
+    const day = thisWeekStart.getDay()
+    thisWeekStart.setDate(thisWeekStart.getDate() + (day === 0 ? -6 : 1 - day))
+    thisWeekStart.setHours(0, 0, 0, 0)
+    if (d.getTime() === thisWeekStart.getTime()) return 'This week'
+    return 'Week of ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }, [visits])
 
   const overallStatus = getStatus(overallDelta, false)
@@ -268,10 +271,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             </div>
             <div className="min-w-0">
               <p className={`font-sans text-sm font-semibold truncate ${todayCheckedIn ? 'text-emerald-700' : 'text-aubergine'}`}>
-                {todayCheckedIn ? 'Checked in today' : "Log today's symptoms"}
+                {todayCheckedIn ? 'Checked in this week' : "Log this week's symptoms"}
               </p>
               <p className={`font-sans text-xs ${todayCheckedIn ? 'text-emerald-600/70' : 'text-aubergine/40'}`}>
-                {todayCheckedIn ? 'Your tracker is up to date' : "Track how you're feeling — 2 minutes"}
+                {todayCheckedIn ? 'Your tracker is up to date' : "How has your week been? — 2 minutes"}
               </p>
             </div>
           </div>
@@ -530,24 +533,24 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             }[status]
 
             // Domain-specific value display
+            const BURDEN_LABELS: Record<number, string> = { 1: 'Not at all', 2: 'Mild', 3: 'Moderate', 4: 'Significant', 5: 'Severe' }
             const domainDisplay = (key: string, val: number) => {
               if (key === 'vasomotor') {
-                // Count format if any value > 5 or === 0, otherwise legacy 1–5
                 const isCount = data.some(v => v === 0 || v > 5)
-                if (isCount) return { value: String(val), unit: val === 1 ? 'episode' : 'episodes' }
-                return { value: String(val), unit: '/ 5' }
+                if (isCount) return { value: String(val), unit: '' }
+                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
               }
               if (key === 'sleep') {
                 const isHours = data.some(v => v > 5)
-                if (isHours) return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: 'hrs' }
-                return { value: String(val), unit: '/ 5' }
+                if (isHours) return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
+                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
               }
               if (key === 'cardio') {
                 const isCount = data.some(v => v === 0)
                 if (isCount) return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
-                return { value: String(val), unit: '/ 5' }
+                return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
               }
-              return { value: String(val), unit: '/ 5' }
+              return { value: BURDEN_LABELS[val] ?? String(val), unit: '' }
             }
 
             return (
