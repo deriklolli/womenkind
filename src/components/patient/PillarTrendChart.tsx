@@ -192,7 +192,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const gradId = useId().replace(/:/g, '')
   const [data, setData] = useState<TrendData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeDomainKey, setActiveDomainKey] = useState<string>(initialDomain ?? activeDomains[0] ?? 'vasomotor')
+  const [activeDomainKey, setActiveDomainKey] = useState<string>(initialDomain ?? activeDomains?.[0] ?? 'vasomotor')
   const [hoveredPin, setHoveredPin] = useState<number | null>(null)
 
   useEffect(() => {
@@ -205,7 +205,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
   // Sync active domain when activeDomains prop changes
   useEffect(() => {
-    if (activeDomains.length === 0) return
+    if (!activeDomains?.length) return
     if (!activeDomains.includes(activeDomainKey)) {
       setActiveDomainKey(activeDomains[0])
     }
@@ -221,7 +221,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   }
 
   // Filter to only domains in activeDomains (preserving order from activeDomains)
-  const visibleDomains = activeDomains
+  const visibleDomains = (activeDomains ?? [])
     .map(k => data.domains.find(d => d.key === k))
     .filter((d): d is DomainMeta => !!d)
 
