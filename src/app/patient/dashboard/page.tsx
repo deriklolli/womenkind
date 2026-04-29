@@ -23,97 +23,131 @@ import TimelineStrip, { type TimelineMarker } from '@/components/patient/Timelin
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
 
-function WomenkindScoreBadge({ score, wmiLabel, delta, deltaStatus, onInfoClick }: {
+function WomenkindScoreBadge({ score, delta, deltaStatus }: {
   score: number | null
-  wmiLabel?: string | null
   delta?: number | null
   deltaStatus?: 'improving' | 'watch' | 'steady' | null
-  onInfoClick?: () => void
 }) {
   const [display, setDisplay] = useState(0)
+  const arcRef = useRef<SVGCircleElement>(null)
+  const C = 2 * Math.PI * 25 // ≈157.08
+
+  // Score-band → tagline (from design spec)
+  const tagline = score == null ? { pre: 'Your health,', em: 'in focus' }
+    : score >= 90 ? { pre: 'Thriving &', em: 'steady' }
+    : score >= 75 ? { pre: 'Strong &', em: 'climbing' }
+    : score >= 60 ? { pre: 'Steady &', em: 'building' }
+    : score >= 45 ? { pre: 'Finding your', em: 'footing' }
+    : { pre: 'Early', em: 'days' }
+
   useEffect(() => {
     if (score == null) return
     const target = Math.round(score)
-    let frame = 0
-    const total = 40
-    const tick = () => {
-      frame++
-      const t = frame / total
-      const eased = t < 1 ? 1 - Math.pow(1 - t, 3) : 1
-      setDisplay(Math.round(eased * target))
-      if (frame < total) requestAnimationFrame(tick)
+    // counter animation
+    const t0 = performance.now()
+    const dur = 1100
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / dur)
+      setDisplay(Math.round(target * (1 - Math.pow(1 - k, 3))))
+      if (k < 1) requestAnimationFrame(tick)
     }
-    requestAnimationFrame(tick)
+    const timerId = setTimeout(() => requestAnimationFrame(tick), 300)
+    // arc animation via CSS transition: set dashoffset after 350ms
+    const arcTimerId = setTimeout(() => {
+      if (arcRef.current) {
+        arcRef.current.style.strokeDashoffset = String(C * (1 - target / 100))
+      }
+    }, 350)
+    return () => { clearTimeout(timerId); clearTimeout(arcTimerId) }
   }, [score])
 
-  const HEADLINE_MAP: Record<string, { prefix: string; suffix: string }> = {
-    optimal:  { prefix: "You're at",       suffix: 'your best'       },
-    strong:   { prefix: 'Strong &',        suffix: 'climbing'        },
-    moderate: { prefix: 'Making',          suffix: 'good progress'   },
-    elevated: { prefix: 'Noticeable',      suffix: 'improvement'     },
-    high:     { prefix: 'Active',          suffix: 'treatment phase' },
-    severe:   { prefix: 'Intensive',       suffix: 'care underway'   },
-  }
-  const key = wmiLabel?.toLowerCase() ?? ''
-  const hl = HEADLINE_MAP[key] ?? { prefix: 'Your health,', suffix: 'in focus' }
-
-  const R = 32, CX = 40, CY = 40, STROKE = 7
-  const circ = 2 * Math.PI * R
-  const pct = score != null ? Math.min(display / 100, 1) : 0
-  const dash = circ * pct
-  const gap  = circ - dash
-
   return (
-    <button
-      onClick={onInfoClick}
-      className="flex items-center gap-3 pr-6 py-2 rounded-[999px] shadow-lg hover:shadow-xl transition-shadow shrink-0"
-      style={{ background: 'linear-gradient(110deg, #ede5dc 0%, #f7f3ee 50%, #ede8e1 100%)', border: '1px solid rgba(66,42,31,0.09)', paddingLeft: '10px' }}
-    >
-      {/* Circular score arc — sits flush left */}
-      <svg width="80" height="80" viewBox="0 0 80 80" className="shrink-0 -ml-1">
-        {/* drop shadow filter */}
-        <defs>
-          <filter id="ring-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#944fed" floodOpacity="0.25"/>
-          </filter>
-        </defs>
-        {/* track */}
-        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,79,237,0.13)" strokeWidth={STROKE} />
-        {/* progress arc */}
-        {score != null && (
-          <circle cx={CX} cy={CY} r={R} fill="none" stroke="#944fed" strokeWidth={STROKE}
-            strokeLinecap="round" strokeDasharray={`${dash} ${gap}`}
-            transform={`rotate(-90 ${CX} ${CY})`} filter="url(#ring-shadow)" />
-        )}
-        {/* score number */}
-        <text x={CX} y={CY + 2} textAnchor="middle" dominantBaseline="middle"
-          fontFamily="'Playfair Display', serif" fontSize="28" fill="#280f49" fontWeight="400">
-          {score != null ? display : '—'}
-        </text>
-      </svg>
+    <>
+      <style>{`
+        @keyframes wkPulse {
+          0%   { transform: scale(.92); opacity: .6 }
+          70%  { transform: scale(1.18); opacity: 0 }
+          100% { transform: scale(1.18); opacity: 0 }
+        }
+      `}</style>
+      <button
+        className="flex items-center shrink-0 transition-all duration-[250ms]"
+        style={{
+          gap: 24,
+          padding: '12px 32px 12px 12px',
+          borderRadius: 999,
+          background: 'linear-gradient(135deg,#fff 0%,#faf6ef 60%,#f3e9da 100%)',
+          border: '1px solid rgba(66,42,31,.10)',
+          boxShadow: '0 1px 0 rgba(255,255,255,.9) inset, 0 22px 50px -28px rgba(40,15,73,.4)',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.transform = 'translateY(-1px)'
+          el.style.boxShadow = '0 1px 0 rgba(255,255,255,.9) inset, 0 30px 60px -28px rgba(40,15,73,.45)'
+          el.style.borderColor = 'rgba(148,79,237,.35)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.transform = ''
+          el.style.boxShadow = '0 1px 0 rgba(255,255,255,.9) inset, 0 22px 50px -28px rgba(40,15,73,.4)'
+          el.style.borderColor = 'rgba(66,42,31,.10)'
+        }}
+      >
+        {/* Ring wrap — 108×108 */}
+        <div style={{ position: 'relative', width: 108, height: 108, flexShrink: 0 }}>
+          {/* Pulse halo */}
+          <div style={{
+            position: 'absolute', inset: -8, borderRadius: '50%',
+            border: '2px solid rgba(148,79,237,.35)',
+            animation: 'wkPulse 2.4s cubic-bezier(.2,.7,.2,1) infinite',
+            pointerEvents: 'none',
+          }} />
+          {/* SVG arc — rotated -90deg so arc starts at 12 o'clock */}
+          <svg style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)', display: 'block' }} viewBox="0 0 60 60">
+            <defs>
+              <linearGradient id="wkBadgeGrad" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stopColor="#b78cf5" />
+                <stop offset="100%" stopColor="#944fed" />
+              </linearGradient>
+            </defs>
+            {/* track */}
+            <circle cx="30" cy="30" r="25" stroke="rgba(66,42,31,.10)" strokeWidth="4" fill="none" />
+            {/* animated arc */}
+            <circle ref={arcRef} cx="30" cy="30" r="25"
+              stroke="url(#wkBadgeGrad)" strokeWidth="4" fill="none" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C}
+              style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.7,.2,1) .35s' }}
+            />
+          </svg>
+          {/* Score number — centered over ring */}
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Playfair Display', serif", fontSize: 44, color: '#280f49', lineHeight: 1,
+            fontFeatureSettings: '"lnum"',
+          }}>
+            {score != null ? display : '—'}
+          </div>
+        </div>
 
-      {/* Text block */}
-      <div className="flex flex-col items-start gap-0.5 text-left">
-        <p className="text-[10px] font-sans font-semibold tracking-[0.2em] uppercase" style={{ color: 'rgba(40,15,73,0.45)' }}>
-          Womenkind Score
-        </p>
-        <p className="font-serif text-[24px] leading-tight text-aubergine whitespace-nowrap">
-          {hl.prefix} <span className="italic" style={{ color: '#944fed' }}>{hl.suffix}</span>
-        </p>
-        {delta != null && deltaStatus && (
-          <p className={`text-[12px] font-sans font-semibold flex items-center gap-1 ${
-            deltaStatus === 'improving' ? 'text-emerald-600' :
-            deltaStatus === 'watch'     ? 'text-amber-600'   : 'text-aubergine/40'
-          }`}>
-            {deltaStatus === 'improving' ? '↑' : deltaStatus === 'watch' ? '↓' : '→'}
-            {' '}+{Math.abs(delta)} this month
-          </p>
-        )}
-        {delta == null && wmiLabel && (
-          <p className="text-[12px] font-sans font-medium" style={{ color: 'rgba(148,79,237,0.7)' }}>{wmiLabel}</p>
-        )}
-      </div>
-    </button>
+        {/* Meta column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.1, paddingRight: 6 }}>
+          <span style={{ fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(66,42,31,.55)', fontWeight: 700 }}>
+            Womenkind Score
+          </span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: '#280f49', lineHeight: 1.05, letterSpacing: '-.005em', marginTop: 4 }}>
+            {tagline.pre} <em style={{ fontStyle: 'italic', color: '#944fed' }}>{tagline.em}</em>
+          </span>
+          {delta != null && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#5a8a6a', marginTop: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M7 14l5-5 5 5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              +{Math.abs(delta)} this month
+            </span>
+          )}
+        </div>
+      </button>
+    </>
   )
 }
 
@@ -909,7 +943,6 @@ export default function PatientDashboardPage() {
             return (
               <WomenkindScoreBadge
                 score={score != null ? score : null}
-                wmiLabel={wmiScores?.wmi_label}
                 delta={delta}
                 deltaStatus={deltaStatus}
               />
