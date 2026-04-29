@@ -73,8 +73,8 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
       <button
         className="flex items-center shrink-0 transition-all duration-[250ms]"
         style={{
-          gap: 24,
-          padding: '12px 32px 12px 12px',
+          gap: 19,
+          padding: '10px 26px 10px 10px',
           borderRadius: 999,
           background: 'linear-gradient(135deg,#fff 0%,#faf6ef 60%,#f3e9da 100%)',
           border: '1px solid rgba(66,42,31,.10)',
@@ -94,10 +94,10 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
         }}
       >
         {/* Ring wrap — 108×108 */}
-        <div style={{ position: 'relative', width: 108, height: 108, flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: 86, height: 86, flexShrink: 0 }}>
           {/* Pulse halo */}
           <div style={{
-            position: 'absolute', inset: -8, borderRadius: '50%',
+            position: 'absolute', inset: -6, borderRadius: '50%',
             border: '2px solid rgba(148,79,237,.35)',
             animation: 'wkPulse 2.4s cubic-bezier(.2,.7,.2,1) infinite',
             pointerEvents: 'none',
@@ -122,7 +122,7 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
           {/* Score number — centered over ring */}
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Playfair Display', serif", fontSize: 44, color: '#280f49', lineHeight: 1,
+            fontFamily: "'Playfair Display', serif", fontSize: 35, color: '#280f49', lineHeight: 1,
             fontFeatureSettings: '"lnum"',
           }}>
             {score != null ? display : '—'}
@@ -131,15 +131,15 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
 
         {/* Meta column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.1, paddingRight: 6 }}>
-          <span style={{ fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(66,42,31,.55)', fontWeight: 700 }}>
+          <span style={{ fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(66,42,31,.55)', fontWeight: 700 }}>
             Womenkind Score
           </span>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: '#280f49', lineHeight: 1.05, letterSpacing: '-.005em', marginTop: 4 }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: '#280f49', lineHeight: 1.05, letterSpacing: '-.005em', marginTop: 3 }}>
             {tagline.pre} <em style={{ fontStyle: 'italic', color: '#944fed' }}>{tagline.em}</em>
           </span>
           {delta != null && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: '#5a8a6a', marginTop: 6 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#5a8a6a', marginTop: 5 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                 <path d="M7 14l5-5 5 5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               +{Math.abs(delta)} this month
