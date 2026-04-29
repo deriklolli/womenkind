@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         where: and(
           eq(visits.patient_id, session.patientId),
           eq(visits.visit_date, weekStart),
-          eq(visits.source, 'weekly'),
+          eq(visits.source, 'daily'),
         ),
         columns: { id: true, checked_in_at: true, symptom_scores: true, visit_date: true },
       }),
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       where: and(
         eq(visits.patient_id, session.patientId),
         eq(visits.visit_date, weekStart),
-        eq(visits.source, 'weekly'),
+        eq(visits.source, 'daily'),
       ),
       columns: { id: true },
     })
@@ -153,9 +153,9 @@ export async function POST(req: NextRequest) {
       patient_id: session.patientId,
       provider_id: provider.id,
       appointment_id: null,
-      visit_type: 'weekly_checkin',
+      visit_type: 'daily_checkin',
       visit_date: weekStart,
-      source: 'weekly',
+      source: 'daily',
       symptom_scores: scores,
       checked_in_at: new Date(),
     }).returning()

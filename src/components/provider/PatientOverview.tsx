@@ -199,7 +199,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
   const lastCheckinDate = useMemo(() => {
     const weekly = visits
-      .filter(v => v.source === 'weekly' || v.visit_type === 'weekly_checkin')
+      .filter(v => v.source === 'daily' || v.visit_type === 'daily_checkin')
       .sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime())[0]
     if (!weekly) return null
     const d = new Date(weekly.visit_date + 'T00:00:00')
