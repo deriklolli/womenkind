@@ -53,6 +53,7 @@ interface PatientOverviewProps {
   onDomainsChange?: (keys: string[]) => void
   showCheckin?: boolean
   compact?: boolean
+  hideScoreHeader?: boolean
 }
 
 const ALL_DOMAINS = [
@@ -121,7 +122,7 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false, compact = false }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false, compact = false, hideScoreHeader = false }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -325,7 +326,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
       )}
 
       {/* ── Score header ─────────────────────────────────────────── */}
-      {compact ? (
+      {!hideScoreHeader && (compact ? (
         /* Compact banner — scorecard / provider view */
         <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-5 py-3 flex items-center gap-4">
           <div className="flex items-end gap-1 shrink-0">
@@ -451,7 +452,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             )}
           </div>
         </div>
-      )}
+      ))}
 
       {/* ── Symptom Tracker ───────────────────────────────────────── */}
       <div>

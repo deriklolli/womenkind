@@ -1298,6 +1298,7 @@ export default function PatientDashboardPage() {
                   view="patient"
                   showCheckin
                   compact
+                  hideScoreHeader
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
                 />
