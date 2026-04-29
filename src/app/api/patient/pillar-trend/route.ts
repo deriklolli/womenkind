@@ -229,6 +229,8 @@ export async function GET(req: NextRequest) {
     const filled: (number | null)[] = [...raw]
     let last: number | null = null
     for (let w = 0; w < actualWeeks; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+    // floor fill: weeks before first real check-in sit at 0 (visual baseline only, not data)
+    for (let w = 0; w < actualWeeks; w++) { if (filled[w] === null) filled[w] = 0; else break }
     series[domainKey] = filled
     const nonNull = filled.filter((v): v is number => v !== null)
     domainsMeta.push({
