@@ -200,7 +200,9 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const overallStatus = getStatus(overallDelta, false)
 
   const headlineMap = {
-    improving: { prefix: 'Responding &', suffix: 'improving' },
+    improving: overallNow !== undefined && overallNow >= 65
+      ? { prefix: 'Responding &', suffix: 'improving' }
+      : { prefix: 'Early progress &', suffix: 'building' },
     watch:     { prefix: 'Needs attention &', suffix: 'monitoring' },
     steady:    { prefix: 'Stable &', suffix: 'holding' },
   }
