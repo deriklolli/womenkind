@@ -170,13 +170,13 @@ export async function GET(
 
   const liveWmi = computeLiveWMI(visitsRows as any, recentWearables)
 
-  // Exclude daily check-ins from the visit list shown to providers
-  const providerVisits = visitsRows.filter(v => v.source !== 'daily')
-
   return NextResponse.json({
     patient,
     intakes: intakesRows,
-    visits: providerVisits,
+    // All visits (incl. daily) so PatientOverview domain cards reflect latest check-in
+    visits: visitsRows,
+    // Separate filtered list for the provider visits tab
+    providerVisits: visitsRows.filter(v => v.source !== 'daily'),
     liveWmi,
     subscriptions: subscriptionsRows,
     prescriptions: prescriptionsRows,

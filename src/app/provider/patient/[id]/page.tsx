@@ -100,6 +100,7 @@ export default function PatientProfilePage() {
   const [patient, setPatient] = useState<PatientProfile | null>(null)
   const [intakes, setIntakes] = useState<Intake[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
+  const [providerVisits, setProviderVisits] = useState<Visit[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [labOrders, setLabOrders] = useState<LabOrder[]>([])
@@ -158,6 +159,7 @@ export default function PatientProfilePage() {
       setPatient(patientData)
       setIntakes(data.intakes || [])
       setVisits(data.visits || [])
+      setProviderVisits(data.providerVisits || data.visits || [])
       setSubscriptions(data.subscriptions || [])
       setPrescriptions(data.prescriptions || [])
       setLabOrders(data.labOrders || [])
@@ -308,8 +310,8 @@ export default function PatientProfilePage() {
     { key: 'biometrics', label: 'Biometrics' },
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
     { key: 'labs', label: 'Labs', count: labOrders.length },
-    { key: 'timeline', label: 'Visit Timeline', count: visits.length },
-    { key: 'notes', label: 'Notes', count: providerNotes.length + visits.filter(v => v.provider_notes).length + encounterNotesCount },
+    { key: 'timeline', label: 'Visit Timeline', count: providerVisits.length },
+    { key: 'notes', label: 'Notes', count: providerNotes.length + providerVisits.filter(v => v.provider_notes).length + encounterNotesCount },
     { key: 'messages', label: 'Messages', count: messageThreadCount },
   ]
 
@@ -435,7 +437,7 @@ export default function PatientProfilePage() {
 
         {activeTab === 'timeline' && (
           <VisitTimeline
-            visits={visits}
+            visits={providerVisits}
             onViewBrief={() => setActiveTab('intake')}
           />
         )}
@@ -462,7 +464,7 @@ export default function PatientProfilePage() {
           <NotesPanel
             patientId={patientId}
             providerId={providerId}
-            visits={visits}
+            visits={providerVisits}
             providerNotes={providerNotes}
             onNoteAdded={reloadProviderNotes}
           />
