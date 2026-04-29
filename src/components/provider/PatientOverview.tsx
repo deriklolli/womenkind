@@ -536,11 +536,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             const domainDisplay = (key: string, val: number) => {
               if (key === 'vasomotor') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'sleep') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
-              if (key === 'cardio') {
-                const isCount = data.some(v => v === 0)
-                if (isCount) return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
-                return { value: String(val), unit: '/ 5' }
-              }
+              if (key === 'cardio') return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
               return { value: String(val), unit: '/ 5' }
             }
 
