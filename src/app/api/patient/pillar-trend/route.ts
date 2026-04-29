@@ -25,6 +25,7 @@ interface Milestone {
 interface TrendData {
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
+  wearableSeries: Record<string, (number | null)[]>
   milestones: Milestone[]
 }
 
@@ -65,6 +66,10 @@ function normalizeToDisplay(domain: string, raw: number): number {
 
 // DEV FIXTURE ─────────────────────────────────────────────────────────────────
 const DEV_RESPONSE: TrendData = {
+  wearableSeries: {
+    sleep: [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
+    energy: [null, null, null, null, 5.5, 5.9, 6.1, 6.3, 6.4, 6.6, 6.5, 6.8, 6.9, 7.0, 7.2, 7.3, 7.2, 7.4, 7.5, 7.5, 7.6, 7.6, 7.7, 7.7],
+  },
   domains: [
     { key: 'vasomotor', name: 'Vasomotor', accent: '#c97c5d', baseline: 12, current: 3, rawScale: 20, lowerIsBetter: true },
     { key: 'sleep',     name: 'Sleep',          accent: '#5d9ed5', baseline: 5.5, current: 8.1 },
@@ -131,7 +136,7 @@ export async function GET(req: NextRequest) {
       )),
   ])
 
-  // ── Build weekly buckets from check-ins ─────────────────────────────────────
+  // ── Build weekly check-in buckets ───────────────────────────────────────────
   const weeklyBuckets: Record<number, Record<string, number[]>> = {}
   for (let w = 0; w < WEEKS; w++) weeklyBuckets[w] = {}
 
@@ -147,54 +152,39 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── Build weekly buckets from wearable (sleep_score → sleep, readiness_score → energy) ──
-  // Wearable values (0–100) scale directly to display 0–10 (/10)
+  // ── Build wearable buckets separately (sleep_score → sleep, readiness_score → energy) ──
   const wearableMap: Record<string, string> = { sleep_score: 'sleep', readiness_score: 'energy' }
+  const wearableBuckets: Record<number, Record<string, number[]>> = {}
+  for (let w = 0; w < WEEKS; w++) wearableBuckets[w] = {}
+
   for (const row of wearableRows) {
     const domainKey = wearableMap[row.metric_type]
     if (!domainKey) continue
     const d = new Date(row.metric_date + 'T00:00:00')
     const wk = Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
     if (wk < 0) continue
-    const displayVal = Math.max(0, Math.min(10, row.value / 10))
-    if (!weeklyBuckets[wk][domainKey]) weeklyBuckets[wk][domainKey] = []
-    // Wearable data takes priority — store separately and overwrite check-in avg below
-    weeklyBuckets[wk][`__wearable_${domainKey}`] = weeklyBuckets[wk][`__wearable_${domainKey}`] ?? []
-    weeklyBuckets[wk][`__wearable_${domainKey}`].push(displayVal)
+    if (!wearableBuckets[wk][domainKey]) wearableBuckets[wk][domainKey] = []
+    wearableBuckets[wk][domainKey].push(Math.max(0, Math.min(10, row.value / 10)))
   }
 
-  // ── Build per-domain series ─────────────────────────────────────────────────
+  // ── Build per-domain check-in series ────────────────────────────────────────
   const series: Record<string, (number | null)[]> = {}
   const domainsMeta: DomainMeta[] = []
 
   for (const [domainKey, meta] of Object.entries(ALL_DOMAIN_META)) {
     const raw: (number | null)[] = Array(WEEKS).fill(null)
     for (let w = 0; w < WEEKS; w++) {
-      // Prefer wearable-sourced values for sleep and energy
-      const wearableVals = weeklyBuckets[w][`__wearable_${domainKey}`]
-      if (wearableVals && wearableVals.length > 0) {
-        raw[w] = wearableVals.reduce((a, b) => a + b, 0) / wearableVals.length
-        continue
-      }
       const vals = weeklyBuckets[w][domainKey]
       if (vals && vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-        // Raw-scale domains (e.g. vasomotor) skip normalization
         raw[w] = domainKey === 'vasomotor' ? avg : normalizeToDisplay(domainKey, avg)
       }
     }
-    // Forward-fill then backward-fill for a continuous line
     const filled: (number | null)[] = [...raw]
     let last: number | null = null
-    for (let w = 0; w < WEEKS; w++) {
-      if (filled[w] !== null) last = filled[w]
-      else if (last !== null) filled[w] = last
-    }
+    for (let w = 0; w < WEEKS; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
     last = null
-    for (let w = WEEKS - 1; w >= 0; w--) {
-      if (filled[w] !== null) last = filled[w]
-      else if (last !== null) filled[w] = last
-    }
+    for (let w = WEEKS - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
     series[domainKey] = filled
     const nonNull = filled.filter((v): v is number => v !== null)
     domainsMeta.push({
@@ -205,6 +195,25 @@ export async function GET(req: NextRequest) {
       current: nonNull[nonNull.length - 1] ?? (domainKey === 'vasomotor' ? 10 : 5),
       ...(domainKey === 'vasomotor' ? { rawScale: 20, lowerIsBetter: true } : {}),
     })
+  }
+
+  // ── Build wearable series (sleep + energy only) ──────────────────────────────
+  const wearableSeries: Record<string, (number | null)[]> = {}
+  for (const domainKey of ['sleep', 'energy']) {
+    const raw: (number | null)[] = Array(WEEKS).fill(null)
+    for (let w = 0; w < WEEKS; w++) {
+      const vals = wearableBuckets[w][domainKey]
+      if (vals && vals.length > 0) raw[w] = vals.reduce((a, b) => a + b, 0) / vals.length
+    }
+    const hasAny = raw.some(v => v !== null)
+    if (hasAny) {
+      const filled: (number | null)[] = [...raw]
+      let last: number | null = null
+      for (let w = 0; w < WEEKS; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+      last = null
+      for (let w = WEEKS - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+      wearableSeries[domainKey] = filled
+    }
   }
 
   // ── Load milestones ─────────────────────────────────────────────────────────
@@ -247,5 +256,5 @@ export async function GET(req: NextRequest) {
 
   milestones.sort((a, b) => a.wk - b.wk)
 
-  return NextResponse.json({ domains: domainsMeta, series, milestones } satisfies TrendData)
+  return NextResponse.json({ domains: domainsMeta, series, wearableSeries, milestones } satisfies TrendData)
 }

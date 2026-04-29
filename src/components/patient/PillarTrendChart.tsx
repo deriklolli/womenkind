@@ -25,6 +25,7 @@ interface Milestone {
 interface TrendData {
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
+  wearableSeries: Record<string, (number | null)[]>
   milestones: Milestone[]
 }
 
@@ -237,6 +238,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const domain = visibleDomains.find(d => d.key === activeDomainKey) ?? visibleDomains[0]
   const { accent, key: domainKey } = domain
   const series = data.series[domainKey] ?? []
+  const wearableSeries = data.wearableSeries?.[domainKey] ?? null
   const milestones = data.milestones
 
   // Domain-aware y coordinate: raw-scale domains (e.g. vasomotor, lower=better) map
@@ -258,6 +260,14 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const linePath = buildPath(pts)
   const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
   const firstPt = pts[0] ?? [xOf(0), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
+
+  // Wearable overlay line
+  const wearablePts: [number, number][] = wearableSeries
+    ? wearableSeries
+        .map((v, i) => v !== null ? [xOf(i), yOfDomain(v)] as [number, number] : null)
+        .filter((p): p is [number, number] => p !== null)
+    : []
+  const wearableLinePath = buildPath(wearablePts)
 
   const areaPath = pts.length > 0
     ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
@@ -287,11 +297,19 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
             <p className="font-sans text-xs text-aubergine/45 mt-1">{DOMAIN_SUBTITLES[domain.key]}</p>
           )}
         </div>
-        <DomainDropdown
-          domains={visibleDomains}
-          activeKey={activeDomainKey}
-          onChange={k => { setActiveDomainKey(k); setHoveredPin(null) }}
-        />
+        <div className="flex items-center gap-3">
+          {wearableLinePath && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-aubergine/15 bg-cream">
+              <span className="block w-5 h-px border-t-2 border-dashed border-aubergine/35" />
+              <span className="font-sans text-[10px] font-bold tracking-[0.14em] text-aubergine/45 uppercase">Oura</span>
+            </div>
+          )}
+          <DomainDropdown
+            domains={visibleDomains}
+            activeKey={activeDomainKey}
+            onChange={k => { setActiveDomainKey(k); setHoveredPin(null) }}
+          />
+        </div>
       </div>
 
       {/* SVG Chart */}
@@ -330,8 +348,11 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {/* Area fill */}
           {areaPath && <path d={areaPath} fill={`url(#grad-${gradId}-${domainKey})`} />}
 
-          {/* Series line */}
+          {/* Series line — patient self-reported */}
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
+
+          {/* Wearable (Oura) overlay — dashed, dimmer */}
+          {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={AUBERGINE} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" opacity={0.3} />}
 
           {/* Milestone stems + data dots */}
           {milestones.map((m, i) => {

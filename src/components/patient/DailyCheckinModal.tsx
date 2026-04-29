@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
-  hasWearable?: boolean
   onSuccess: () => void
   onClose: () => void
 }
@@ -57,7 +56,7 @@ const STANDARD_QUESTIONS = [
   },
 ]
 
-const WEARABLE_QUESTIONS = [
+const SLEEP_ENERGY_QUESTIONS = [
   {
     domain: 'sleep',
     question: 'On average, how many hours of sleep per night did you get this week?',
@@ -86,22 +85,18 @@ function scoreColor(val: number): string {
   return 'text-red-600'
 }
 
-function buildInitialScores(hasWearable: boolean): Record<string, number> {
-  const base: Record<string, number> = {
+function buildInitialScores(): Record<string, number> {
+  return {
     vasomotor: 0,
+    sleep: 7, energy: 3,
     mood: 3, cognition: 3, gsm: 3, bone: 3, weight: 3, libido: 3,
     cardio: 0,
     overall: 3,
   }
-  if (!hasWearable) {
-    base.sleep = 7
-    base.energy = 3
-  }
-  return base
 }
 
-export default function DailyCheckinModal({ hasWearable = false, onSuccess, onClose }: Props) {
-  const [scores, setScores] = useState<Record<string, number>>(() => buildInitialScores(hasWearable))
+export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
+  const [scores, setScores] = useState<Record<string, number>>(buildInitialScores)
   const [cardioYes, setCardioYes] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -113,9 +108,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
 
   useEffect(() => { setMounted(true) }, [])
 
-  const questions = hasWearable
-    ? STANDARD_QUESTIONS
-    : [...STANDARD_QUESTIONS.slice(0, 1), ...WEARABLE_QUESTIONS, ...STANDARD_QUESTIONS.slice(1)]
+  const questions = [...STANDARD_QUESTIONS.slice(0, 1), ...SLEEP_ENERGY_QUESTIONS, ...STANDARD_QUESTIONS.slice(1)]
 
   // Slider questions are pre-answered (default 3 is valid). Counter, hours, cardio need explicit touch.
   const explicitDomains = questions

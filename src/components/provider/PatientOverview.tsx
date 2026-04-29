@@ -315,7 +315,6 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
       {/* Daily check-in modal */}
       {checkinModal && (
         <DailyCheckinModal
-          hasWearable={hasWearable}
           onClose={() => setCheckinModal(false)}
           onSuccess={() => {
             setCheckinModal(false)
