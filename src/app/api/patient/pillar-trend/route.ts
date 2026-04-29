@@ -124,10 +124,10 @@ export async function GET(req: NextRequest) {
   // ── Find earliest data date to anchor the window ───────────────────────────
   const [firstCheckin, firstVisit, firstRx] = await Promise.all([
     db.select({ d: visits.visit_date }).from(visits)
-      .where(and(eq(visits.patient_id, patientId), eq(visits.source, 'weekly')))
+      .where(and(eq(visits.patient_id, patientId), eq(visits.source, 'daily')))
       .orderBy(asc(visits.visit_date)).limit(1),
     db.select({ d: visits.visit_date }).from(visits)
-      .where(and(eq(visits.patient_id, patientId), ne(visits.source, 'weekly')))
+      .where(and(eq(visits.patient_id, patientId), ne(visits.source, 'daily')))
       .orderBy(asc(visits.visit_date)).limit(1),
     db.select({ d: prescriptions.prescribed_at }).from(prescriptions)
       .where(eq(prescriptions.patient_id, patientId))
@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
   // ── Load check-ins + wearable data in parallel ─────────────────────────────
   const [checkins, wearableRows] = await Promise.all([
     db.select({ visit_date: visits.visit_date, symptom_scores: visits.symptom_scores })
-      .from(visits).where(and(eq(visits.patient_id, patientId), eq(visits.source, 'weekly'), gte(visits.visit_date, startIso))),
+      .from(visits).where(and(eq(visits.patient_id, patientId), eq(visits.source, 'daily'), gte(visits.visit_date, startIso))),
     db.select({ metric_type: wearable_metrics.metric_type, metric_date: wearable_metrics.metric_date, value: wearable_metrics.value })
       .from(wearable_metrics).where(and(
         eq(wearable_metrics.patient_id, patientId),
@@ -250,7 +250,7 @@ export async function GET(req: NextRequest) {
   // ── Load milestones ─────────────────────────────────────────────────────────
   const [providerVisits, rxList] = await Promise.all([
     db.select({ id: visits.id, visit_date: visits.visit_date, visit_type: visits.visit_type })
-      .from(visits).where(and(eq(visits.patient_id, patientId), ne(visits.source, 'weekly'), gte(visits.visit_date, startIso))),
+      .from(visits).where(and(eq(visits.patient_id, patientId), ne(visits.source, 'daily'), gte(visits.visit_date, startIso))),
     db.select({ medication_name: prescriptions.medication_name, dosage: prescriptions.dosage, prescribed_at: prescriptions.prescribed_at })
       .from(prescriptions).where(and(eq(prescriptions.patient_id, patientId), gte(prescriptions.prescribed_at, startDate))),
   ])
