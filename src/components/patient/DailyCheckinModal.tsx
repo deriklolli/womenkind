@@ -187,6 +187,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
                         value={scores[q.domain]}
                         min={0}
                         max={20}
+                        step={0.5}
                         unit="per day avg"
                         onChange={(v) => set(q.domain, v)}
                       />
@@ -289,28 +290,29 @@ function SliderInput({ value, onChange }: { value: number; onChange: (v: number)
 }
 
 function CounterInput({
-  value, min, max, unit, onChange,
+  value, min, max, step = 1, unit, onChange,
 }: {
-  value: number; min: number; max: number; unit: string; onChange: (v: number) => void
+  value: number; min: number; max: number; step?: number; unit: string; onChange: (v: number) => void
 }) {
   const countColor = value === 0 ? 'text-emerald-600' : value <= 3 ? 'text-amber-600' : value <= 7 ? 'text-orange-600' : 'text-red-600'
+  const display = value % 1 === 0 ? String(value) : value.toFixed(1)
   return (
     <div className="flex items-center gap-4">
       <button
-        onClick={() => onChange(Math.max(min, value - 1))}
+        onClick={() => onChange(Math.max(min, Math.round((value - step) * 10) / 10))}
         className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
         aria-label="Decrease"
       >
         −
       </button>
       <div className="flex-1 text-center">
-        <span className={`font-serif text-4xl leading-none ${countColor}`}>{value}</span>
+        <span className={`font-serif text-4xl leading-none ${countColor}`}>{display}</span>
         <p className="font-sans text-xs text-aubergine/40 mt-1">
           {value === 0 ? 'None this week' : `${unit}`}
         </p>
       </div>
       <button
-        onClick={() => onChange(Math.min(max, value + 1))}
+        onClick={() => onChange(Math.min(max, Math.round((value + step) * 10) / 10))}
         className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
         aria-label="Increase"
       >

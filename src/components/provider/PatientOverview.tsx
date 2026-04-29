@@ -534,7 +534,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
             // Domain-specific value display
             const domainDisplay = (key: string, val: number) => {
-              if (key === 'vasomotor') return { value: String(val), unit: '' }
+              if (key === 'vasomotor') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'sleep') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'cardio') {
                 const isCount = data.some(v => v === 0)
