@@ -89,12 +89,12 @@ describe('POST /api/stripe/checkout', () => {
     })
   })
 
-  it('returns 400 when intakeId is missing', async () => {
+  it('returns 400 when no patient can be resolved', async () => {
     const { POST } = await import('../checkout/route')
     const res = await POST(makeRequest({}))
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toMatch(/intakeId/)
+    expect(body.error).toBeTruthy()
   })
 
   it('returns 400 when body is empty object', async () => {

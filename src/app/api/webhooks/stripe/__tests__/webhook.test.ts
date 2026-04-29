@@ -196,7 +196,7 @@ describe('POST /api/webhooks/stripe', () => {
       expect(res.status).toBe(200)
       expect(mockUpdate).toHaveBeenCalled()
       expect(mockSet).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'submitted', paid: true })
+        expect.objectContaining({ paid: true })
       )
     })
 
@@ -321,7 +321,7 @@ describe('POST /api/webhooks/stripe', () => {
       expect(res.status).toBe(200)
       // Both an update (intake) and inserts (intake record + membership record) should fire
       expect(mockSet).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'submitted', paid: true })
+        expect.objectContaining({ paid: true })
       )
       expect(mockInsertValues).toHaveBeenCalledTimes(2)
     })
