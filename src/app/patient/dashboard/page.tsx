@@ -79,6 +79,7 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
           background: 'linear-gradient(135deg,#fff 0%,#faf6ef 60%,#f3e9da 100%)',
           border: '1px solid rgba(66,42,31,.10)',
           boxShadow: '0 1px 0 rgba(255,255,255,.9) inset, 0 22px 50px -28px rgba(40,15,73,.4)',
+          opacity: 0.75,
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLElement
