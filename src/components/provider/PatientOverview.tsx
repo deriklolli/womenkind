@@ -130,7 +130,15 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const [wmiExplainerOpen, setWmiExplainerOpen] = useState(false)
   const [todayCheckedIn, setTodayCheckedIn] = useState<boolean | null>(null)
   const [hasWearable, setHasWearable] = useState(false)
-  const [checkinDismissed, setCheckinDismissed] = useState(false)
+  const currentWeekKey = (() => {
+    const d = new Date(); const day = d.getDay()
+    const monday = new Date(d); monday.setDate(d.getDate() - ((day + 6) % 7)); monday.setHours(0,0,0,0)
+    return `wk_checkin_dismissed_${monday.toISOString().slice(0,10)}`
+  })()
+  const [checkinDismissed, setCheckinDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(currentWeekKey) === '1'
+  })
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -281,7 +289,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
           </div>
           {todayCheckedIn ? (
             <button
-              onClick={() => setCheckinDismissed(true)}
+              onClick={() => { setCheckinDismissed(true); localStorage.setItem(currentWeekKey, '1') }}
               className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-emerald-100 transition-colors shrink-0 text-emerald-600/60 hover:text-emerald-700"
               aria-label="Dismiss"
             >
