@@ -114,6 +114,17 @@ const DEMO_INTAKE = {
     metadata: { symptom_burden: 'moderate', menopausal_stage: 'Perimenopause' },
     summary: 'Your vasomotor symptoms continue to improve on your current estradiol regimen, and your energy is trending upward. Sleep and mood remain areas to watch — your provider will review your progress at your next visit.',
   },
+  wmi_scores: {
+    wmi: 73,
+    wmi_label: 'Improving / Mild Strain',
+    wmi_message: 'Your system is responding to treatment. Focus on consistent check-ins and sleep — these have the most impact on your score right now.',
+    wmi_band: '70-79' as const,
+    phenotype: 'VMS-dominant',
+    safety_flags: [] as string[],
+    vms: 6, sleep: 4, mams: 3, cog: 2,
+    gsm: 3, hsdd: 1, cardio: 1, msk: 1,
+    confidence: 'high' as const,
+  },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {

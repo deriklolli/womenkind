@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { Flame, Moon, Zap, SmilePlus, Droplets, Brain, Shield, Scale, Heart, Activity } from 'lucide-react'
 import DailyCheckinModal from '@/components/patient/DailyCheckinModal'
+import WmiExplainerModal from '@/components/patient/WmiExplainerModal'
 
 interface Visit {
   id: string
@@ -125,6 +126,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [checkinModal, setCheckinModal] = useState(false)
+  const [wmiExplainerOpen, setWmiExplainerOpen] = useState(false)
   const [todayCheckedIn, setTodayCheckedIn] = useState<boolean | null>(null)
   const [hasWearable, setHasWearable] = useState(false)
   const [checkinDismissed, setCheckinDismissed] = useState(false)
@@ -294,6 +296,18 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
         </div>
       )}
 
+      {/* WMI explainer modal */}
+      {wmiExplainerOpen && wmiScores && (
+        <WmiExplainerModal
+          open={wmiExplainerOpen}
+          onClose={() => setWmiExplainerOpen(false)}
+          score={Math.round(overallNow ?? wmiScores.wmi)}
+          wmiLabel={wmiScores.wmi_label}
+          wmiMessage={wmiScores.wmi_message}
+          hasWearable={hasWearable}
+        />
+      )}
+
       {/* Daily check-in modal */}
       {checkinModal && (
         <DailyCheckinModal
@@ -363,7 +377,20 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
+        <div className="relative bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
+          {/* Info button */}
+          {wmiScores && (
+            <button
+              onClick={() => setWmiExplainerOpen(true)}
+              className="absolute top-3 right-4 w-7 h-7 rounded-full flex items-center justify-center text-aubergine/30 hover:text-aubergine/60 hover:bg-aubergine/5 transition-colors"
+              aria-label="Learn about your score"
+            >
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M7.5 6.5v4M7.5 4.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           <div className="flex flex-col items-center text-center">
             <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
               Your Womenkind Score
