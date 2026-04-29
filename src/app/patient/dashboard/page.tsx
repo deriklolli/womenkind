@@ -57,7 +57,7 @@ function WomenkindScoreBadge({ score, wmiLabel, delta, deltaStatus, onInfoClick 
   const key = wmiLabel?.toLowerCase() ?? ''
   const hl = HEADLINE_MAP[key] ?? { prefix: 'Your health,', suffix: 'in focus' }
 
-  const R = 26, CX = 34, CY = 34, STROKE = 4
+  const R = 32, CX = 40, CY = 40, STROKE = 7
   const circ = 2 * Math.PI * R
   const pct = score != null ? Math.min(display / 100, 1) : 0
   const dash = circ * pct
@@ -66,42 +66,51 @@ function WomenkindScoreBadge({ score, wmiLabel, delta, deltaStatus, onInfoClick 
   return (
     <button
       onClick={onInfoClick}
-      className="flex items-center gap-4 px-5 py-3 rounded-[999px] shadow-md hover:shadow-lg transition-shadow shrink-0"
-      style={{ background: 'linear-gradient(105deg, #ede5dc 0%, #f7f3ee 55%, #f0eae3 100%)', border: '1px solid rgba(66,42,31,0.09)' }}
+      className="flex items-center gap-3 pr-6 py-2 rounded-[999px] shadow-lg hover:shadow-xl transition-shadow shrink-0"
+      style={{ background: 'linear-gradient(110deg, #ede5dc 0%, #f7f3ee 50%, #ede8e1 100%)', border: '1px solid rgba(66,42,31,0.09)', paddingLeft: '10px' }}
     >
-      {/* Circular score arc */}
-      <svg width="68" height="68" viewBox="0 0 68 68" className="shrink-0">
-        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,79,237,0.14)" strokeWidth={STROKE} />
+      {/* Circular score arc — sits flush left */}
+      <svg width="80" height="80" viewBox="0 0 80 80" className="shrink-0 -ml-1">
+        {/* drop shadow filter */}
+        <defs>
+          <filter id="ring-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#944fed" floodOpacity="0.25"/>
+          </filter>
+        </defs>
+        {/* track */}
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,79,237,0.13)" strokeWidth={STROKE} />
+        {/* progress arc */}
         {score != null && (
           <circle cx={CX} cy={CY} r={R} fill="none" stroke="#944fed" strokeWidth={STROKE}
             strokeLinecap="round" strokeDasharray={`${dash} ${gap}`}
-            transform={`rotate(-90 ${CX} ${CY})`} />
+            transform={`rotate(-90 ${CX} ${CY})`} filter="url(#ring-shadow)" />
         )}
-        <text x={CX} y={CY + 1} textAnchor="middle" dominantBaseline="middle"
-          fontFamily="'Playfair Display', serif" fontSize="20" fill="#280f49">
+        {/* score number */}
+        <text x={CX} y={CY + 2} textAnchor="middle" dominantBaseline="middle"
+          fontFamily="'Playfair Display', serif" fontSize="28" fill="#280f49" fontWeight="400">
           {score != null ? display : '—'}
         </text>
       </svg>
 
-      {/* Text */}
+      {/* Text block */}
       <div className="flex flex-col items-start gap-0.5 text-left">
-        <p className="text-[10px] font-sans font-semibold tracking-[0.18em] uppercase text-aubergine/45">
+        <p className="text-[10px] font-sans font-semibold tracking-[0.2em] uppercase" style={{ color: 'rgba(40,15,73,0.45)' }}>
           Womenkind Score
         </p>
-        <p className="font-serif text-[22px] leading-tight text-aubergine whitespace-nowrap">
+        <p className="font-serif text-[24px] leading-tight text-aubergine whitespace-nowrap">
           {hl.prefix} <span className="italic" style={{ color: '#944fed' }}>{hl.suffix}</span>
         </p>
         {delta != null && deltaStatus && (
-          <p className={`text-xs font-sans font-semibold flex items-center gap-1 ${
+          <p className={`text-[12px] font-sans font-semibold flex items-center gap-1 ${
             deltaStatus === 'improving' ? 'text-emerald-600' :
             deltaStatus === 'watch'     ? 'text-amber-600'   : 'text-aubergine/40'
           }`}>
             {deltaStatus === 'improving' ? '↑' : deltaStatus === 'watch' ? '↓' : '→'}
-            {' '}+{Math.abs(delta)} since last visit
+            {' '}+{Math.abs(delta)} this month
           </p>
         )}
         {delta == null && wmiLabel && (
-          <p className="text-xs font-sans text-violet/70">{wmiLabel}</p>
+          <p className="text-[12px] font-sans font-medium" style={{ color: 'rgba(148,79,237,0.7)' }}>{wmiLabel}</p>
         )}
       </div>
     </button>
