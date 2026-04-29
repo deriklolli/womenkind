@@ -862,8 +862,6 @@ export default function PatientDashboardPage() {
                   onDomainsChange={setChartDomains}
                 />
 
-                <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} />
-
                 <TimelineStrip markers={timelineMarkers} />
 
               </>
