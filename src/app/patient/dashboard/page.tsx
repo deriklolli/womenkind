@@ -130,7 +130,7 @@ function WomenkindScoreBadge({ score, delta, deltaStatus }: {
         </div>
 
         {/* Meta column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.1, paddingRight: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, lineHeight: 1.1, paddingRight: 6 }}>
           <span style={{ fontSize: 9, letterSpacing: '.22em', textTransform: 'uppercase', color: 'rgba(66,42,31,.55)', fontWeight: 700 }}>
             Womenkind Score
           </span>
