@@ -97,10 +97,7 @@ function DomainDropdown({
         style={{ borderRadius: 14, borderColor: open ? '#944fed' : 'rgba(66,42,31,.15)' }}
       >
         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: active?.accent }} />
-        <span className="flex-1 text-left">
-          <span className="block font-sans text-[9px] font-bold tracking-[0.16em] text-aubergine/40 uppercase">Symptom</span>
-          <span className="block font-display text-sm text-aubergine">{active?.name}</span>
-        </span>
+        <span className="font-display text-sm text-aubergine flex-1 text-left">{active?.name}</span>
         <svg
           width="10" height="6" viewBox="0 0 10 6" fill="none"
           className="flex-shrink-0 transition-transform"
