@@ -39,6 +39,10 @@ interface Props {
 const AUBERGINE = '#280f49'
 const CREAM = '#f7f3ee'
 
+const DOMAIN_SUBTITLES: Record<string, string> = {
+  vasomotor: 'Hot flashes per day avg',
+}
+
 const VB_W = 1100
 const VB_H = 380
 const PAD = { l: 54, r: 36, t: 62, b: 46 }
@@ -237,7 +241,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   // Domain-aware y coordinate: raw-scale domains (e.g. vasomotor, lower=better) map
   // 0 → top of chart, rawScale → bottom. Normalized domains map 10 → top, 0 → bottom.
   const yOfDomain = (val: number): number => {
-    if (domain.rawScale) return PAD.t + (val / domain.rawScale) * CHART_H
+    if (domain.rawScale) return PAD.t + CHART_H - (val / domain.rawScale) * CHART_H
     return PAD.t + CHART_H - (val / 10) * CHART_H
   }
 
@@ -275,12 +279,12 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <p className="font-sans text-[10px] font-bold tracking-[0.16em] uppercase text-aubergine/35 mb-0.5">
-            Trend over time
-          </p>
           <h2 className="font-display text-[26px] leading-tight text-aubergine">
             {domain.name} over time
           </h2>
+          {DOMAIN_SUBTITLES[domain.key] && (
+            <p className="font-sans text-xs text-aubergine/45 mt-1">{DOMAIN_SUBTITLES[domain.key]}</p>
+          )}
         </div>
         <DomainDropdown
           domains={visibleDomains}
@@ -313,9 +317,6 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
               </g>
             )
           })}
-          {domain.lowerIsBetter && (
-            <text x={PAD.l - 8} y={PAD.t - 8} textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={9} fontWeight={700} fill="rgba(66,42,31,0.35)" letterSpacing="0.06em">↓ lower is better</text>
-          )}
 
           {/* Baseline marker */}
           <line x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY} stroke="rgba(66,42,31,0.45)" strokeWidth={1} strokeDasharray="3 4" />
