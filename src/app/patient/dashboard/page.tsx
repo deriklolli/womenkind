@@ -930,7 +930,7 @@ export default function PatientDashboardPage() {
               Here's the latest on your care journey.
             </p>
           </div>
-          {(() => {
+          {activeView === 'scorecard' && (() => {
             const wmiScores = overviewIntake?.wmi_scores
             const score = overviewLiveWmi ?? wmiScores?.wmi ?? null
             const sortedOverall = [...overviewVisits]
