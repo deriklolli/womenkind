@@ -41,8 +41,16 @@ const AUBERGINE = '#280f49'
 const CREAM = '#f7f3ee'
 
 const DOMAIN_SUBTITLES: Record<string, string> = {
-  vasomotor: 'Hot flashes per day avg',
-  sleep: 'Sleep / nightly avg',
+  vasomotor: 'Hot flashes / daily avg',
+  sleep:     'Sleep / nightly avg',
+  energy:    'Daily energy level',
+  mood:      'Self-rated, journaled',
+  cognition: 'Brain fog & clarity',
+  gsm:       'GSM symptom score',
+  bone:      'Density indicators',
+  weight:    'Weight & metabolic',
+  libido:    'Self-rated intimacy',
+  cardio:    'Heart & circulation',
 }
 
 const VB_W = 1100
