@@ -324,7 +324,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
         />
       )}
 
-      {/* ── Score header ─────────────────────────────────────────── */}
+      {/* ── Score header (compact banner — provider only) ─────────── */}
       {compact ? (
         <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-5 py-3 flex items-center gap-4">
           {/* Score number */}
@@ -379,97 +379,64 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
             )}
           </div>
         </div>
-      ) : (
-        <div className="relative bg-white rounded-card shadow-sm border border-aubergine/5 px-7 pt-4 pb-7">
-          {/* Info button */}
-          {wmiScores && (
-            <button
-              onClick={() => setWmiExplainerOpen(true)}
-              className="absolute top-3 right-4 w-7 h-7 rounded-full flex items-center justify-center text-aubergine/30 hover:text-aubergine/60 hover:bg-aubergine/5 transition-colors"
-              aria-label="Learn about your score"
-            >
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-                <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-                <path d="M7.5 6.5v4M7.5 4.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-            </button>
-          )}
-          <div className="flex flex-col items-center text-center">
-            <p className="text-[10px] font-sans tracking-widest text-aubergine/55 uppercase mt-4 -mb-2">
-              Your Womenkind Score
-            </p>
-
-            <div className="flex items-end gap-2 mb-3">
-              {overallNow !== undefined ? (
-                <>
-                  <span className="font-serif font-normal text-[100px] leading-none text-aubergine">{displayScore}</span>
-                  <span className="font-serif text-xl mb-1.5 italic" style={{ color: '#C4A87A' }}>/100</span>
-                </>
-              ) : (
-                <span className="font-serif text-6xl leading-none text-aubergine/20">—</span>
-              )}
-            </div>
-
-            {isInitialState && wmiScores ? (
-              <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  Based on WMI
-                </span>
-              </div>
-            ) : overallDelta !== null ? (
-              <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
-                overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
-                overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
-                                               'bg-aubergine/5 text-aubergine/50'
-              }`}>
-                {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} since last visit
-              </span>
-            ) : wmiScores ? (
-              <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  {wmiScores.wmi_label}
-                </span>
-                {wmiScores.phenotype && (
-                  <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-aubergine/5 text-aubergine/55">
-                    {wmiScores.phenotype}
-                  </span>
-                )}
-              </div>
-            ) : null}
-
-            {isLiveScore && lastCheckinDate && (
-              <p className="text-[10px] font-sans text-aubergine/40 -mt-2 mb-3 tracking-wide">
-                Live score · Last check-in: {lastCheckinDate}
-              </p>
-            )}
-
-            {isInitialState && wmiScores ? (
-              <>
-                <p className="font-serif text-2xl text-aubergine mb-2">
-                  {wmiHeadline.prefix} <span className="italic text-violet">{wmiHeadline.suffix}</span>
-                </p>
-                {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
-              </>
-            ) : (
-              <>
-                <p className="font-serif text-2xl text-aubergine mb-2">
-                  {headline.prefix} <span className="italic text-violet">{headline.suffix}</span>
-                </p>
-                {body && <p className="text-sm font-sans text-aubergine/50 leading-relaxed max-w-lg">{body}</p>}
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* ── Symptom Tracker ───────────────────────────────────────── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <p className="font-serif text-xl text-aubergine">
+        <div className="flex items-start justify-between mb-4">
+          <p className="font-serif text-xl text-aubergine pt-1">
             Symptom <span className="italic text-violet">Tracker</span>
           </p>
-          <div className="relative" ref={dropdownRef}>
+
+          <div className="flex items-start gap-3">
+            {/* WomenScore badge */}
+            {!compact && (
+              <div className="bg-white border border-aubergine/8 rounded-2xl shadow-lg shadow-aubergine/10 px-4 py-3 flex flex-col items-end min-w-[120px]">
+                <p className="text-[9px] font-sans font-bold tracking-widest uppercase mb-1" style={{ color: '#944fed' }}>
+                  Womenkind Score
+                </p>
+                <div className="flex items-end gap-1 leading-none">
+                  {overallNow !== undefined ? (
+                    <>
+                      <span className="font-serif text-[32px] leading-none text-aubergine">{displayScore}</span>
+                      <span className="font-serif text-sm italic mb-0.5" style={{ color: '#C4A87A' }}>/100</span>
+                    </>
+                  ) : (
+                    <span className="font-serif text-2xl leading-none text-aubergine/20">—</span>
+                  )}
+                </div>
+                {isInitialState && wmiScores ? (
+                  <span className="text-[9px] font-sans font-semibold px-2 py-0.5 rounded-pill mt-1.5 bg-violet/8 text-violet">
+                    Based on WMI
+                  </span>
+                ) : overallDelta !== null ? (
+                  <span className={`text-[9px] font-sans font-bold px-2 py-0.5 rounded-pill mt-1.5 ${
+                    overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
+                    overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
+                                                   'bg-aubergine/5 text-aubergine/50'
+                  }`}>
+                    {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'} {Math.abs(overallDelta)} pts
+                  </span>
+                ) : wmiScores ? (
+                  <span className="text-[9px] font-sans font-semibold px-2 py-0.5 rounded-pill mt-1.5 bg-violet/8 text-violet">
+                    {wmiScores.wmi_label}
+                  </span>
+                ) : null}
+                {isLiveScore && (
+                  <p className="text-[8px] font-sans text-aubergine/35 mt-1 tracking-wide">Live score</p>
+                )}
+                {wmiScores && (
+                  <button
+                    onClick={() => setWmiExplainerOpen(true)}
+                    className="mt-1.5 text-[8px] font-sans text-aubergine/30 hover:text-violet transition-colors underline underline-offset-2"
+                  >
+                    How is this calculated?
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(o => !o)}
               className="w-8 h-8 rounded-full border-2 border-aubergine/20 flex items-center justify-center text-aubergine/40 hover:border-violet hover:text-violet transition-colors"
@@ -514,6 +481,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
               </div>
             )}
           </div>
+          </div>{/* end flex gap-3 wrapper */}
         </div>
 
         <div className={`grid gap-3 ${activeDomains.length <= 3 ? 'grid-cols-3' : activeDomains.length === 4 ? 'grid-cols-4' : 'grid-cols-4'}`}>
