@@ -851,7 +851,7 @@ export default function PatientDashboardPage() {
                   onDomainsChange={setChartDomains}
                 />
 
-                <PillarTrendChart patientId={patient.patientId} initialPillar="sleep" />
+                <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} />
 
                 <TimelineStrip markers={timelineMarkers} />
 
@@ -1144,7 +1144,7 @@ export default function PatientDashboardPage() {
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
                 />
-                <PillarTrendChart patientId={patient.patientId} initialPillar="vasomotor" />
+                <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} />
               </>
             )}
 

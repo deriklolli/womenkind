@@ -4,15 +4,12 @@ import { useState, useEffect, useId } from 'react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PillarKey = 'sleep' | 'vasomotor' | 'mood' | 'brain' | 'hormonal'
-
-interface Pillar {
-  key: PillarKey
+interface DomainMeta {
+  key: string
   name: string
   accent: string
   baseline: number
   current: number
-  unit: string
 }
 
 interface Milestone {
@@ -23,29 +20,28 @@ interface Milestone {
   body: string
 }
 
-interface PillarTrendData {
-  pillars: Pillar[]
-  series: Record<PillarKey, (number | null)[]>
+interface TrendData {
+  domains: DomainMeta[]
+  series: Record<string, (number | null)[]>
   milestones: Milestone[]
-  startDate: string
 }
 
 interface Props {
   patientId: string
-  initialPillar?: PillarKey
+  activeDomains: string[]   // mirrors symptom tracker card selection
+  initialDomain?: string
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const AUBERGINE = '#280f49'
-const WARM = '#422a1f'
 const CREAM = '#f7f3ee'
 
 const VB_W = 1100
 const VB_H = 380
 const PAD = { l: 54, r: 36, t: 62, b: 46 }
-const CHART_W = VB_W - PAD.l - PAD.r   // 1010
-const CHART_H = VB_H - PAD.t - PAD.b   // 272
+const CHART_W = VB_W - PAD.l - PAD.r
+const CHART_H = VB_H - PAD.t - PAD.b
 const WEEKS = 24
 
 const X_TICKS = [
@@ -79,39 +75,36 @@ function buildPath(pts: [number, number][]): string {
   return d
 }
 
-// ── Pillar dropdown ───────────────────────────────────────────────────────────
+// ── Domain dropdown ───────────────────────────────────────────────────────────
 
-function PillarDropdown({
-  pillars,
-  active,
+function DomainDropdown({
+  domains,
+  activeKey,
   onChange,
 }: {
-  pillars: Pillar[]
-  active: PillarKey
-  onChange: (k: PillarKey) => void
+  domains: DomainMeta[]
+  activeKey: string
+  onChange: (k: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const activePillar = pillars.find(p => p.key === active)!
+  const active = domains.find(d => d.key === activeKey) ?? domains[0]
 
   return (
     <div className="relative" style={{ minWidth: 230 }}>
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 bg-cream border transition-colors"
-        style={{
-          borderRadius: 14,
-          borderColor: open ? '#944fed' : 'rgba(66,42,31,.15)',
-        }}
+        style={{ borderRadius: 14, borderColor: open ? '#944fed' : 'rgba(66,42,31,.15)' }}
       >
-        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: activePillar.accent }} />
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: active?.accent }} />
         <span className="flex-1 text-left">
-          <span className="block font-sans text-[9px] font-bold tracking-[0.16em] text-aubergine/40 uppercase">Pillar</span>
-          <span className="block font-display text-sm text-aubergine">{activePillar.name}</span>
+          <span className="block font-sans text-[9px] font-bold tracking-[0.16em] text-aubergine/40 uppercase">Symptom</span>
+          <span className="block font-display text-sm text-aubergine">{active?.name}</span>
         </span>
         <svg
           width="10" height="6" viewBox="0 0 10 6" fill="none"
-          className="transition-transform flex-shrink-0"
-          style={{ transform: open ? 'rotate(180deg)' : 'none', color: WARM, opacity: 0.4 }}
+          className="flex-shrink-0 transition-transform"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', color: AUBERGINE, opacity: 0.4 }}
         >
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -122,23 +115,21 @@ function PillarDropdown({
           className="absolute top-full mt-1.5 w-full bg-white border border-aubergine/10 shadow-lg z-20 overflow-hidden"
           style={{ borderRadius: 14 }}
         >
-          {pillars.map(p => (
+          {domains.map(d => (
             <button
-              key={p.key}
-              onClick={() => { onChange(p.key); setOpen(false) }}
+              key={d.key}
+              onClick={() => { onChange(d.key); setOpen(false) }}
               className="w-full flex items-center gap-3 px-4 py-3 transition-colors hover:bg-cream/60"
-              style={{ background: p.key === active ? CREAM : undefined }}
+              style={{ background: d.key === activeKey ? CREAM : undefined }}
             >
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: p.accent }} />
-              <span className="font-display text-sm text-aubergine">{p.name}</span>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.accent }} />
+              <span className="font-display text-sm text-aubergine">{d.name}</span>
             </button>
           ))}
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-      )}
+      {open && <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />}
     </div>
   )
 }
@@ -163,14 +154,10 @@ function AnnotationCard({
   return (
     <div
       className="rounded-2xl p-4 cursor-default transition-all duration-[250ms]"
-      style={{
-        background: highlighted ? accent : CREAM,
-        color: highlighted ? 'white' : AUBERGINE,
-      }}
+      style={{ background: highlighted ? accent : CREAM, color: highlighted ? 'white' : AUBERGINE }}
       onMouseEnter={() => onHover(milestoneIndex)}
       onMouseLeave={() => onHover(null)}
     >
-      {/* Top row: chip + eyebrow */}
       <div className="flex items-center gap-2 mb-2">
         <span
           className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-[250ms]"
@@ -187,21 +174,14 @@ function AnnotationCard({
         </span>
         <span
           className="font-sans font-bold tracking-[0.18em] uppercase transition-colors duration-[250ms]"
-          style={{
-            fontSize: 9.5,
-            color: highlighted ? 'rgba(255,255,255,0.65)' : 'rgba(66,42,31,0.45)',
-          }}
+          style={{ fontSize: 9.5, color: highlighted ? 'rgba(255,255,255,0.65)' : 'rgba(66,42,31,0.45)' }}
         >
           WK {milestone.wk} · {milestone.short}
         </span>
       </div>
-      {/* Title */}
       <p
         className="font-display leading-snug transition-colors duration-[250ms]"
-        style={{
-          fontSize: 14,
-          color: highlighted ? 'white' : AUBERGINE,
-        }}
+        style={{ fontSize: 14, color: highlighted ? 'white' : AUBERGINE }}
       >
         {milestone.title}
       </p>
@@ -211,20 +191,28 @@ function AnnotationCard({
 
 // ── Main chart ────────────────────────────────────────────────────────────────
 
-export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }: Props) {
+export default function PillarTrendChart({ patientId, activeDomains, initialDomain }: Props) {
   const gradId = useId().replace(/:/g, '')
-  const [data, setData] = useState<PillarTrendData | null>(null)
+  const [data, setData] = useState<TrendData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activePillar, setActivePillar] = useState<PillarKey>(initialPillar)
+  const [activeDomainKey, setActiveDomainKey] = useState<string>(initialDomain ?? activeDomains[0] ?? 'vasomotor')
   const [hoveredPin, setHoveredPin] = useState<number | null>(null)
 
   useEffect(() => {
     setLoading(true)
     fetch(`/api/patient/pillar-trend?patientId=${encodeURIComponent(patientId)}`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
+      .then((d: TrendData) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [patientId])
+
+  // Sync active domain when activeDomains prop changes
+  useEffect(() => {
+    if (activeDomains.length === 0) return
+    if (!activeDomains.includes(activeDomainKey)) {
+      setActiveDomainKey(activeDomains[0])
+    }
+  }, [activeDomains, activeDomainKey])
 
   if (loading || !data) {
     return (
@@ -235,12 +223,19 @@ export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }:
     )
   }
 
-  const pillar = data.pillars.find(p => p.key === activePillar) ?? data.pillars[0]
-  const series = data.series[activePillar]
-  const { accent } = pillar
+  // Filter to only domains in activeDomains (preserving order from activeDomains)
+  const visibleDomains = activeDomains
+    .map(k => data.domains.find(d => d.key === k))
+    .filter((d): d is DomainMeta => !!d)
+
+  if (visibleDomains.length === 0) return null
+
+  const domain = visibleDomains.find(d => d.key === activeDomainKey) ?? visibleDomains[0]
+  const { accent, key: domainKey } = domain
+  const series = data.series[domainKey] ?? []
   const milestones = data.milestones
 
-  // Build SVG points from series
+  // SVG points
   const pts: [number, number][] = series
     .map((v, i) => v !== null ? [xOf(i), yOf(v)] as [number, number] : null)
     .filter((p): p is [number, number] => p !== null)
@@ -249,15 +244,13 @@ export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }:
   const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOf(5)]
   const firstPt = pts[0] ?? [xOf(0), yOf(5)]
 
-  // Area fill path: line + close to bottom
   const areaPath = pts.length > 0
     ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
     : ''
 
-  // Baseline Y
-  const baselineY = yOf(pillar.baseline)
+  const baselineY = yOf(domain.baseline)
 
-  // Annotation rail: first 3 + most recent (if 4+)
+  // Annotation rail: first 3 + most recent
   const annotationCards = milestones.length <= 4
     ? milestones.map((m, i) => ({ milestone: m, milestoneIndex: i, displayNumber: i + 1 }))
     : [
@@ -276,13 +269,13 @@ export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }:
             Trend over time
           </p>
           <h2 className="font-display text-[26px] leading-tight text-aubergine">
-            {pillar.name} over time
+            {domain.name} over time
           </h2>
         </div>
-        <PillarDropdown
-          pillars={data.pillars}
-          active={activePillar}
-          onChange={k => { setActivePillar(k); setHoveredPin(null) }}
+        <DomainDropdown
+          domains={visibleDomains}
+          activeKey={activeDomainKey}
+          onChange={k => { setActiveDomainKey(k); setHoveredPin(null) }}
         />
       </div>
 
@@ -294,176 +287,84 @@ export default function PillarTrendChart({ patientId, initialPillar = 'sleep' }:
           style={{ width: '100%', height: 'auto', minHeight: 200, display: 'block' }}
         >
           <defs>
-            {/* Area gradient */}
-            <linearGradient id={`grad-${gradId}-${activePillar}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`grad-${gradId}-${domainKey}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={accent} stopOpacity="0.35" />
               <stop offset="100%" stopColor={accent} stopOpacity="0" />
             </linearGradient>
           </defs>
 
-          {/* ── Y-axis gridlines ── */}
+          {/* Y-axis gridlines */}
           {[0, 2, 4, 6, 8, 10].map(v => {
             const gy = yOf(v)
             return (
               <g key={v}>
-                <line
-                  x1={PAD.l} y1={gy} x2={PAD.l + CHART_W} y2={gy}
-                  stroke={`rgba(66,42,31,0.07)`} strokeWidth={1}
-                />
-                <text
-                  x={PAD.l - 8} y={gy + 4}
-                  textAnchor="end"
-                  fontFamily="'Plus Jakarta Sans', sans-serif"
-                  fontSize={10}
-                  fontWeight={600}
-                  fill={`rgba(66,42,31,0.5)`}
-                >
-                  {v}
-                </text>
+                <line x1={PAD.l} y1={gy} x2={PAD.l + CHART_W} y2={gy} stroke="rgba(66,42,31,0.07)" strokeWidth={1} />
+                <text x={PAD.l - 8} y={gy + 4} textAnchor="end" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={600} fill="rgba(66,42,31,0.5)">{v}</text>
               </g>
             )
           })}
 
-          {/* ── Baseline marker ── */}
-          <line
-            x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY}
-            stroke={`rgba(66,42,31,0.45)`}
-            strokeWidth={1}
-            strokeDasharray="3 4"
-          />
-          <text
-            x={PAD.l + 6} y={baselineY - 6}
-            fontFamily="'Plus Jakarta Sans', sans-serif"
-            fontSize={10}
-            fontWeight={700}
-            letterSpacing="0.1em"
-            fill={`rgba(66,42,31,0.6)`}
-          >
-            {`BASELINE · ${pillar.baseline.toFixed(1)}`}
+          {/* Baseline marker */}
+          <line x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY} stroke="rgba(66,42,31,0.45)" strokeWidth={1} strokeDasharray="3 4" />
+          <text x={PAD.l + 6} y={baselineY - 6} fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.1em" fill="rgba(66,42,31,0.6)">
+            {`BASELINE · ${domain.baseline.toFixed(1)}`}
           </text>
 
-          {/* ── Area fill ── */}
-          {areaPath && (
-            <path
-              d={areaPath}
-              fill={`url(#grad-${gradId}-${activePillar})`}
-            />
-          )}
+          {/* Area fill */}
+          {areaPath && <path d={areaPath} fill={`url(#grad-${gradId}-${domainKey})`} />}
 
-          {/* ── Series line ── */}
-          {linePath && (
-            <path
-              d={linePath}
-              fill="none"
-              stroke={accent}
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
+          {/* Series line */}
+          {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
 
-          {/* ── Milestone stems + data dots ── */}
+          {/* Milestone stems + data dots */}
           {milestones.map((m, i) => {
             const mx = xOf(Math.min(WEEKS - 1, m.wk))
-            const my = series[Math.min(WEEKS - 1, m.wk)] !== null
-              ? yOf(series[Math.min(WEEKS - 1, m.wk)]!)
-              : yOf(5)
+            const sv = series[Math.min(WEEKS - 1, m.wk)]
+            const my = sv !== null ? yOf(sv) : yOf(5)
             return (
               <g key={i}>
-                {/* Stem */}
-                <line
-                  x1={mx} y1={my}
-                  x2={mx} y2={PAD.t - 18}
-                  stroke={AUBERGINE}
-                  strokeWidth={1}
-                  strokeDasharray="2 3"
-                  opacity={0.6}
-                />
-                {/* Data point dot */}
+                <line x1={mx} y1={my} x2={mx} y2={PAD.t - 18} stroke={AUBERGINE} strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
                 <circle cx={mx} cy={my} r={4.5} fill="white" stroke={accent} strokeWidth={2} />
               </g>
             )
           })}
 
-          {/* ── Medallions (above stems, interactive) ── */}
+          {/* Medallions */}
           {milestones.map((m, i) => {
             const mx = xOf(Math.min(WEEKS - 1, m.wk))
             const my = PAD.t - 30
             const isHovered = hoveredPin === i
             const r = isHovered ? 15 : 13
             return (
-              <g
-                key={i}
-                style={{ cursor: 'default' }}
-                onMouseEnter={() => setHoveredPin(i)}
-                onMouseLeave={() => setHoveredPin(null)}
-              >
-                <circle
-                  cx={mx} cy={my} r={r}
-                  fill={isHovered ? accent : 'white'}
-                  stroke={accent}
-                  strokeWidth={1.8}
-                  style={{ transition: 'r 200ms, fill 200ms' }}
-                />
-                <text
-                  x={mx} y={my + 4.5}
-                  textAnchor="middle"
-                  fontFamily="'Playfair Display', serif"
-                  fontSize={12}
-                  fontStyle="italic"
-                  fill={isHovered ? 'white' : accent}
-                  style={{ transition: 'fill 200ms', userSelect: 'none', pointerEvents: 'none' }}
-                >
+              <g key={i} style={{ cursor: 'default' }} onMouseEnter={() => setHoveredPin(i)} onMouseLeave={() => setHoveredPin(null)}>
+                <circle cx={mx} cy={my} r={r} fill={isHovered ? accent : 'white'} stroke={accent} strokeWidth={1.8} style={{ transition: 'r 200ms, fill 200ms' }} />
+                <text x={mx} y={my + 4.5} textAnchor="middle" fontFamily="'Playfair Display', serif" fontSize={12} fontStyle="italic" fill={isHovered ? 'white' : accent} style={{ transition: 'fill 200ms', userSelect: 'none', pointerEvents: 'none' }}>
                   {i + 1}
                 </text>
               </g>
             )
           })}
 
-          {/* ── Current week dot ── */}
+          {/* Current week dot */}
           {pts.length > 0 && (
             <g>
-              <circle
-                cx={lastPt[0]} cy={lastPt[1]}
-                r={14}
-                fill={accent}
-                opacity={0.15}
-              />
-              <circle
-                cx={lastPt[0]} cy={lastPt[1]}
-                r={6}
-                fill="white"
-                stroke={accent}
-                strokeWidth={2.5}
-              />
+              <circle cx={lastPt[0]} cy={lastPt[1]} r={14} fill={accent} opacity={0.15} />
+              <circle cx={lastPt[0]} cy={lastPt[1]} r={6} fill="white" stroke={accent} strokeWidth={2.5} />
             </g>
           )}
 
-          {/* ── X-axis labels ── */}
+          {/* X-axis labels */}
           {X_TICKS.map(({ wk, label }) => (
-            <text
-              key={wk}
-              x={xOf(wk)}
-              y={PAD.t + CHART_H + 20}
-              textAnchor="middle"
-              fontFamily="'Plus Jakarta Sans', sans-serif"
-              fontSize={10}
-              fontWeight={700}
-              letterSpacing="0.12em"
-              fill={`rgba(66,42,31,0.45)`}
-            >
+            <text key={wk} x={xOf(wk)} y={PAD.t + CHART_H + 20} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.12em" fill="rgba(66,42,31,0.45)">
               {label}
             </text>
           ))}
         </svg>
       </div>
 
-      {/* ── Annotation rail ── */}
+      {/* Annotation rail */}
       {annotationCards.length > 0 && (
-        <div
-          className="mt-4 grid gap-3"
-          style={{ gridTemplateColumns: `repeat(${Math.min(4, annotationCards.length)}, 1fr)` }}
-        >
+        <div className="mt-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(4, annotationCards.length)}, 1fr)` }}>
           {annotationCards.map(({ milestone, milestoneIndex, displayNumber }) => (
             <AnnotationCard
               key={milestoneIndex}
