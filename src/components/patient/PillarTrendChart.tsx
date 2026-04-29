@@ -282,8 +282,6 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
     ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
     : ''
 
-  const baselineY = yOfDomain(domain.baseline)
-
   // Annotation rail: first 3 + most recent
   const annotationCards = milestones.length <= 4
     ? milestones.map((m, i) => ({ milestone: m, milestoneIndex: i, displayNumber: i + 1 }))
@@ -347,14 +345,6 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
               </g>
             )
           })}
-
-          {/* Baseline marker */}
-          <line x1={PAD.l} y1={baselineY} x2={PAD.l + CHART_W} y2={baselineY} stroke="rgba(66,42,31,0.45)" strokeWidth={1} strokeDasharray="3 4" />
-          <text x={PAD.l + 6} y={baselineY - 6} fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.1em" fill="rgba(66,42,31,0.6)">
-            {domain.rawScale
-              ? `BASELINE · ${domain.baseline.toFixed(1)} / day`
-              : `BASELINE · ${domain.baseline.toFixed(1)}`}
-          </text>
 
           {/* Area fill */}
           {areaPath && <path d={areaPath} fill={`url(#grad-${gradId}-${domainKey})`} />}
