@@ -41,6 +41,7 @@ const CREAM = '#f7f3ee'
 
 const DOMAIN_SUBTITLES: Record<string, string> = {
   vasomotor: 'Hot flashes per day avg',
+  sleep: 'Sleep / nightly avg',
 }
 
 const VB_W = 1100
