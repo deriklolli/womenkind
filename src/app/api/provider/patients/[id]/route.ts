@@ -69,7 +69,7 @@ export async function GET(
     }),
 
     db.query.visits.findMany({
-      where: eq(visits.patient_id, patientId),
+      where: and(eq(visits.patient_id, patientId), ne(visits.source, 'daily')),
       columns: {
         id: true,
         visit_type: true,
