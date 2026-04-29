@@ -23,6 +23,91 @@ import TimelineStrip, { type TimelineMarker } from '@/components/patient/Timelin
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
 
+function WomenkindScoreBadge({ score, wmiLabel, delta, deltaStatus, onInfoClick }: {
+  score: number | null
+  wmiLabel?: string | null
+  delta?: number | null
+  deltaStatus?: 'improving' | 'watch' | 'steady' | null
+  onInfoClick?: () => void
+}) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    if (score == null) return
+    const target = Math.round(score)
+    let frame = 0
+    const total = 40
+    const tick = () => {
+      frame++
+      const t = frame / total
+      const eased = t < 1 ? 1 - Math.pow(1 - t, 3) : 1
+      setDisplay(Math.round(eased * target))
+      if (frame < total) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [score])
+
+  const HEADLINE_MAP: Record<string, { prefix: string; suffix: string }> = {
+    optimal:  { prefix: "You're at",       suffix: 'your best'       },
+    strong:   { prefix: 'Strong &',        suffix: 'climbing'        },
+    moderate: { prefix: 'Making',          suffix: 'good progress'   },
+    elevated: { prefix: 'Noticeable',      suffix: 'improvement'     },
+    high:     { prefix: 'Active',          suffix: 'treatment phase' },
+    severe:   { prefix: 'Intensive',       suffix: 'care underway'   },
+  }
+  const key = wmiLabel?.toLowerCase() ?? ''
+  const hl = HEADLINE_MAP[key] ?? { prefix: 'Your health,', suffix: 'in focus' }
+
+  const R = 26, CX = 34, CY = 34, STROKE = 4
+  const circ = 2 * Math.PI * R
+  const pct = score != null ? Math.min(display / 100, 1) : 0
+  const dash = circ * pct
+  const gap  = circ - dash
+
+  return (
+    <button
+      onClick={onInfoClick}
+      className="flex items-center gap-4 px-5 py-3 rounded-[999px] shadow-md hover:shadow-lg transition-shadow shrink-0"
+      style={{ background: 'linear-gradient(105deg, #ede5dc 0%, #f7f3ee 55%, #f0eae3 100%)', border: '1px solid rgba(66,42,31,0.09)' }}
+    >
+      {/* Circular score arc */}
+      <svg width="68" height="68" viewBox="0 0 68 68" className="shrink-0">
+        <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(148,79,237,0.14)" strokeWidth={STROKE} />
+        {score != null && (
+          <circle cx={CX} cy={CY} r={R} fill="none" stroke="#944fed" strokeWidth={STROKE}
+            strokeLinecap="round" strokeDasharray={`${dash} ${gap}`}
+            transform={`rotate(-90 ${CX} ${CY})`} />
+        )}
+        <text x={CX} y={CY + 1} textAnchor="middle" dominantBaseline="middle"
+          fontFamily="'Playfair Display', serif" fontSize="20" fill="#280f49">
+          {score != null ? display : '—'}
+        </text>
+      </svg>
+
+      {/* Text */}
+      <div className="flex flex-col items-start gap-0.5 text-left">
+        <p className="text-[10px] font-sans font-semibold tracking-[0.18em] uppercase text-aubergine/45">
+          Womenkind Score
+        </p>
+        <p className="font-serif text-[22px] leading-tight text-aubergine whitespace-nowrap">
+          {hl.prefix} <span className="italic" style={{ color: '#944fed' }}>{hl.suffix}</span>
+        </p>
+        {delta != null && deltaStatus && (
+          <p className={`text-xs font-sans font-semibold flex items-center gap-1 ${
+            deltaStatus === 'improving' ? 'text-emerald-600' :
+            deltaStatus === 'watch'     ? 'text-amber-600'   : 'text-aubergine/40'
+          }`}>
+            {deltaStatus === 'improving' ? '↑' : deltaStatus === 'watch' ? '↓' : '→'}
+            {' '}+{Math.abs(delta)} since last visit
+          </p>
+        )}
+        {delta == null && wmiLabel && (
+          <p className="text-xs font-sans text-violet/70">{wmiLabel}</p>
+        )}
+      </div>
+    </button>
+  )
+}
+
 type IntakeStatus = 'draft' | 'submitted' | 'reviewed' | 'care_plan_sent'
 type MembershipStatus = 'active' | 'canceled' | 'past_due' | 'none'
 
@@ -793,13 +878,34 @@ export default function PatientDashboardPage() {
           ${fadeIn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}
       >
         {/* Welcome header */}
-        <div className="mb-8">
-          <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
-            Welcome back, <span className="italic text-violet">{patient.name.split(' ')[0]}</span>
-          </h1>
-          <p className="text-sm font-sans text-aubergine/40">
-            Here's the latest on your care journey.
-          </p>
+        <div className="mb-8 flex items-center justify-between gap-6">
+          <div>
+            <h1 className="font-serif font-normal text-2xl md:text-3xl text-aubergine mb-2">
+              Welcome back, <span className="italic text-violet">{patient.name.split(' ')[0]}</span>
+            </h1>
+            <p className="text-sm font-sans text-aubergine/40">
+              Here's the latest on your care journey.
+            </p>
+          </div>
+          {(() => {
+            const wmiScores = overviewIntake?.wmi_scores
+            const score = overviewLiveWmi ?? wmiScores?.wmi ?? null
+            const sortedOverall = [...overviewVisits]
+              .filter(v => v.symptom_scores?.overall !== undefined)
+              .sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())
+            const cur = sortedOverall[sortedOverall.length - 1]?.symptom_scores?.overall
+            const prev = sortedOverall[sortedOverall.length - 2]?.symptom_scores?.overall
+            const delta = cur !== undefined && prev !== undefined ? cur - prev : null
+            const deltaStatus = delta === null ? null : delta > 0 ? 'improving' : delta < 0 ? 'watch' : 'steady'
+            return (
+              <WomenkindScoreBadge
+                score={score != null ? score : null}
+                wmiLabel={wmiScores?.wmi_label}
+                delta={delta}
+                deltaStatus={deltaStatus}
+              />
+            )
+          })()}
         </div>
 
         {/* Membership notification */}

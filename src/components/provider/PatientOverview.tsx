@@ -383,60 +383,11 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
       {/* ── Symptom Tracker ───────────────────────────────────────── */}
       <div>
-        <div className="flex items-start justify-between mb-4">
-          <p className="font-serif text-xl text-aubergine pt-1">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-serif text-xl text-aubergine">
             Symptom <span className="italic text-violet">Tracker</span>
           </p>
-
-          <div className="flex items-start gap-3">
-            {/* WomenScore badge */}
-            {!compact && (
-              <div className="bg-white border border-aubergine/8 rounded-2xl shadow-lg shadow-aubergine/10 px-4 py-3 flex flex-col items-end min-w-[120px]">
-                <p className="text-[9px] font-sans font-bold tracking-widest uppercase mb-1" style={{ color: '#944fed' }}>
-                  Womenkind Score
-                </p>
-                <div className="flex items-end gap-1 leading-none">
-                  {overallNow !== undefined ? (
-                    <>
-                      <span className="font-serif text-[32px] leading-none text-aubergine">{displayScore}</span>
-                      <span className="font-serif text-sm italic mb-0.5" style={{ color: '#C4A87A' }}>/100</span>
-                    </>
-                  ) : (
-                    <span className="font-serif text-2xl leading-none text-aubergine/20">—</span>
-                  )}
-                </div>
-                {isInitialState && wmiScores ? (
-                  <span className="text-[9px] font-sans font-semibold px-2 py-0.5 rounded-pill mt-1.5 bg-violet/8 text-violet">
-                    Based on WMI
-                  </span>
-                ) : overallDelta !== null ? (
-                  <span className={`text-[9px] font-sans font-bold px-2 py-0.5 rounded-pill mt-1.5 ${
-                    overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
-                    overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
-                                                   'bg-aubergine/5 text-aubergine/50'
-                  }`}>
-                    {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'} {Math.abs(overallDelta)} pts
-                  </span>
-                ) : wmiScores ? (
-                  <span className="text-[9px] font-sans font-semibold px-2 py-0.5 rounded-pill mt-1.5 bg-violet/8 text-violet">
-                    {wmiScores.wmi_label}
-                  </span>
-                ) : null}
-                {isLiveScore && (
-                  <p className="text-[8px] font-sans text-aubergine/35 mt-1 tracking-wide">Live score</p>
-                )}
-                {wmiScores && (
-                  <button
-                    onClick={() => setWmiExplainerOpen(true)}
-                    className="mt-1.5 text-[8px] font-sans text-aubergine/30 hover:text-violet transition-colors underline underline-offset-2"
-                  >
-                    How is this calculated?
-                  </button>
-                )}
-              </div>
-            )}
-
-            <div className="relative" ref={dropdownRef}>
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(o => !o)}
               className="w-8 h-8 rounded-full border-2 border-aubergine/20 flex items-center justify-center text-aubergine/40 hover:border-violet hover:text-violet transition-colors"
@@ -481,7 +432,6 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
               </div>
             )}
           </div>
-          </div>{/* end flex gap-3 wrapper */}
         </div>
 
         <div className={`grid gap-3 ${activeDomains.length <= 3 ? 'grid-cols-3' : activeDomains.length === 4 ? 'grid-cols-4' : 'grid-cols-4'}`}>
