@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Props {
   hasWearable?: boolean
@@ -8,7 +9,6 @@ interface Props {
   onClose: () => void
 }
 
-// Questions always shown regardless of wearable
 const STANDARD_QUESTIONS = [
   {
     domain: 'vasomotor',
@@ -57,7 +57,6 @@ const STANDARD_QUESTIONS = [
   },
 ]
 
-// Questions skipped when wearable (Oura) is providing the data
 const WEARABLE_QUESTIONS = [
   {
     domain: 'sleep',
@@ -107,13 +106,30 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
-  const set = (domain: string, value: number) =>
-    setScores((prev) => ({ ...prev, [domain]: value }))
+  // Track which non-slider questions have been explicitly answered
+  const [touched, setTouched] = useState<Set<string>>(new Set())
+
+  useEffect(() => { setMounted(true) }, [])
 
   const questions = hasWearable
     ? STANDARD_QUESTIONS
     : [...STANDARD_QUESTIONS.slice(0, 1), ...WEARABLE_QUESTIONS, ...STANDARD_QUESTIONS.slice(1)]
+
+  // Slider questions are pre-answered (default 3 is valid). Counter, hours, cardio need explicit touch.
+  const explicitDomains = questions
+    .filter(q => q.inputType !== 'slider')
+    .map(q => q.domain)
+  const allAnswered = explicitDomains.every(d => touched.has(d))
+
+  const touch = (domain: string) =>
+    setTouched(prev => new Set(prev).add(domain))
+
+  const set = (domain: string, value: number) => {
+    setScores(prev => ({ ...prev, [domain]: value }))
+    touch(domain)
+  }
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -135,16 +151,14 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  const modal = (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style={{ height: 'min(85vh, 680px)' }}>
         {/* Header */}
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between px-6 py-4 border-b border-gray-100 rounded-t-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div>
             <h2 className="font-display text-lg text-aubergine">This Week's Check-In</h2>
-            <p className="font-sans text-xs text-aubergine/50">
-              {hasWearable ? 'Your sleep & energy are tracked by your wearable · ~90 seconds' : 'Takes about 2 minutes'}
-            </p>
+            <p className="font-sans text-xs text-aubergine/50">Takes about 2 minutes</p>
           </div>
           <button
             onClick={onClose}
@@ -158,7 +172,7 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
         </div>
 
         {success ? (
-          <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <div className="flex flex-col items-center justify-center flex-1 px-6 text-center">
             <div className="w-14 h-14 rounded-full bg-violet/10 flex items-center justify-center mb-4">
               <svg className="w-7 h-7 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -168,70 +182,74 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
             <p className="font-sans text-sm text-aubergine/50">Your tracker is updating.</p>
           </div>
         ) : (
-          <div className="px-6 py-6">
-            <div className="space-y-4">
-              {questions.map((q, idx) => (
-                <div key={q.domain} className="rounded-xl p-4 border border-gray-100 bg-gray-50">
-                  <div className="flex items-start gap-3 mb-4">
-                    <span className="font-sans text-xs font-semibold text-aubergine/30 mt-0.5 w-4 shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p className="font-sans text-sm font-medium text-aubergine leading-relaxed">
-                      {q.question}
-                    </p>
-                  </div>
+          <>
+            {/* Scrollable questions */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="space-y-4">
+                {questions.map((q, idx) => (
+                  <div key={q.domain} className="rounded-xl p-4 border border-gray-100 bg-gray-50">
+                    <div className="flex items-start gap-3 mb-4">
+                      <span className="font-sans text-xs font-semibold text-aubergine/30 mt-0.5 w-4 shrink-0">
+                        {idx + 1}
+                      </span>
+                      <p className="font-sans text-sm font-medium text-aubergine leading-relaxed">
+                        {q.question}
+                      </p>
+                    </div>
 
-                  <div className="pl-7">
-                    {q.inputType === 'counter' && (
-                      <CounterInput
-                        value={scores[q.domain]}
-                        min={0}
-                        max={20}
-                        step={0.5}
-                        unit="per day avg"
-                        onChange={(v) => set(q.domain, v)}
-                      />
-                    )}
-                    {q.inputType === 'hours' && (
-                      <HoursInput
-                        value={scores[q.domain]}
-                        onChange={(v) => set(q.domain, v)}
-                      />
-                    )}
-                    {q.inputType === 'cardio' && (
-                      <CardioInput
-                        value={scores[q.domain]}
-                        cardioYes={cardioYes}
-                        onToggle={(yes) => {
-                          setCardioYes(yes)
-                          set(q.domain, yes ? 1 : 0)
-                        }}
-                        onCount={(v) => set(q.domain, v)}
-                      />
-                    )}
-                    {q.inputType === 'slider' && (
-                      <SliderInput
-                        value={scores[q.domain]}
-                        onChange={(v) => set(q.domain, v)}
-                      />
-                    )}
+                    <div className="pl-7">
+                      {q.inputType === 'counter' && (
+                        <CounterInput
+                          value={scores[q.domain]}
+                          min={0}
+                          max={20}
+                          unit="per day avg"
+                          onChange={(v) => set(q.domain, v)}
+                        />
+                      )}
+                      {q.inputType === 'hours' && (
+                        <HoursInput
+                          value={scores[q.domain]}
+                          onChange={(v) => set(q.domain, v)}
+                        />
+                      )}
+                      {q.inputType === 'cardio' && (
+                        <CardioInput
+                          value={scores[q.domain]}
+                          cardioYes={cardioYes}
+                          onToggle={(yes) => {
+                            setCardioYes(yes)
+                            set(q.domain, yes ? 1 : 0)
+                          }}
+                          onCount={(v) => set(q.domain, v)}
+                        />
+                      )}
+                      {q.inputType === 'slider' && (
+                        <SliderInput
+                          value={scores[q.domain]}
+                          onChange={(v) => set(q.domain, v)}
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            {error && (
-              <p className="font-sans text-sm text-red-500 mt-4">{error}</p>
-            )}
-
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="mt-6 w-full font-sans font-semibold text-sm text-white bg-aubergine rounded-xl py-3 hover:bg-aubergine/90 transition-colors disabled:opacity-50"
-            >
-              {submitting ? 'Logging…' : "Log this week's symptoms"}
-            </button>
-          </div>
+            {/* Sticky footer */}
+            <div className="px-6 py-4 border-t border-gray-100 shrink-0">
+              {error && (
+                <p className="font-sans text-sm text-red-500 mb-3">{error}</p>
+              )}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !allAnswered}
+                className="w-full font-sans font-semibold text-sm text-white bg-aubergine rounded-xl py-3 hover:bg-aubergine/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Logging…' : !allAnswered ? 'Answer all questions to continue' : "Log this week's symptoms"}
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -254,11 +272,13 @@ export default function DailyCheckinModal({ hasWearable = false, onSuccess, onCl
           border: 3px solid white;
           box-shadow: 0 1px 4px rgba(40, 15, 73, 0.2);
           cursor: pointer;
-          border: none;
         }
       `}</style>
     </div>
   )
+
+  if (!mounted) return null
+  return createPortal(modal, document.body)
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────────
@@ -290,33 +310,39 @@ function SliderInput({ value, onChange }: { value: number; onChange: (v: number)
 }
 
 function CounterInput({
-  value, min, max, step = 1, unit, onChange,
+  value, min, max, unit, onChange,
 }: {
-  value: number; min: number; max: number; step?: number; unit: string; onChange: (v: number) => void
+  value: number; min: number; max: number; unit: string; onChange: (v: number) => void
 }) {
   const countColor = value === 0 ? 'text-emerald-600' : value <= 3 ? 'text-amber-600' : value <= 7 ? 'text-orange-600' : 'text-red-600'
-  const display = value % 1 === 0 ? String(value) : value.toFixed(1)
   return (
     <div className="flex items-center gap-4">
       <button
-        onClick={() => onChange(Math.max(min, Math.round((value - step) * 10) / 10))}
-        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors"
+        style={{ lineHeight: 1 }}
         aria-label="Decrease"
       >
-        −
+        <svg width="12" height="2" viewBox="0 0 12 2" fill="none">
+          <line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
       <div className="flex-1 text-center">
-        <span className={`font-serif text-4xl leading-none ${countColor}`}>{display}</span>
+        <span className={`font-serif text-4xl leading-none ${countColor}`}>{value}</span>
         <p className="font-sans text-xs text-aubergine/40 mt-1">
-          {value === 0 ? 'None this week' : `${unit}`}
+          {value === 0 ? 'None this week' : unit}
         </p>
       </div>
       <button
-        onClick={() => onChange(Math.min(max, Math.round((value + step) * 10) / 10))}
-        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors"
+        style={{ lineHeight: 1 }}
         aria-label="Increase"
       >
-        +
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <line x1="6" y1="0" x2="6" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="0" y1="6" x2="12" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
     </div>
   )
@@ -327,22 +353,27 @@ function HoursInput({ value, onChange }: { value: number; onChange: (v: number) 
   return (
     <div className="flex items-center gap-4">
       <button
-        onClick={() => onChange(Math.max(0, Math.round((value - 0.5) * 2) / 2))}
-        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        onClick={() => onChange(Math.max(0, value - 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors"
         aria-label="Decrease"
       >
-        −
+        <svg width="12" height="2" viewBox="0 0 12 2" fill="none">
+          <line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
       <div className="flex-1 text-center">
         <span className={`font-serif text-4xl leading-none ${hoursColor}`}>{value}</span>
         <p className="font-sans text-xs text-aubergine/40 mt-1">hours</p>
       </div>
       <button
-        onClick={() => onChange(Math.min(12, Math.round((value + 0.5) * 2) / 2))}
-        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors text-lg font-light"
+        onClick={() => onChange(Math.min(12, value + 1))}
+        className="w-9 h-9 rounded-full border-2 border-aubergine/15 flex items-center justify-center text-aubergine/50 hover:border-aubergine/40 hover:text-aubergine transition-colors"
         aria-label="Increase"
       >
-        +
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <line x1="6" y1="0" x2="6" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="0" y1="6" x2="12" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
     </div>
   )
