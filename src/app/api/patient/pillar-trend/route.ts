@@ -109,13 +109,7 @@ const DEV_RESPONSE: TrendData = {
     libido:    [4.5, 4.6, 4.7, 4.9, 5.0, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.2, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5],
     cardio:    [8.0, 8.1, 8.2, 8.3, 8.4, 8.4, 8.5, 8.5, 8.6, 8.6, 8.7, 8.7, 8.8, 8.8, 8.8, 8.9, 8.9, 8.9, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0],
   },
-  milestones: [
-    { wk: 0,  type: 'visit', short: 'Visit 1',  title: 'Initial Consultation',        body: 'Met with Dr. Urban to review symptoms, history, and establish a personalized care plan.' },
-    { wk: 4,  type: 'rx',   short: 'Estradiol', title: 'Estradiol Patch Started',      body: 'Started transdermal estradiol 0.0375 mg/day to address vasomotor symptoms and sleep disruption.' },
-    { wk: 8,  type: 'lab',  short: 'Labs',      title: 'Hormone Panel Drawn',          body: 'Baseline estradiol, FSH, and progesterone levels checked to confirm dosing effectiveness.' },
-    { wk: 16, type: 'dose', short: 'Dose +',    title: 'Estradiol Dose Increased',     body: 'Dose adjusted to 0.05 mg/day based on symptom response and hormone panel results.' },
-    { wk: 22, type: 'visit', short: 'Visit 2',  title: 'Follow-Up Consultation',       body: 'Reviewed progress across all domains. Vasomotor and sleep show significant improvement.' },
-  ],
+  milestones: [],
 }
 
 export async function GET(req: NextRequest) {
