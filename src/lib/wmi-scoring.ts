@@ -292,9 +292,10 @@ export function computeLiveWMI(
   visits: Array<{ symptom_scores: Record<string, number> | null; visit_date: string; source?: string | null }>,
   wearableMetrics?: Array<{ metric_type: string; value: number; metric_date: string }>
 ): number | null {
-  // Use the most recent weekly check-in — it already represents the week's average
+  // Prefer weekly check-ins; fall back to daily for backwards-compat with existing data
+  const hasWeekly = visits.some((v) => v.source === 'weekly')
   const recent = visits
-    .filter((v) => v.source === 'weekly' && v.symptom_scores)
+    .filter((v) => (hasWeekly ? v.source === 'weekly' : v.source === 'daily') && v.symptom_scores)
     .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
     .slice(0, 1)
 
