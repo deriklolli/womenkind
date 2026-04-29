@@ -39,7 +39,7 @@ interface Props {
 
 const AUBERGINE = '#280f49'
 const CREAM = '#f7f3ee'
-const OURA_COLOR = '#5b8fa8'
+const OURA_COLOR = '#e8924a'
 
 const DOMAIN_SUBTITLES: Record<string, string> = {
   vasomotor: 'Hot flashes / daily avg',
