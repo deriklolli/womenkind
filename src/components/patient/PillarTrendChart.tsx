@@ -39,6 +39,7 @@ interface Props {
 
 const AUBERGINE = '#280f49'
 const CREAM = '#f7f3ee'
+const OURA_COLOR = '#5b8fa8'
 
 const DOMAIN_SUBTITLES: Record<string, string> = {
   vasomotor: 'Hot flashes / daily avg',
@@ -307,9 +308,11 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
         </div>
         <div className="flex items-center gap-3">
           {wearableLinePath && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-aubergine/15 bg-cream">
-              <span className="block w-5 h-px border-t-2 border-dashed border-aubergine/35" />
-              <span className="font-sans text-[10px] font-bold tracking-[0.14em] text-aubergine/45 uppercase">Oura</span>
+            <div className="flex items-center gap-1.5">
+              <svg width="20" height="10" viewBox="0 0 20 10" fill="none">
+                <line x1="0" y1="5" x2="20" y2="5" stroke={OURA_COLOR} strokeWidth="1.8" strokeLinecap="round" strokeDasharray="5 4" />
+              </svg>
+              <span className="font-sans text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: OURA_COLOR }}>Oura</span>
             </div>
           )}
           <DomainDropdown
@@ -360,7 +363,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
 
           {/* Wearable (Oura) overlay — dashed, dimmer */}
-          {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={AUBERGINE} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" opacity={0.3} />}
+          {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />}
 
           {/* Milestone stems + data dots */}
           {milestones.map((m, i) => {
