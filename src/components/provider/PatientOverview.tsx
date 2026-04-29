@@ -57,7 +57,7 @@ interface PatientOverviewProps {
 }
 
 const ALL_DOMAINS = [
-  { key: 'vasomotor', label: 'Vasomotor',     Icon: Flame,     color: '#d85623', subtitle: 'hot flashes / day avg',   improvesDown: true,  tags: { improving: 'Slow taper',      watch: 'Increasing',      steady: 'Holding steady' } },
+  { key: 'vasomotor', label: 'Vasomotor',     Icon: Flame,     color: '#d85623', subtitle: 'Hot flashes / daily avg',   improvesDown: true,  tags: { improving: 'Slow taper',      watch: 'Increasing',      steady: 'Holding steady' } },
   { key: 'sleep',     label: 'Sleep',          Icon: Moon,      color: '#5d9ed5', subtitle: 'hrs per night avg',       improvesDown: false, tags: { improving: 'Deeper cycles',   watch: 'Disrupted',       steady: 'Consistent'     } },
   { key: 'energy',    label: 'Energy',         Icon: Zap,       color: '#e8a838', subtitle: 'Daily energy level',     improvesDown: false, tags: { improving: 'Rising steadily', watch: 'Fatigue rising',  steady: 'Steady energy'  } },
   { key: 'mood',      label: 'Mood',           Icon: SmilePlus, color: '#944fed', subtitle: 'Self-rated, journaled',  improvesDown: false, tags: { improving: 'Steadier days',   watch: 'More variable',   steady: 'Consistent'     } },
