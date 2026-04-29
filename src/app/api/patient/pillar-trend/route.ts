@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { visits, prescriptions } from '@/lib/db/schema'
-import { eq, and, gte, ne } from 'drizzle-orm'
+import { visits, prescriptions, wearable_metrics } from '@/lib/db/schema'
+import { eq, and, gte, ne, inArray } from 'drizzle-orm'
 
 interface DomainMeta {
   key: string
@@ -117,19 +117,19 @@ export async function GET(req: NextRequest) {
   startDate.setHours(0, 0, 0, 0)
   const startIso = startDate.toISOString().slice(0, 10)
 
-  // ── Load daily check-in visits ──────────────────────────────────────────────
-  const checkins = await db.select({
-    visit_date: visits.visit_date,
-    symptom_scores: visits.symptom_scores,
-  }).from(visits).where(
-    and(
-      eq(visits.patient_id, patientId),
-      eq(visits.source, 'daily'),
-      gte(visits.visit_date, startIso),
-    )
-  )
+  // ── Load check-ins + wearable data in parallel ─────────────────────────────
+  const [checkins, wearableRows] = await Promise.all([
+    db.select({ visit_date: visits.visit_date, symptom_scores: visits.symptom_scores })
+      .from(visits).where(and(eq(visits.patient_id, patientId), eq(visits.source, 'daily'), gte(visits.visit_date, startIso))),
+    db.select({ metric_type: wearable_metrics.metric_type, metric_date: wearable_metrics.metric_date, value: wearable_metrics.value })
+      .from(wearable_metrics).where(and(
+        eq(wearable_metrics.patient_id, patientId),
+        gte(wearable_metrics.metric_date, startIso),
+        inArray(wearable_metrics.metric_type, ['sleep_score', 'readiness_score']),
+      )),
+  ])
 
-  // ── Build weekly buckets ────────────────────────────────────────────────────
+  // ── Build weekly buckets from check-ins ─────────────────────────────────────
   const weeklyBuckets: Record<number, Record<string, number[]>> = {}
   for (let w = 0; w < WEEKS; w++) weeklyBuckets[w] = {}
 
@@ -145,6 +145,22 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Build weekly buckets from wearable (sleep_score → sleep, readiness_score → energy) ──
+  // Wearable values (0–100) scale directly to display 0–10 (/10)
+  const wearableMap: Record<string, string> = { sleep_score: 'sleep', readiness_score: 'energy' }
+  for (const row of wearableRows) {
+    const domainKey = wearableMap[row.metric_type]
+    if (!domainKey) continue
+    const d = new Date(row.metric_date + 'T00:00:00')
+    const wk = Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
+    if (wk < 0) continue
+    const displayVal = Math.max(0, Math.min(10, row.value / 10))
+    if (!weeklyBuckets[wk][domainKey]) weeklyBuckets[wk][domainKey] = []
+    // Wearable data takes priority — store separately and overwrite check-in avg below
+    weeklyBuckets[wk][`__wearable_${domainKey}`] = weeklyBuckets[wk][`__wearable_${domainKey}`] ?? []
+    weeklyBuckets[wk][`__wearable_${domainKey}`].push(displayVal)
+  }
+
   // ── Build per-domain series ─────────────────────────────────────────────────
   const series: Record<string, (number | null)[]> = {}
   const domainsMeta: DomainMeta[] = []
@@ -152,6 +168,12 @@ export async function GET(req: NextRequest) {
   for (const [domainKey, meta] of Object.entries(ALL_DOMAIN_META)) {
     const raw: (number | null)[] = Array(WEEKS).fill(null)
     for (let w = 0; w < WEEKS; w++) {
+      // Prefer wearable-sourced values for sleep and energy
+      const wearableVals = weeklyBuckets[w][`__wearable_${domainKey}`]
+      if (wearableVals && wearableVals.length > 0) {
+        raw[w] = wearableVals.reduce((a, b) => a + b, 0) / wearableVals.length
+        continue
+      }
       const vals = weeklyBuckets[w][domainKey]
       if (vals && vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
@@ -185,23 +207,40 @@ export async function GET(req: NextRequest) {
   const [providerVisits, rxList] = await Promise.all([
     db.select({ id: visits.id, visit_date: visits.visit_date, visit_type: visits.visit_type })
       .from(visits).where(and(eq(visits.patient_id, patientId), ne(visits.source, 'daily'), gte(visits.visit_date, startIso))),
-    db.select({ id: prescriptions.id, medication_name: prescriptions.medication_name, dosage: prescriptions.dosage, prescribed_at: prescriptions.prescribed_at })
+    db.select({ medication_name: prescriptions.medication_name, dosage: prescriptions.dosage, prescribed_at: prescriptions.prescribed_at })
       .from(prescriptions).where(and(eq(prescriptions.patient_id, patientId), gte(prescriptions.prescribed_at, startDate))),
   ])
 
   const milestones: Milestone[] = []
+
+  // Provider visits — deduplicate same visit_date (appointment + note create duplicate rows)
+  const seenVisitDates = new Set<string>()
   let visitCount = 0
   for (const v of providerVisits.sort((a, b) => a.visit_date.localeCompare(b.visit_date))) {
+    if (seenVisitDates.has(v.visit_date)) continue
+    seenVisitDates.add(v.visit_date)
     visitCount++
     const d = new Date(v.visit_date + 'T00:00:00')
     const wk = Math.max(0, Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK)))
     milestones.push({ wk, type: 'visit', short: `Visit ${visitCount}`, title: `${v.visit_type === 'initial_consultation' ? 'Initial' : 'Follow-Up'} Consultation`, body: 'Care team visit with Dr. Urban.' })
   }
-  for (const rx of rxList.sort((a, b) => (a.prescribed_at?.getTime() ?? 0) - (b.prescribed_at?.getTime() ?? 0))) {
+
+  // Prescriptions — group same-week rxs into one milestone
+  const rxByWeek: Record<number, { names: string[]; prescribed_at: Date }> = {}
+  for (const rx of rxList) {
     if (!rx.prescribed_at) continue
     const wk = Math.max(0, Math.min(WEEKS - 1, Math.floor((rx.prescribed_at.getTime() - startDate.getTime()) / MS_PER_WEEK)))
-    milestones.push({ wk, type: 'rx', short: rx.medication_name.split(' ')[0].slice(0, 10), title: `${rx.medication_name} ${rx.dosage} Started`, body: `Prescription started at ${rx.dosage}.` })
+    if (!rxByWeek[wk]) rxByWeek[wk] = { names: [], prescribed_at: rx.prescribed_at }
+    rxByWeek[wk].names.push(rx.medication_name)
   }
+  for (const [wkStr, { names }] of Object.entries(rxByWeek)) {
+    const wk = Number(wkStr)
+    const label = names.length === 1 ? names[0].split(' ')[0] : 'Rx started'
+    const title = names.length === 1 ? `${names[0]} Started` : 'Medications Started'
+    const body = names.join(', ')
+    milestones.push({ wk, type: 'rx', short: label.slice(0, 10), title, body })
+  }
+
   milestones.sort((a, b) => a.wk - b.wk)
 
   return NextResponse.json({ domains: domainsMeta, series, milestones } satisfies TrendData)
