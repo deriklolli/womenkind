@@ -23,6 +23,7 @@ interface Milestone {
 }
 
 interface TrendData {
+  weeks: number
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
   wearableSeries: Record<string, (number | null)[]>
@@ -59,20 +60,22 @@ const VB_H = 380
 const PAD = { l: 54, r: 36, t: 62, b: 46 }
 const CHART_W = VB_W - PAD.l - PAD.r
 const CHART_H = VB_H - PAD.t - PAD.b
-const WEEKS = 24
-
-const X_TICKS = [
-  { wk: 0,  label: 'START' },
-  { wk: 6,  label: 'WK 6' },
-  { wk: 12, label: 'WK 12' },
-  { wk: 18, label: 'WK 18' },
-  { wk: 23, label: 'NOW' },
-]
-
 // ── Math helpers ──────────────────────────────────────────────────────────────
 
-function xOf(wk: number): number {
-  return PAD.l + (wk / (WEEKS - 1)) * CHART_W
+function xOf(wk: number, weeks: number): number {
+  return PAD.l + (wk / Math.max(1, weeks - 1)) * CHART_W
+}
+
+function getXTicks(weeks: number) {
+  if (weeks <= 1) return [{ wk: 0, label: 'NOW' }]
+  const last = weeks - 1
+  const ticks = [{ wk: 0, label: 'START' }]
+  for (const pct of [0.25, 0.5, 0.75]) {
+    const wk = Math.round(pct * last)
+    if (wk > 0 && wk < last) ticks.push({ wk, label: `WK ${wk}` })
+  }
+  ticks.push({ wk: last, label: 'NOW' })
+  return ticks
 }
 
 function yOf(val: number): number {
@@ -249,6 +252,8 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const series = data.series[domainKey] ?? []
   const wearableSeries = data.wearableSeries?.[domainKey] ?? null
   const milestones = data.milestones
+  const weeks = data.weeks ?? 24
+  const xTicks = getXTicks(weeks)
 
   // Domain-aware y coordinate: raw-scale domains (e.g. vasomotor, lower=better) map
   // 0 → top of chart, rawScale → bottom. Normalized domains map 10 → top, 0 → bottom.
@@ -263,17 +268,17 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
   // SVG points
   const pts: [number, number][] = series
-    .map((v, i) => v !== null ? [xOf(i), yOfDomain(v)] as [number, number] : null)
+    .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
     .filter((p): p is [number, number] => p !== null)
 
   const linePath = buildPath(pts)
-  const lastPt = pts[pts.length - 1] ?? [xOf(WEEKS - 1), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
-  const firstPt = pts[0] ?? [xOf(0), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
+  const lastPt = pts[pts.length - 1] ?? [xOf(weeks - 1, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
+  const firstPt = pts[0] ?? [xOf(0, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
 
   // Wearable overlay line
   const wearablePts: [number, number][] = wearableSeries
     ? wearableSeries
-        .map((v, i) => v !== null ? [xOf(i), yOfDomain(v)] as [number, number] : null)
+        .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
         .filter((p): p is [number, number] => p !== null)
     : []
   const wearableLinePath = buildPath(wearablePts)
@@ -357,8 +362,8 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
           {/* Milestone stems + data dots */}
           {milestones.map((m, i) => {
-            const mx = xOf(Math.min(WEEKS - 1, m.wk))
-            const sv = series[Math.min(WEEKS - 1, m.wk)]
+            const mx = xOf(Math.min(weeks - 1, m.wk), weeks)
+            const sv = series[Math.min(weeks - 1, m.wk)]
             const my = sv !== null ? yOfDomain(sv) : PAD.t + CHART_H
             return (
               <g key={i}>
@@ -370,7 +375,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
           {/* Medallions */}
           {milestones.map((m, i) => {
-            const mx = xOf(Math.min(WEEKS - 1, m.wk))
+            const mx = xOf(Math.min(weeks - 1, m.wk), weeks)
             const my = PAD.t - 30
             const isHovered = hoveredPin === i
             const r = isHovered ? 15 : 13
@@ -393,8 +398,8 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           )}
 
           {/* X-axis labels */}
-          {X_TICKS.map(({ wk, label }) => (
-            <text key={wk} x={xOf(wk)} y={PAD.t + CHART_H + 20} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.12em" fill="rgba(66,42,31,0.45)">
+          {xTicks.map(({ wk, label }) => (
+            <text key={wk} x={xOf(wk, weeks)} y={PAD.t + CHART_H + 20} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={700} letterSpacing="0.12em" fill="rgba(66,42,31,0.45)">
               {label}
             </text>
           ))}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { visits, prescriptions, wearable_metrics } from '@/lib/db/schema'
-import { eq, and, gte, ne, inArray } from 'drizzle-orm'
+import { eq, and, gte, ne, inArray, asc } from 'drizzle-orm'
 
 interface DomainMeta {
   key: string
@@ -23,6 +23,7 @@ interface Milestone {
 }
 
 interface TrendData {
+  weeks: number
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
   wearableSeries: Record<string, (number | null)[]>
@@ -44,7 +45,7 @@ const ALL_DOMAIN_META: Record<string, { name: string; accent: string }> = {
   overall:   { name: 'Overall',         accent: '#944fed' },
 }
 
-const WEEKS = 24
+const MAX_WEEKS = 104
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000
 
 function normalizeToDisplay(domain: string, raw: number): number {
@@ -66,6 +67,7 @@ function normalizeToDisplay(domain: string, raw: number): number {
 
 // DEV FIXTURE ─────────────────────────────────────────────────────────────────
 const DEV_RESPONSE: TrendData = {
+  weeks: 24,
   wearableSeries: {
     sleep: [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
     energy: [null, null, null, null, 5.5, 5.9, 6.1, 6.3, 6.4, 6.6, 6.5, 6.8, 6.9, 7.0, 7.2, 7.3, 7.2, 7.4, 7.5, 7.5, 7.6, 7.6, 7.7, 7.7],
@@ -119,9 +121,38 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'patientId required' }, { status: 400 })
   }
 
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - (WEEKS - 1) * 7)
+  // ── Find earliest data date to anchor the window ───────────────────────────
+  const [firstCheckin, firstVisit, firstRx] = await Promise.all([
+    db.select({ d: visits.visit_date }).from(visits)
+      .where(and(eq(visits.patient_id, patientId), eq(visits.source, 'weekly')))
+      .orderBy(asc(visits.visit_date)).limit(1),
+    db.select({ d: visits.visit_date }).from(visits)
+      .where(and(eq(visits.patient_id, patientId), ne(visits.source, 'weekly')))
+      .orderBy(asc(visits.visit_date)).limit(1),
+    db.select({ d: prescriptions.prescribed_at }).from(prescriptions)
+      .where(eq(prescriptions.patient_id, patientId))
+      .orderBy(asc(prescriptions.prescribed_at)).limit(1),
+  ])
+
+  const candidates: Date[] = [
+    firstCheckin[0]?.d ? new Date(firstCheckin[0].d + 'T00:00:00') : null,
+    firstVisit[0]?.d ? new Date(firstVisit[0].d + 'T00:00:00') : null,
+    firstRx[0]?.d ?? null,
+  ].filter((d): d is Date => d !== null)
+
+  // Default to 4 weeks ago if no data exists yet
+  const earliest = candidates.length > 0
+    ? new Date(Math.min(...candidates.map(d => d.getTime())))
+    : (() => { const d = new Date(); d.setDate(d.getDate() - 27); return d })()
+
+  // Anchor to Monday of that week
+  const startDate = new Date(earliest)
+  const dayOfWeek = startDate.getDay()
+  startDate.setDate(startDate.getDate() - ((dayOfWeek + 6) % 7))
   startDate.setHours(0, 0, 0, 0)
+
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const actualWeeks = Math.min(MAX_WEEKS, Math.max(4, Math.ceil((today.getTime() - startDate.getTime()) / MS_PER_WEEK) + 1))
   const startIso = startDate.toISOString().slice(0, 10)
 
   // ── Load check-ins + wearable data in parallel ─────────────────────────────
@@ -138,11 +169,11 @@ export async function GET(req: NextRequest) {
 
   // ── Build weekly check-in buckets ───────────────────────────────────────────
   const weeklyBuckets: Record<number, Record<string, number[]>> = {}
-  for (let w = 0; w < WEEKS; w++) weeklyBuckets[w] = {}
+  for (let w = 0; w < actualWeeks; w++) weeklyBuckets[w] = {}
 
   for (const ci of checkins) {
     const d = new Date(ci.visit_date + 'T00:00:00')
-    const wk = Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
+    const wk = Math.min(actualWeeks - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
     if (wk < 0) continue
     const scores = ci.symptom_scores as Record<string, number> | null
     if (!scores) continue
@@ -155,13 +186,13 @@ export async function GET(req: NextRequest) {
   // ── Build wearable buckets separately (sleep_score → sleep, readiness_score → energy) ──
   const wearableMap: Record<string, string> = { sleep_score: 'sleep', readiness_score: 'energy' }
   const wearableBuckets: Record<number, Record<string, number[]>> = {}
-  for (let w = 0; w < WEEKS; w++) wearableBuckets[w] = {}
+  for (let w = 0; w < actualWeeks; w++) wearableBuckets[w] = {}
 
   for (const row of wearableRows) {
     const domainKey = wearableMap[row.metric_type]
     if (!domainKey) continue
     const d = new Date(row.metric_date + 'T00:00:00')
-    const wk = Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
+    const wk = Math.min(actualWeeks - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
     if (wk < 0) continue
     if (!wearableBuckets[wk][domainKey]) wearableBuckets[wk][domainKey] = []
     wearableBuckets[wk][domainKey].push(Math.max(0, Math.min(10, row.value / 10)))
@@ -172,8 +203,8 @@ export async function GET(req: NextRequest) {
   const domainsMeta: DomainMeta[] = []
 
   for (const [domainKey, meta] of Object.entries(ALL_DOMAIN_META)) {
-    const raw: (number | null)[] = Array(WEEKS).fill(null)
-    for (let w = 0; w < WEEKS; w++) {
+    const raw: (number | null)[] = Array(actualWeeks).fill(null)
+    for (let w = 0; w < actualWeeks; w++) {
       const vals = weeklyBuckets[w][domainKey]
       if (vals && vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
@@ -182,9 +213,9 @@ export async function GET(req: NextRequest) {
     }
     const filled: (number | null)[] = [...raw]
     let last: number | null = null
-    for (let w = 0; w < WEEKS; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+    for (let w = 0; w < actualWeeks; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
     last = null
-    for (let w = WEEKS - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+    for (let w = actualWeeks - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
     series[domainKey] = filled
     const nonNull = filled.filter((v): v is number => v !== null)
     domainsMeta.push({
@@ -200,8 +231,8 @@ export async function GET(req: NextRequest) {
   // ── Build wearable series (sleep + energy only) ──────────────────────────────
   const wearableSeries: Record<string, (number | null)[]> = {}
   for (const domainKey of ['sleep', 'energy']) {
-    const raw: (number | null)[] = Array(WEEKS).fill(null)
-    for (let w = 0; w < WEEKS; w++) {
+    const raw: (number | null)[] = Array(actualWeeks).fill(null)
+    for (let w = 0; w < actualWeeks; w++) {
       const vals = wearableBuckets[w][domainKey]
       if (vals && vals.length > 0) raw[w] = vals.reduce((a, b) => a + b, 0) / vals.length
     }
@@ -209,9 +240,9 @@ export async function GET(req: NextRequest) {
     if (hasAny) {
       const filled: (number | null)[] = [...raw]
       let last: number | null = null
-      for (let w = 0; w < WEEKS; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+      for (let w = 0; w < actualWeeks; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
       last = null
-      for (let w = WEEKS - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+      for (let w = actualWeeks - 1; w >= 0; w--) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
       wearableSeries[domainKey] = filled
     }
   }
@@ -234,7 +265,7 @@ export async function GET(req: NextRequest) {
     seenVisitDates.add(v.visit_date)
     visitCount++
     const d = new Date(v.visit_date + 'T00:00:00')
-    const wk = Math.max(0, Math.min(WEEKS - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK)))
+    const wk = Math.max(0, Math.min(actualWeeks - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK)))
     milestones.push({ wk, type: 'visit', short: `Visit ${visitCount}`, title: `${v.visit_type === 'initial_consultation' ? 'Initial' : 'Follow-Up'} Consultation`, body: 'Care team visit with Dr. Urban.' })
   }
 
@@ -242,7 +273,7 @@ export async function GET(req: NextRequest) {
   const rxByWeek: Record<number, { names: string[]; prescribed_at: Date }> = {}
   for (const rx of rxList) {
     if (!rx.prescribed_at) continue
-    const wk = Math.max(0, Math.min(WEEKS - 1, Math.floor((rx.prescribed_at.getTime() - startDate.getTime()) / MS_PER_WEEK)))
+    const wk = Math.max(0, Math.min(actualWeeks - 1, Math.floor((rx.prescribed_at.getTime() - startDate.getTime()) / MS_PER_WEEK)))
     if (!rxByWeek[wk]) rxByWeek[wk] = { names: [], prescribed_at: rx.prescribed_at }
     rxByWeek[wk].names.push(rx.medication_name)
   }
@@ -256,5 +287,5 @@ export async function GET(req: NextRequest) {
 
   milestones.sort((a, b) => a.wk - b.wk)
 
-  return NextResponse.json({ domains: domainsMeta, series, wearableSeries, milestones } satisfies TrendData)
+  return NextResponse.json({ weeks: actualWeeks, domains: domainsMeta, series, wearableSeries, milestones } satisfies TrendData)
 }
