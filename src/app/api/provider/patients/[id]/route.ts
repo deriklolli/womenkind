@@ -69,7 +69,7 @@ export async function GET(
     }),
 
     db.query.visits.findMany({
-      where: and(eq(visits.patient_id, patientId), ne(visits.source, 'daily')),
+      where: eq(visits.patient_id, patientId),
       columns: {
         id: true,
         visit_type: true,
@@ -170,10 +170,13 @@ export async function GET(
 
   const liveWmi = computeLiveWMI(visitsRows as any, recentWearables)
 
+  // Exclude daily check-ins from the visit list shown to providers
+  const providerVisits = visitsRows.filter(v => v.source !== 'daily')
+
   return NextResponse.json({
     patient,
     intakes: intakesRows,
-    visits: visitsRows,
+    visits: providerVisits,
     liveWmi,
     subscriptions: subscriptionsRows,
     prescriptions: prescriptionsRows,
