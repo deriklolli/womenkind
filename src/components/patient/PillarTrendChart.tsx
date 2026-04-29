@@ -359,7 +359,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {milestones.map((m, i) => {
             const mx = xOf(Math.min(WEEKS - 1, m.wk))
             const sv = series[Math.min(WEEKS - 1, m.wk)]
-            const my = sv !== null ? yOfDomain(sv) : yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)
+            const my = sv !== null ? yOfDomain(sv) : PAD.t + CHART_H
             return (
               <g key={i}>
                 <line x1={mx} y1={my} x2={mx} y2={PAD.t - 18} stroke={AUBERGINE} strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
