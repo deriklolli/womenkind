@@ -104,9 +104,9 @@ export default function PatientSchedulePage() {
 
   const checkAuth = async () => {
     // Check real auth first (takes priority over demo mode)
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       // Fall back to demo mode if no real session
       const demo = localStorage.getItem('womenkind_demo_patient')
       if (demo) {
@@ -135,7 +135,7 @@ export default function PatientSchedulePage() {
 
     const me = await meRes.json()
     setPatientName(me.name || 'Patient')
-    setPatientEmail(me.email || session.user.email || '')
+    setPatientEmail(me.email || user.email || '')
     setPatientId(me.patientId)
     setProviderId(me.providerId || '')
     setIsMember(me.isMember ?? false)

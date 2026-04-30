@@ -33,22 +33,13 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
       // Real session always takes priority — check it first
       const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_patient')
-
-        const role = session.user.user_metadata?.role
-
-        if (role === 'patient') {
-          setAuthorized(true)
-          setChecking(false)
-          return
-        }
-
-        // Logged in but not a patient — redirect
-        router.replace('/patient/login')
+        setAuthorized(true)
+        setChecking(false)
         return
       }
 

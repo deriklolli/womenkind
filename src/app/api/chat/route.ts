@@ -109,9 +109,12 @@ async function executeAction(action: string, params: Record<string, any>, contex
           .limit(1)
 
         const intake = intakeRows[0]
-        if (!intake?.ai_brief) return { success: false, error: 'No AI brief found' }
+        if (!intake) return { success: false, error: 'Intake not found' }
 
-        const brief = typeof intake.ai_brief === 'string' ? JSON.parse(intake.ai_brief) : intake.ai_brief as any
+        const existing = intake.ai_brief
+        const brief = existing
+          ? (typeof existing === 'string' ? JSON.parse(existing) : { ...(existing as any) })
+          : {}
         if (!brief.risk_flags) brief.risk_flags = { urgent: [], contraindications: [], considerations: [] }
         if (!brief.risk_flags[flagType]) brief.risk_flags[flagType] = []
         brief.risk_flags[flagType].push(flag)
@@ -319,7 +322,7 @@ CAPABILITIES — You can take these actions when Dr. Urban requests them. You ma
 \`\`\`
 
 CLINICAL UPDATE RULES (CRITICAL):
-- When Dr. Urban mentions an ALLERGY or ADVERSE REACTION to a medication: ALWAYS emit both add_provider_note (note_type: "clinical") AND add_risk_flag (flagType: "contraindications"). Optionally also emit update_ai_brief to remove the drug from treatment_options.
+- When Dr. Urban mentions an ALLERGY or ADVERSE REACTION: emit EXACTLY TWO actions — add_provider_note (note_type: "clinical") AND add_risk_flag (flagType: "contraindications"). Do NOT use update_ai_brief for allergies — add_risk_flag always works even when no brief exists and is the correct action for contraindications.
 - When Dr. Urban mentions a TREATMENT CHANGE or NEW MEDICATION PLAN: emit add_provider_note AND update_ai_brief to update treatment_pathway or md_command.treatment_options.
 - When Dr. Urban mentions a NEW CLINICAL FINDING or SAFETY CONCERN: emit add_provider_note AND add_risk_flag with the appropriate flagType.
 - Always acknowledge the update explicitly: "I've noted that [patient] had [update] and flagged it as [category]. This will be reflected in all future AI outputs for this patient."
@@ -343,16 +346,14 @@ CLINICAL UPDATE RULES (CRITICAL):
       })
     }
 
-    // Check for action blocks in the response
-    const actionMatch = responseText.match(/```action\n([\s\S]*?)\n```/)
-    if (actionMatch) {
+    // Execute all action blocks in the response
+    const actionRegex = /```action\n([\s\S]*?)\n```/g
+    const actionMatches = Array.from(responseText.matchAll(actionRegex))
+    for (const match of actionMatches) {
       try {
-        const actionData = JSON.parse(actionMatch[1])
+        const actionData = JSON.parse(match[1])
         const result = await executeAction(actionData.action, actionData.params, context, session.providerId ?? null)
-
-        // Remove the action block from the displayed response
-        responseText = responseText.replace(/```action\n[\s\S]*?\n```/, '').trim()
-
+        responseText = responseText.replace(match[0], '').trim()
         if (result.success) {
           responseText += `\n\n✓ ${result.message}`
         } else {

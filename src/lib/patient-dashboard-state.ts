@@ -46,6 +46,7 @@ export interface DashboardSnapshot {
   lastCheckinAt: Date | string | null
   recommendedFollowUpAt: Date | string | null
   now: Date
+  checkedInAppointmentIds?: Set<string> | null
 }
 
 const toDate = (v: Date | string | null | undefined): Date | null => {
@@ -86,7 +87,9 @@ export function detectDashboardState(s: DashboardSnapshot): { state: DashboardSt
     if (minutesUntilStart <= 15 && upcoming.daily_room_url) {
       return { state: 'S3', heroAction: { kind: 'join_video', appointment: upcoming } }
     }
-    return { state: 'S3', heroAction: { kind: 'prep_visit', appointment: upcoming, minutesUntilStart } }
+    if (!(s.checkedInAppointmentIds instanceof Set && s.checkedInAppointmentIds.has(upcoming.id))) {
+      return { state: 'S3', heroAction: { kind: 'prep_visit', appointment: upcoming, minutesUntilStart } }
+    }
   }
 
   if (isLapsed && hasFinalizedVisit) {

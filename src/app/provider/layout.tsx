@@ -28,21 +28,12 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
 
     const checkAccess = async () => {
       // Real session always takes priority — check it first
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_provider')
-
-        const role = session.user.user_metadata?.role
-
-        if (role === 'provider') {
-          setAuthorized(true)
-          setChecking(false)
-          return
-        }
-
-        // Logged in but not a provider — redirect
-        router.replace('/provider/login')
+        setAuthorized(true)
+        setChecking(false)
         return
       }
 

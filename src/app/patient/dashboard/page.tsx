@@ -662,7 +662,8 @@ export default function PatientDashboardPage() {
     lastCheckinAt: null,
     recommendedFollowUpAt: null,
     now: new Date(),
-  }), [patient, overviewIntake, appointments, overviewPrescriptions])
+    checkedInAppointmentIds,
+  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds])
 
   const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
 
@@ -746,16 +747,16 @@ export default function PatientDashboardPage() {
     try {
       // Check Supabase auth session (Auth only — no app table queries)
       const {
-        data: { session },
-      } = await supabase.auth.getSession()
+        data: { user },
+      } = await supabase.auth.getUser()
 
       // Real session always takes priority — clear any stale demo key
-      if (session) {
+      if (user) {
         localStorage.removeItem('womenkind_demo_patient')
       }
 
       // Only use demo mode when there is no real session
-      if (!session) {
+      if (!user) {
         const demo = localStorage.getItem('womenkind_demo_patient')
         if (demo) {
           setPatient(DEMO_PATIENT)
@@ -1431,6 +1432,15 @@ export default function PatientDashboardPage() {
           onClose={() => setCheckinModalOpen(false)}
           onSuccess={(liveWmi, visit) => {
             setCheckinModalOpen(false)
+            // If this check-in was for the prep_visit appointment, collapse the banner immediately
+            if (heroAction.kind === 'prep_visit') {
+              const apptId = heroAction.appointment.id
+              setCheckedInAppointmentIds(prev => {
+                const next = new Set(prev ?? [])
+                next.add(apptId)
+                return next
+              })
+            }
             handleCheckinComplete(liveWmi, visit)
           }}
         />

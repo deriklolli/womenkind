@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import ProviderNav from '@/components/provider/ProviderNav'
 import PatientOverview from '@/components/provider/PatientOverview'
@@ -110,7 +110,9 @@ export default function PatientProfilePage() {
   const [latestEncounterNote, setLatestEncounterNote] = useState<{ assessment: string | null; plan: string | null } | null>(null)
   const [liveWmi, setLiveWmi] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [dataVersion, setDataVersion] = useState(0)
+  const fetchGenRef = useRef(0)
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as ProfileTab) || 'overview'
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab)
@@ -157,11 +159,15 @@ export default function PatientProfilePage() {
   }
 
   const loadPatientData = async () => {
-    setLoading(true)
+    const gen = ++fetchGenRef.current
+    if (!patient) setLoading(true)
+    setLoadError(null)
     try {
       const res = await fetch(`/api/provider/patients/${patientId}`)
       if (!res.ok) throw new Error(`Failed to load patient: ${res.status}`)
       const data = await res.json()
+
+      if (fetchGenRef.current !== gen) return
 
       const patientData = data.patient as PatientProfile
       setPatient(patientData)
@@ -181,6 +187,7 @@ export default function PatientProfilePage() {
       try {
         const msgRes = await fetch(`/api/messages?patientId=${patientId}`)
         const msgData = await msgRes.json()
+        if (fetchGenRef.current !== gen) return
         setMessageThreadCount((msgData.threads || []).length)
       } catch {}
 
@@ -194,6 +201,7 @@ export default function PatientProfilePage() {
         intakeStatus: latestIntake?.status,
       })
     } catch (err) {
+      if (fetchGenRef.current !== gen) return
       if (process.env.NODE_ENV === 'development' && devFixtures.patientProfile[patientId]) {
         const fx = devFixtures.patientProfile[patientId]
         setPatient(fx.patient as PatientProfile)
@@ -215,9 +223,10 @@ export default function PatientProfilePage() {
         })
       } else {
         console.error('Failed to load patient:', err)
+        setLoadError('Could not load patient data. Try again.')
       }
     } finally {
-      setLoading(false)
+      if (fetchGenRef.current === gen) setLoading(false)
     }
   }
 
@@ -275,6 +284,20 @@ export default function PatientProfilePage() {
         <ProviderNav />
         <div className="flex items-center justify-center py-32">
           <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError && !patient) {
+    return (
+      <div className="min-h-screen bg-cream">
+        <ProviderNav />
+        <div className="text-center py-32">
+          <p className="font-sans font-semibold text-xl text-aubergine/30">{loadError}</p>
+          <button onClick={loadPatientData} className="text-sm font-sans text-violet mt-4 hover:text-violet-dark">
+            Retry
+          </button>
         </div>
       </div>
     )
