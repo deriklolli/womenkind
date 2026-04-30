@@ -215,7 +215,7 @@ function ActionButton({ action, isActive, onSelect, teal, alwaysColorIcon }: { a
         <p className={`text-sm font-sans leading-tight ${isActive ? (teal ? 'font-medium text-[#4ECDC4]' : 'font-medium text-violet') : 'font-normal text-aubergine'}`}>
           {action.label}
         </p>
-        <p className="text-xs font-sans text-aubergine/38 mt-0.5">
+        <p className="text-xs font-sans text-aubergine/38 mt-0.5 truncate">
           {action.subtitle}
         </p>
       </div>
