@@ -277,20 +277,30 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
   const chartStartDate = new Date(data.startIso + 'T00:00:00')
 
-  const linePath = buildPath(pts)
+  const bottomY = PAD.t + CHART_H
   const lastPt = pts[pts.length - 1] ?? [xOf(weeks - 1, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
-  const firstPt = pts[0] ?? [xOf(0, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
 
-  // Wearable overlay line
+  // Split at first real check-in so the floor section renders as a flat line
+  // rather than letting the bezier create a steep S-curve from 0 to the real value
+  const firstRealWk = rawSeries.findIndex(v => v !== null)
+  const bezierPts = firstRealWk > 0 ? pts.slice(firstRealWk) : pts
+  const floorEndX = bezierPts.length > 0 ? bezierPts[0][0] : PAD.l + CHART_W
+
+  const linePath = buildPath(bezierPts)
+
+  // Wearable overlay line — same split: flat floor + bezier from first real reading
   const wearablePts: [number, number][] = wearableSeries
     ? wearableSeries
         .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
         .filter((p): p is [number, number] => p !== null)
     : []
-  const wearableLinePath = buildPath(wearablePts)
+  const firstRealWearableWk = wearableSeries ? wearableSeries.findIndex(v => v !== null) : -1
+  const wearableBezierPts = firstRealWearableWk > 0 ? wearablePts.slice(firstRealWearableWk) : wearablePts
+  const wearableFloorEndX = wearableBezierPts.length > 0 ? wearableBezierPts[0][0] : PAD.l + CHART_W
+  const wearableLinePath = buildPath(wearableBezierPts)
 
-  const areaPath = pts.length > 0
-    ? `${linePath} L${lastPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} L${firstPt[0].toFixed(1)},${(PAD.t + CHART_H).toFixed(1)} Z`
+  const areaPath = bezierPts.length > 0
+    ? `${linePath} L${lastPt[0].toFixed(1)},${bottomY.toFixed(1)} L${bezierPts[0][0].toFixed(1)},${bottomY.toFixed(1)} Z`
     : ''
 
   // Annotation rail: first 3 + most recent
@@ -352,7 +362,12 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {/* Area fill */}
           {areaPath && <path d={areaPath} fill={`url(#grad-${gradId}-${domainKey})`} />}
 
-          {/* Series line — patient self-reported */}
+          {/* Floor line — flat baseline before first real check-in */}
+          {firstRealWk > 0 && (
+            <line x1={PAD.l} y1={bottomY} x2={floorEndX} y2={bottomY} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
+          )}
+
+          {/* Series line — bezier only from first real check-in onward */}
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
 
           {/* Check-in dots — hollow ring at each real data point (last point covered by current-week dot) */}
@@ -375,9 +390,12 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           })}
 
           {/* Wearable (Oura) overlay — dashed, dimmer */}
-          {wearableLinePath && (
+          {(wearableLinePath || firstRealWearableWk > 0) && (
             <>
-              <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />
+              {firstRealWearableWk > 0 && (
+                <line x1={PAD.l} y1={bottomY} x2={wearableFloorEndX} y2={bottomY} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
+              )}
+              {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />}
               {wearablePts.length > 0 && (
                 <text
                   x={wearablePts[0][0]}
