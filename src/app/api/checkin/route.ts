@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
     if (existing) {
       const [updated] = await db.update(visits).set({
         symptom_scores: scores,
+        source: 'daily',
         checked_in_at: now,
       }).where(eq(visits.id, existing.id)).returning()
 
@@ -93,6 +94,7 @@ export async function POST(req: NextRequest) {
         appointment_id: appointmentId,
         visit_type: 'follow_up',
         visit_date: visitDate,
+        source: 'daily',
         symptom_scores: scores,
         checked_in_at: now,
       }).returning()
