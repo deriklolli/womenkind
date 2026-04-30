@@ -16,6 +16,7 @@ export type HeroAction =
   | { kind: 'reengagement' }
 
 export interface AppointmentLike {
+  id: string
   starts_at: Date | string
   ends_at: Date | string
   encounterNoteFinalized?: boolean

@@ -642,6 +642,7 @@ export default function PatientDashboardPage() {
       ? { status: patient.intakeStatus ?? 'draft', ai_brief: overviewIntake?.ai_brief ?? null, wmi_scores: patient.wmiScores }
       : null,
     appointments: appointments.map((a: any) => ({
+      id: a.id,
       starts_at: a.starts_at,
       ends_at: a.ends_at,
       encounterNoteFinalized: a.encounter_note_finalized ?? false,
@@ -670,7 +671,7 @@ export default function PatientDashboardPage() {
       case 'followup_recommended':
         setActiveView('schedule'); break
       case 'prep_visit':
-        setCheckinModalOpen(true); break
+        router.push(`/patient/checkin/${heroAction.appointment.id}`); break
       case 'join_video':
         if (heroAction.appointment.daily_room_url) {
           window.open(heroAction.appointment.daily_room_url, '_blank')

@@ -22,7 +22,7 @@ describe('detectDashboardState', () => {
   it('returns S3 when an upcoming appointment exists', () => {
     const result = detectDashboardState({
       ...baseSnapshot,
-      appointments: [{ starts_at: new Date('2026-04-30T12:00:00Z'), ends_at: new Date('2026-04-30T13:00:00Z') }],
+      appointments: [{ id: 'apt-1', starts_at: new Date('2026-04-30T12:00:00Z'), ends_at: new Date('2026-04-30T13:00:00Z') }],
     })
     expect(result.state).toBe('S3')
   })
@@ -30,7 +30,7 @@ describe('detectDashboardState', () => {
   it('returns S4 when most recent visit ended within 48h and no encounter notes finalized', () => {
     const result = detectDashboardState({
       ...baseSnapshot,
-      appointments: [{ starts_at: new Date('2026-04-26T12:00:00Z'), ends_at: new Date('2026-04-26T13:00:00Z'), encounterNoteFinalized: false }],
+      appointments: [{ id: 'apt-1', starts_at: new Date('2026-04-26T12:00:00Z'), ends_at: new Date('2026-04-26T13:00:00Z'), encounterNoteFinalized: false }],
     })
     expect(result.state).toBe('S4')
   })
@@ -38,7 +38,7 @@ describe('detectDashboardState', () => {
   it('returns S5 when treatment is active and nothing is overdue', () => {
     const result = detectDashboardState({
       ...baseSnapshot,
-      appointments: [{ starts_at: new Date('2026-04-20T12:00:00Z'), ends_at: new Date('2026-04-20T13:00:00Z'), encounterNoteFinalized: true }],
+      appointments: [{ id: 'apt-1', starts_at: new Date('2026-04-20T12:00:00Z'), ends_at: new Date('2026-04-20T13:00:00Z'), encounterNoteFinalized: true }],
       lastCheckinAt: new Date('2026-04-25T12:00:00Z'),
     })
     expect(result.state).toBe('S5')
@@ -47,7 +47,7 @@ describe('detectDashboardState', () => {
   it('returns S6 when no check-in in >= 21 days and no upcoming visit', () => {
     const result = detectDashboardState({
       ...baseSnapshot,
-      appointments: [{ starts_at: new Date('2026-03-01T12:00:00Z'), ends_at: new Date('2026-03-01T13:00:00Z'), encounterNoteFinalized: true }],
+      appointments: [{ id: 'apt-1', starts_at: new Date('2026-03-01T12:00:00Z'), ends_at: new Date('2026-03-01T13:00:00Z'), encounterNoteFinalized: true }],
       lastCheckinAt: new Date('2026-04-01T12:00:00Z'),
     })
     expect(result.state).toBe('S6')
@@ -56,7 +56,7 @@ describe('detectDashboardState', () => {
   it('S3 beats S6: upcoming visit overrides lapsed', () => {
     const result = detectDashboardState({
       ...baseSnapshot,
-      appointments: [{ starts_at: new Date('2026-04-30T12:00:00Z'), ends_at: new Date('2026-04-30T13:00:00Z') }],
+      appointments: [{ id: 'apt-1', starts_at: new Date('2026-04-30T12:00:00Z'), ends_at: new Date('2026-04-30T13:00:00Z') }],
       lastCheckinAt: new Date('2026-04-01T12:00:00Z'),
     })
     expect(result.state).toBe('S3')
@@ -66,7 +66,7 @@ describe('detectDashboardState', () => {
 describe('detectDashboardState rotation (S5)', () => {
   const s5Base = {
     ...baseSnapshot,
-    appointments: [{ starts_at: new Date('2026-04-20T12:00:00Z'), ends_at: new Date('2026-04-20T13:00:00Z'), encounterNoteFinalized: true }],
+    appointments: [{ id: 'apt-1', starts_at: new Date('2026-04-20T12:00:00Z'), ends_at: new Date('2026-04-20T13:00:00Z'), encounterNoteFinalized: true }],
     // now is Mon 2026-04-27; checkin done same week (Mon 08:00 UTC)
     lastCheckinAt: new Date('2026-04-27T08:00:00Z'),
   }
