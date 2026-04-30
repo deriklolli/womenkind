@@ -24,6 +24,7 @@ interface Milestone {
 
 interface TrendData {
   weeks: number
+  startIso: string
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
   seriesRaw: Record<string, (number | null)[]>
@@ -67,8 +68,11 @@ function normalizeToDisplay(domain: string, raw: number): number {
 }
 
 // DEV FIXTURE ─────────────────────────────────────────────────────────────────
+const DEV_START_ISO = (() => { const d = new Date(); d.setDate(d.getDate() - 23 * 7); return d.toISOString().slice(0, 10) })()
+
 const DEV_RESPONSE: TrendData = {
   weeks: 24,
+  startIso: DEV_START_ISO,
   wearableSeries: {
     sleep: [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
     energy: [null, null, null, null, 5.5, 5.9, 6.1, 6.3, 6.4, 6.6, 6.5, 6.8, 6.9, 7.0, 7.2, 7.3, 7.2, 7.4, 7.5, 7.5, 7.6, 7.6, 7.7, 7.7],
@@ -294,5 +298,5 @@ export async function GET(req: NextRequest) {
 
   milestones.sort((a, b) => a.wk - b.wk)
 
-  return NextResponse.json({ weeks: actualWeeks, domains: domainsMeta, series, seriesRaw, wearableSeries, milestones } satisfies TrendData)
+  return NextResponse.json({ weeks: actualWeeks, startIso, domains: domainsMeta, series, seriesRaw, wearableSeries, milestones } satisfies TrendData)
 }

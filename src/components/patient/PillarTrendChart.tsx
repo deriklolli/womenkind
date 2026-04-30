@@ -24,6 +24,7 @@ interface Milestone {
 
 interface TrendData {
   weeks: number
+  startIso: string
   domains: DomainMeta[]
   series: Record<string, (number | null)[]>
   seriesRaw: Record<string, (number | null)[]>
@@ -69,14 +70,10 @@ function xOf(wk: number, weeks: number): number {
 
 function getXTicks(weeks: number) {
   if (weeks <= 1) return [{ wk: 0, label: 'NOW' }]
-  const last = weeks - 1
-  const ticks = [{ wk: 0, label: 'START' }]
-  for (const pct of [0.25, 0.5, 0.75]) {
-    const wk = Math.round(pct * last)
-    if (wk > 0 && wk < last) ticks.push({ wk, label: `WK ${wk}` })
-  }
-  ticks.push({ wk: last, label: 'NOW' })
-  return ticks
+  return [
+    { wk: 0, label: 'START' },
+    { wk: weeks - 1, label: 'NOW' },
+  ]
 }
 
 function yOf(val: number): number {
@@ -215,6 +212,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const [loading, setLoading] = useState(true)
   const [activeDomainKey, setActiveDomainKey] = useState<string>(initialDomain ?? activeDomains?.[0] ?? 'vasomotor')
   const [hoveredPin, setHoveredPin] = useState<number | null>(null)
+  const [hoveredDot, setHoveredDot] = useState<number | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -273,9 +271,11 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
     .filter((p): p is [number, number] => p !== null)
 
   const rawSeries = data.seriesRaw?.[domainKey] ?? []
-  const rawPts: [number, number][] = rawSeries
-    .map((v, i) => v !== null ? [xOf(i, weeks), yOfDomain(v)] as [number, number] : null)
-    .filter((p): p is [number, number] => p !== null)
+  const rawPts: { x: number; y: number; wk: number }[] = rawSeries
+    .map((v, i) => v !== null ? { x: xOf(i, weeks), y: yOfDomain(v), wk: i } : null)
+    .filter((p): p is { x: number; y: number; wk: number } => p !== null)
+
+  const chartStartDate = new Date(data.startIso + 'T00:00:00')
 
   const linePath = buildPath(pts)
   const lastPt = pts[pts.length - 1] ?? [xOf(weeks - 1, weeks), yOfDomain(domain.rawScale ? domain.rawScale / 2 : 5)]
@@ -319,7 +319,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           <DomainDropdown
             domains={visibleDomains}
             activeKey={activeDomainKey}
-            onChange={k => { setActiveDomainKey(k); setHoveredPin(null) }}
+            onChange={k => { setActiveDomainKey(k); setHoveredPin(null); setHoveredDot(null) }}
           />
         </div>
       </div>
@@ -356,9 +356,23 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {linePath && <path d={linePath} fill="none" stroke={accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />}
 
           {/* Check-in dots — hollow ring at each real data point (last point covered by current-week dot) */}
-          {rawPts.slice(0, -1).map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r={4} fill="white" stroke={accent} strokeWidth={2} />
-          ))}
+          {rawPts.slice(0, -1).map((pt, i) => {
+            const ptDate = new Date(chartStartDate.getTime() + pt.wk * 7 * 24 * 60 * 60 * 1000)
+            const label = ptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            const isHovered = hoveredDot === i
+            const PILL_W = 54
+            return (
+              <g key={i} onMouseEnter={() => setHoveredDot(i)} onMouseLeave={() => setHoveredDot(null)} style={{ cursor: 'default' }}>
+                {isHovered && (
+                  <g>
+                    <rect x={pt.x - PILL_W / 2} y={pt.y - 34} width={PILL_W} height={18} rx={9} fill={AUBERGINE} />
+                    <text x={pt.x} y={pt.y - 22} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={600} fill="white">{label}</text>
+                  </g>
+                )}
+                <circle cx={pt.x} cy={pt.y} r={isHovered ? 5 : 4} fill="white" stroke={accent} strokeWidth={2} />
+              </g>
+            )
+          })}
 
           {/* Wearable (Oura) overlay — dashed, dimmer */}
           {wearableLinePath && (
