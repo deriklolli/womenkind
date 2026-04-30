@@ -1011,8 +1011,6 @@ export default function PatientDashboardPage() {
                   onDomainsChange={setChartDomains}
                 />
 
-                <TimelineStrip markers={timelineMarkers} />
-
               </>
             )}
 
