@@ -41,6 +41,7 @@
 - Patient `dlolli@gmail.com` password is **not** `password123` — ask the user if you need to log in as that account
 - Signup flow is fully server-side (`/api/auth/signup`): admin client with `email_confirm: true` skips Supabase SMTP, creates RDS `profiles` + `patients` rows immediately, signs in server-side, sends welcome email via Resend
 - Patient signup link on the login page goes to `womenkindhealth.com/signup` (marketing site), not the in-app `/signup` route
+- `getServerSession()` checks **providers before patients** — if a user has both rows (can happen accidentally), they resolve as provider. `/api/auth/create-patient` guards against creating a patient row for a provider account.
 
 ## Patient Dashboard
 - Entry: `src/app/patient/dashboard/page.tsx` — `PatientLayout` (`src/app/patient/layout.tsx`) gates auth; dev bypass via `process.env.NODE_ENV === 'development'` in both files
@@ -140,6 +141,12 @@ All cron routes use `GET` + `Authorization: Bearer ${CRON_SECRET}`.
 
 ### Settings UI
 Notifications tab in `src/components/patient/PatientSettings.tsx` — 3 wired toggle rows backed by the preferences API. Note on bottom: prescription refill and lab result notifications always sent.
+
+### Email PHI notes
+- Medication names appear in email **body only** (not subject) — acceptable under HIPAA treatment operations, but requires a BAA with Resend. BAA is in progress as of 2026-04-30.
+- Subjects are deliberately neutral: score-drop → "A message from your care team", refill → "Time to request a refill"
+- Two borderline subjects flagged but left as-is pending user decision: post-visit ("How are you feeling after your visit?") and lab results ("Your lab results are ready")
+- Email preview page: `/admin/email-preview` — renders all 8 templates with sample data, flags PHI notes inline
 
 ### Key gotchas
 - `profiles` table has **no** `last_sign_in_at` column — the no-login check uses `supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })` to build a Map of `profile_id → last_sign_in_at`
