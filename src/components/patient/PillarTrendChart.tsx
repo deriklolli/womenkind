@@ -36,6 +36,7 @@ interface Props {
   patientId: string
   activeDomains: string[]   // mirrors symptom tracker card selection
   initialDomain?: string
+  refreshKey?: number
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -206,7 +207,7 @@ function AnnotationCard({
 
 // ── Main chart ────────────────────────────────────────────────────────────────
 
-export default function PillarTrendChart({ patientId, activeDomains, initialDomain }: Props) {
+export default function PillarTrendChart({ patientId, activeDomains, initialDomain, refreshKey }: Props) {
   const gradId = useId().replace(/:/g, '')
   const [data, setData] = useState<TrendData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -220,7 +221,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
       .then(r => r.json())
       .then((d: TrendData) => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [patientId])
+  }, [patientId, refreshKey])
 
   // Sync active domain when activeDomains prop changes
   useEffect(() => {

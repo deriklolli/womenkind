@@ -421,6 +421,7 @@ export default function PatientDashboardPage() {
   const [overviewLiveWmi, setOverviewLiveWmi] = useState<number | null>(null)
   const [chartDomains, setChartDomains] = useState<string[]>(['vasomotor', 'sleep', 'energy', 'mood'])
   const [checkinModalOpen, setCheckinModalOpen] = useState(false)
+  const [checkinRefreshKey, setCheckinRefreshKey] = useState(0)
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
   const [cancelingBanner, setCancelingBanner] = useState(false)
@@ -823,6 +824,7 @@ export default function PatientDashboardPage() {
   }
 
   const handleCheckinComplete = async (liveWmi?: number | null, newVisit?: Record<string, any>) => {
+    setCheckinRefreshKey(k => k + 1)
     // Apply score immediately
     if (liveWmi != null) setOverviewLiveWmi(liveWmi)
     // Add new visit to domain cards immediately (no re-fetch needed for boxes)
@@ -1347,7 +1349,7 @@ export default function PatientDashboardPage() {
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
                 />
-                <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} />
+                <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} refreshKey={checkinRefreshKey} />
               </>
             )}
 
