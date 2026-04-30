@@ -579,7 +579,8 @@ export default function PatientDashboardPage() {
 
   // Fetch appointments at dashboard level for banner logic
   useEffect(() => {
-    if (!patient?.patientId) { setAppointmentsLoading(false); return }
+    if (!patient) return  // patient data not loaded yet — keep appointmentsLoading true
+    if (!patient.patientId) { setAppointmentsLoading(false); return }
     const fetchAppointments = async () => {
       try {
         const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&includeCanceled=true`)
