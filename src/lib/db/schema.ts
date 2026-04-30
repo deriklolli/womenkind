@@ -383,3 +383,23 @@ export const care_presentations = pgTable('care_presentations', {
   viewed_at:           timestamp('viewed_at', { withTimezone: true }),
   created_at:          timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// ── Engagement Log ────────────────────────────────────────────────────────────
+export const engagement_log = pgTable('engagement_log', {
+  id:           uuid('id').primaryKey().defaultRandom(),
+  patient_id:   uuid('patient_id').notNull().references(() => patients.id),
+  trigger_type: text('trigger_type').notNull(),
+  channel:      text('channel').notNull().default('email'),
+  sent_at:      timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+  metadata:     json('metadata'),
+})
+
+// ── Notification Preferences ──────────────────────────────────────────────────
+export const notification_preferences = pgTable('notification_preferences', {
+  id:                uuid('id').primaryKey().defaultRandom(),
+  patient_id:        uuid('patient_id').notNull().unique().references(() => patients.id),
+  checkin_reminders: boolean('checkin_reminders').notNull().default(true),
+  progress_updates:  boolean('progress_updates').notNull().default(true),
+  care_alerts:       boolean('care_alerts').notNull().default(true),
+  updated_at:        timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
