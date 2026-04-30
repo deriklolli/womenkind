@@ -254,6 +254,8 @@ export async function GET(req: NextRequest) {
       const filled: (number | null)[] = [...raw]
       let last: number | null = null
       for (let w = 0; w < actualWeeks; w++) { if (filled[w] !== null) last = filled[w]; else if (last !== null) filled[w] = last }
+      // floor fill: extend line back to start at 0 before first wearable reading
+      for (let w = 0; w < actualWeeks; w++) { if (filled[w] === null) filled[w] = 0; else break }
       wearableSeries[domainKey] = filled
     }
   }
