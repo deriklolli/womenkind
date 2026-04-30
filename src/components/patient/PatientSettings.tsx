@@ -41,9 +41,33 @@ export default function PatientSettings({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [canceling, setCanceling] = useState(false)
 
+  const [notifPrefs, setNotifPrefs] = useState({ checkin_reminders: true, progress_updates: true, care_alerts: true })
+  const [notifLoading, setNotifLoading] = useState(true)
+  const [notifSaving, setNotifSaving] = useState(false)
+
   useEffect(() => {
     fetchStatus()
+    fetch('/api/patient/notification-preferences')
+      .then(r => r.json())
+      .then(data => setNotifPrefs({
+        checkin_reminders: data.checkin_reminders ?? true,
+        progress_updates:  data.progress_updates  ?? true,
+        care_alerts:       data.care_alerts        ?? true,
+      }))
+      .finally(() => setNotifLoading(false))
   }, [patientId])
+
+  async function handleNotifToggle(key: 'checkin_reminders' | 'progress_updates' | 'care_alerts') {
+    const newVal = !notifPrefs[key]
+    setNotifPrefs(prev => ({ ...prev, [key]: newVal }))
+    setNotifSaving(true)
+    await fetch('/api/patient/notification-preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: newVal }),
+    })
+    setNotifSaving(false)
+  }
 
   async function fetchStatus() {
     try {
@@ -347,53 +371,46 @@ export default function PatientSettings({
         <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
           <div className="px-6 py-5 space-y-5">
             <p className="text-sm font-sans text-aubergine/50 leading-relaxed">
-              Choose how you&apos;d like to be notified about updates to your care.
+              Choose which emails you&apos;d like to receive from Womenkind.
             </p>
 
-            {/* Email notifications */}
-            <div className="space-y-3">
-              <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider">Email Notifications</p>
-              <NotificationToggle
-                label="Appointment reminders"
-                description="Receive an email 24 hours before your scheduled visit"
-                defaultOn
-              />
-              <NotificationToggle
-                label="Lab results ready"
-                description="Get notified when new lab results are available"
-                defaultOn
-              />
-              <NotificationToggle
-                label="Prescription updates"
-                description="Refill approvals, new prescriptions, and pharmacy notifications"
-                defaultOn
-              />
-              <NotificationToggle
-                label="Health Blueprint updates"
-                description="When your provider publishes a new or updated care plan"
-                defaultOn
-              />
-              <NotificationToggle
-                label="Provider messages"
-                description="New messages from your care team"
-                defaultOn
-              />
-            </div>
+            {notifLoading ? (
+              <div className="space-y-4 animate-pulse">
+                {[0, 1, 2].map(i => <div key={i} className="h-12 bg-aubergine/5 rounded-xl" />)}
+              </div>
+            ) : (
+              <div className="divide-y divide-aubergine/5">
+                {([
+                  { key: 'checkin_reminders' as const, label: 'Check-in Reminders',  desc: 'Weekly symptom nudges and missed check-in alerts' },
+                  { key: 'progress_updates'  as const, label: 'Progress Updates',    desc: 'Monthly recap of your WMI trend and domain improvements' },
+                  { key: 'care_alerts'       as const, label: 'Care Alerts',         desc: 'Notifications when your symptom scores change or after a visit' },
+                ]).map(({ key, label, desc }) => (
+                  <div key={key} className="flex items-start justify-between gap-4 py-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-sans font-medium text-aubergine">{label}</p>
+                      <p className="text-xs font-sans text-aubergine/40 mt-0.5">{desc}</p>
+                    </div>
+                    <button
+                      onClick={() => handleNotifToggle(key)}
+                      disabled={notifSaving}
+                      className={`relative flex-shrink-0 w-10 h-[22px] rounded-full transition-colors duration-200 ${
+                        notifPrefs[key] ? 'bg-violet' : 'bg-aubergine/10'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-[3px] left-[3px] w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                          notifPrefs[key] ? 'translate-x-[18px]' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* In-app notifications */}
-            <div className="space-y-3 pt-4 border-t border-aubergine/5">
-              <p className="text-xs font-sans font-semibold text-aubergine/50 uppercase tracking-wider">In-App Notifications</p>
-              <NotificationToggle
-                label="Dashboard alerts"
-                description="Show alert cards on your dashboard for items that need attention"
-                defaultOn
-              />
-              <NotificationToggle
-                label="Notification bell"
-                description="Show the unread count badge on the bell icon"
-                defaultOn
-              />
-            </div>
+            <p className="text-xs font-sans text-aubergine/40 pt-2 border-t border-aubergine/5">
+              Prescription refill and lab result notifications are always sent — they&apos;re part of your care plan.
+            </p>
           </div>
         </div>
       )}
