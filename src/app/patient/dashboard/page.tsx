@@ -410,7 +410,7 @@ export default function PatientDashboardPage() {
   const [membershipLoading, setMembershipLoading] = useState(false)
   const [appointments, setAppointments] = useState<any[]>([])
   const [appointmentsLoading, setAppointmentsLoading] = useState(true)
-  const [hasInitialConsultation, setHasInitialConsultation] = useState(true)
+  const [hasInitialConsultation, setHasInitialConsultation] = useState(false)
   const [hasEverHadInitial, setHasEverHadInitial] = useState(false)
   const [activeView, setActiveView] = useState<DashboardView>('dashboard')
   const [overviewVisits, setOverviewVisits] = useState<any[]>([])
