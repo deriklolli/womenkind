@@ -822,13 +822,16 @@ export default function PatientDashboardPage() {
     }
   }
 
-  const handleCheckinComplete = async () => {
+  const handleCheckinComplete = async (liveWmi?: number | null) => {
+    // Apply the live WMI returned directly from the POST response immediately
+    if (liveWmi != null) setOverviewLiveWmi(liveWmi)
+    // Also re-fetch to refresh visit list (and pick up liveWmi if not passed directly)
     try {
       const res = await fetch('/api/patient/me')
       if (res.ok) {
         const me = await res.json()
         if (me.visits?.length) setOverviewVisits(me.visits)
-        if (me.liveWmi != null) setOverviewLiveWmi(me.liveWmi)
+        if (liveWmi == null && me.liveWmi != null) setOverviewLiveWmi(me.liveWmi)
       }
     } catch {}
   }
@@ -1389,9 +1392,9 @@ export default function PatientDashboardPage() {
       {checkinModalOpen && (
         <DailyCheckinModal
           onClose={() => setCheckinModalOpen(false)}
-          onSuccess={() => {
+          onSuccess={(liveWmi) => {
             setCheckinModalOpen(false)
-            handleCheckinComplete()
+            handleCheckinComplete(liveWmi)
           }}
         />
       )}

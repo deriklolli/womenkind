@@ -4,6 +4,7 @@ import { logPhiAccess } from '@/lib/phi-audit'
 import { db } from '@/lib/db'
 import { visits, providers, wearable_metrics } from '@/lib/db/schema'
 import { eq, and, gte } from 'drizzle-orm'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 // Domains always required regardless of wearable
 const BASE_DOMAINS = ['vasomotor', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
@@ -90,8 +91,10 @@ export async function POST(req: NextRequest) {
   try {
     if (process.env.NODE_ENV === 'development') {
       const { scores } = await req.json()
+      const today = new Date().toISOString().slice(0, 10)
+      const liveWmi = computeLiveWMI([{ source: 'daily', visit_date: today, symptom_scores: scores as Record<string, number> }])
       return NextResponse.json(
-        { visit: { id: 'dev-weekly-visit', symptom_scores: scores } },
+        { visit: { id: 'dev-weekly-visit', symptom_scores: scores }, liveWmi },
         { status: 201 },
       )
     }
@@ -171,7 +174,13 @@ export async function POST(req: NextRequest) {
       req,
     })
 
-    return NextResponse.json({ visit: inserted }, { status: 201 })
+    const liveWmi = computeLiveWMI([{
+      source: 'daily',
+      visit_date: inserted.visit_date,
+      symptom_scores: inserted.symptom_scores as Record<string, number> | null,
+    }])
+
+    return NextResponse.json({ visit: inserted, liveWmi }, { status: 201 })
   } catch (err: any) {
     console.error('Weekly check-in POST error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

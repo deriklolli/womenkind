@@ -49,7 +49,7 @@ interface PatientOverviewProps {
     wmi_scores?: WMIScores | null
   } | null
   liveWmi?: number | null
-  onCheckinComplete?: () => void
+  onCheckinComplete?: (liveWmi?: number | null) => void
   onDomainsChange?: (keys: string[]) => void
   showCheckin?: boolean
   compact?: boolean
@@ -324,10 +324,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
       {checkinModal && (
         <DailyCheckinModal
           onClose={() => setCheckinModal(false)}
-          onSuccess={() => {
+          onSuccess={(liveWmi) => {
             setCheckinModal(false)
             setTodayCheckedIn(true)
-            onCheckinComplete?.()
+            onCheckinComplete?.(liveWmi)
           }}
         />
       )}
