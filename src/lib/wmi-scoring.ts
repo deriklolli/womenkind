@@ -289,12 +289,19 @@ export function computeWMI(answers: Record<string, unknown>): WMIScores {
 // ── Live WMI from weekly check-ins + wearables ───────────────────────────────
 
 export function computeLiveWMI(
-  visits: Array<{ symptom_scores: Record<string, number> | null; visit_date: string; source?: string | null }>,
+  visits: Array<{ symptom_scores: Record<string, number> | null; visit_date: string; source?: string | null; checked_in_at?: string | Date | null }>,
   wearableMetrics?: Array<{ metric_type: string; value: number; metric_date: string }>
 ): number | null {
   const recent = visits
     .filter((v) => v.source === 'daily' && v.symptom_scores)
-    .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    .sort((a, b) => {
+      // Prefer most-recently submitted (checked_in_at) so that a same-week
+      // re-submission always wins over an earlier check-in with a later visit_date.
+      const aTs = a.checked_in_at ? new Date(a.checked_in_at).getTime() : 0
+      const bTs = b.checked_in_at ? new Date(b.checked_in_at).getTime() : 0
+      if (bTs !== aTs) return bTs - aTs
+      return b.visit_date.localeCompare(a.visit_date)
+    })
     .slice(0, 1)
 
   // Build wearable metric averager (last 14 days to cover up to 2 weekly cycles)

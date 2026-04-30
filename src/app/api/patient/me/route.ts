@@ -99,7 +99,7 @@ export async function GET() {
   // Visits (for symptom tracker domain cards + live WMI)
   const patientVisits = await db.query.visits.findMany({
     where: eq(visits.patient_id, patientId),
-    columns: { id: true, visit_type: true, visit_date: true, symptom_scores: true, source: true },
+    columns: { id: true, visit_type: true, visit_date: true, symptom_scores: true, source: true, checked_in_at: true },
     orderBy: [desc(visits.visit_date)],
   })
 
