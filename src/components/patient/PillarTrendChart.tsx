@@ -424,7 +424,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
             </>
           )}
 
-          {/* Milestone stems + data dots */}
+          {/* Milestone stems + filled dots (filled = event, not a symptom survey point) */}
           {milestones.map((m, i) => {
             const mx = xOf(Math.min(weeks - 1, m.wk), weeks)
             const sv = series[Math.min(weeks - 1, m.wk)]
@@ -432,7 +432,7 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
             return (
               <g key={i}>
                 <line x1={mx} y1={my} x2={mx} y2={PAD.t - 18} stroke={AUBERGINE} strokeWidth={1} strokeDasharray="2 3" opacity={0.6} />
-                <circle cx={mx} cy={my} r={4.5} fill="white" stroke={accent} strokeWidth={2} />
+                <circle cx={mx} cy={my} r={5} fill={accent} stroke="white" strokeWidth={1.5} />
               </g>
             )
           })}
