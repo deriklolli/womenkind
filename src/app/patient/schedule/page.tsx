@@ -147,7 +147,9 @@ export default function PatientSchedulePage() {
       if (aptsRes.ok) {
         const aptsData = await aptsRes.json()
         hasPrior = (aptsData.appointments || []).some(
-          (a: any) => a.status === 'confirmed' || a.status === 'completed'
+          (a: any) =>
+            (a.status === 'confirmed' || a.status === 'completed') &&
+            (a.appointment_types?.name || '').toLowerCase().includes('initial')
         )
         setIsNewPatient(!hasPrior)
       }
