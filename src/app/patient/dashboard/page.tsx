@@ -998,11 +998,13 @@ export default function PatientDashboardPage() {
             {/* Dashboard view — action-first hero + health story stack */}
             {activeView === 'dashboard' && (
               <>
-                <DashboardHero
-                  action={heroAction}
-                  onPrimaryClick={handleHero}
-                  patientFirstName={patient.name?.split(' ')[0]}
-                />
+                {!appointmentsLoading && (
+                  <DashboardHero
+                    action={heroAction}
+                    onPrimaryClick={handleHero}
+                    patientFirstName={patient.name?.split(' ')[0]}
+                  />
+                )}
 
                 <PatientOverview
                   visits={overviewVisits}
