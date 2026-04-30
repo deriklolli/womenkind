@@ -74,44 +74,44 @@ const DEV_RESPONSE: TrendData = {
   weeks: 24,
   startIso: DEV_START_ISO,
   wearableSeries: {
-    sleep: [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
-    energy: [null, null, null, null, 5.5, 5.9, 6.1, 6.3, 6.4, 6.6, 6.5, 6.8, 6.9, 7.0, 7.2, 7.3, 7.2, 7.4, 7.5, 7.5, 7.6, 7.6, 7.7, 7.7],
+    sleep:  [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
+    energy: [null, null, null, null, 2.6, 2.4, 2.3, 2.1, 2.0, 1.9, 2.0, 1.8, 1.7, 1.6, 1.5, 1.4, 1.5, 1.3, 1.2, 1.3, 1.2, 1.2, 1.1, 1.1],
   },
   domains: [
-    { key: 'vasomotor', name: 'Vasomotor', accent: '#c97c5d', baseline: 12, current: 3, rawScale: 20, lowerIsBetter: true },
-    { key: 'sleep',     name: 'Sleep',          accent: '#5d9ed5', baseline: 5.5, current: 8.1 },
-    { key: 'energy',    name: 'Energy',         accent: '#e8a838', baseline: 5.0, current: 7.5 },
-    { key: 'mood',      name: 'Mood',           accent: '#7c6bc4', baseline: 5.0, current: 7.7 },
-    { key: 'cognition', name: 'Cognition',      accent: '#6366f1', baseline: 4.5, current: 7.1 },
-    { key: 'gsm',       name: 'Hormonal',       accent: '#c47884', baseline: 5.0, current: 8.0 },
-    { key: 'bone',      name: 'Bone Health',    accent: '#78716c', baseline: 5.5, current: 7.0 },
-    { key: 'weight',    name: 'Metabolism',     accent: '#0891b2', baseline: 5.0, current: 6.5 },
-    { key: 'libido',    name: 'Libido',         accent: '#e879f9', baseline: 4.5, current: 6.5 },
-    { key: 'cardio',    name: 'Cardiovascular', accent: '#ef4444', baseline: 8.0, current: 9.0 },
+    { key: 'vasomotor', name: 'Vasomotor',     accent: '#c97c5d', baseline: 12,  current: 3,   rawScale: 20, lowerIsBetter: true },
+    { key: 'sleep',     name: 'Sleep',          accent: '#5d9ed5', baseline: 5.5, current: 8.1, rawScale: 12 },
+    { key: 'energy',    name: 'Energy',         accent: '#e8a838', baseline: 3.8, current: 2.0, rawScale: 5 },
+    { key: 'mood',      name: 'Mood',           accent: '#7c6bc4', baseline: 3.5, current: 1.9, rawScale: 5 },
+    { key: 'cognition', name: 'Cognition',      accent: '#6366f1', baseline: 4.0, current: 2.1, rawScale: 5 },
+    { key: 'gsm',       name: 'Hormonal',       accent: '#c47884', baseline: 3.5, current: 1.8, rawScale: 5 },
+    { key: 'bone',      name: 'Bone Health',    accent: '#78716c', baseline: 3.0, current: 2.2, rawScale: 5 },
+    { key: 'weight',    name: 'Metabolism',     accent: '#0891b2', baseline: 3.2, current: 2.2, rawScale: 5 },
+    { key: 'libido',    name: 'Libido',         accent: '#e879f9', baseline: 4.0, current: 2.3, rawScale: 5 },
+    { key: 'cardio',    name: 'Cardiovascular', accent: '#ef4444', baseline: 2,   current: 0,   rawScale: 20, lowerIsBetter: true },
   ],
   series: {
     vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
     sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
-    energy:    [5.0, 4.8, 5.3, 5.5, 5.4, 5.7, 5.9, 6.0, 6.1, 6.3, 6.2, 6.5, 6.6, 6.7, 6.9, 7.0, 7.0, 7.1, 7.2, 7.3, 7.4, 7.4, 7.5, 7.5],
-    mood:      [5.0, 4.8, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.2, 6.4, 6.3, 6.6, 6.7, 6.8, 7.0, 7.1, 7.0, 7.2, 7.3, 7.4, 7.3, 7.5, 7.6, 7.7],
-    cognition: [4.5, 4.3, 4.7, 5.0, 4.8, 5.2, 5.5, 5.3, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.5, 6.4, 6.6, 6.7, 6.7, 6.8, 6.9, 7.0, 7.1],
-    gsm:       [5.0, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.3, 6.5, 6.4, 6.7, 6.8, 7.0, 7.0, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.6, 7.8, 7.9, 8.0],
-    bone:      [5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.3, 6.4, 6.5, 6.5, 6.6, 6.7, 6.8, 6.8, 6.9, 6.9, 7.0, 7.0, 7.0, 7.0, 7.0],
-    weight:    [5.0, 5.1, 5.2, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.1, 6.2, 6.3, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5, 6.5],
-    libido:    [4.5, 4.6, 4.7, 4.9, 5.0, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.2, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5],
-    cardio:    [8.0, 8.1, 8.2, 8.3, 8.4, 8.4, 8.5, 8.5, 8.6, 8.6, 8.7, 8.7, 8.8, 8.8, 8.8, 8.9, 8.9, 8.9, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0],
+    energy:    [3.8, 3.6, 3.8, 3.7, 3.6, 3.4, 3.3, 3.1, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 2.0],
+    mood:      [3.5, 3.3, 3.8, 3.4, 3.5, 3.2, 3.0, 3.1, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.4, 2.3, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.9],
+    cognition: [4.0, 3.8, 3.9, 3.7, 3.6, 3.5, 3.4, 3.2, 3.2, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.5, 2.4, 2.3, 2.3, 2.2, 2.2, 2.1, 2.1],
+    gsm:       [3.5, 3.6, 3.4, 3.6, 3.3, 3.2, 3.1, 2.9, 2.8, 2.8, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.8],
+    bone:      [3.0, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2, 2.2],
+    weight:    [3.2, 3.3, 3.1, 3.2, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2],
+    libido:    [4.0, 3.9, 3.8, 3.7, 3.7, 3.5, 3.4, 3.3, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.8, 2.7, 2.7, 2.6, 2.5, 2.5, 2.5, 2.4, 2.3, 2.3],
+    cardio:    [2, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   seriesRaw: {
     vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
     sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
-    energy:    [5.0, 4.8, 5.3, 5.5, 5.4, 5.7, 5.9, 6.0, 6.1, 6.3, 6.2, 6.5, 6.6, 6.7, 6.9, 7.0, 7.0, 7.1, 7.2, 7.3, 7.4, 7.4, 7.5, 7.5],
-    mood:      [5.0, 4.8, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.2, 6.4, 6.3, 6.6, 6.7, 6.8, 7.0, 7.1, 7.0, 7.2, 7.3, 7.4, 7.3, 7.5, 7.6, 7.7],
-    cognition: [4.5, 4.3, 4.7, 5.0, 4.8, 5.2, 5.5, 5.3, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.5, 6.4, 6.6, 6.7, 6.7, 6.8, 6.9, 7.0, 7.1],
-    gsm:       [5.0, 5.2, 5.5, 5.3, 5.8, 6.0, 5.9, 6.3, 6.5, 6.4, 6.7, 6.8, 7.0, 7.0, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.6, 7.8, 7.9, 8.0],
-    bone:      [5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.3, 6.4, 6.5, 6.5, 6.6, 6.7, 6.8, 6.8, 6.9, 6.9, 7.0, 7.0, 7.0, 7.0, 7.0],
-    weight:    [5.0, 5.1, 5.2, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.1, 6.2, 6.3, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5, 6.5],
-    libido:    [4.5, 4.6, 4.7, 4.9, 5.0, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.2, 6.3, 6.4, 6.4, 6.5, 6.5, 6.5, 6.5],
-    cardio:    [8.0, 8.1, 8.2, 8.3, 8.4, 8.4, 8.5, 8.5, 8.6, 8.6, 8.7, 8.7, 8.8, 8.8, 8.8, 8.9, 8.9, 8.9, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0],
+    energy:    [3.8, 3.6, 3.8, 3.7, 3.6, 3.4, 3.3, 3.1, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 2.0],
+    mood:      [3.5, 3.3, 3.8, 3.4, 3.5, 3.2, 3.0, 3.1, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.4, 2.3, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.9],
+    cognition: [4.0, 3.8, 3.9, 3.7, 3.6, 3.5, 3.4, 3.2, 3.2, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.5, 2.4, 2.3, 2.3, 2.2, 2.2, 2.1, 2.1],
+    gsm:       [3.5, 3.6, 3.4, 3.6, 3.3, 3.2, 3.1, 2.9, 2.8, 2.8, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.8],
+    bone:      [3.0, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2, 2.2],
+    weight:    [3.2, 3.3, 3.1, 3.2, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2],
+    libido:    [4.0, 3.9, 3.8, 3.7, 3.7, 3.5, 3.4, 3.3, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.8, 2.7, 2.7, 2.6, 2.5, 2.5, 2.5, 2.4, 2.3, 2.3],
+    cardio:    [2, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   milestones: [],
 }
@@ -206,10 +206,26 @@ export async function GET(req: NextRequest) {
     const wk = Math.min(actualWeeks - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK))
     if (wk < 0) continue
     if (!wearableBuckets[wk][domainKey]) wearableBuckets[wk][domainKey] = []
-    wearableBuckets[wk][domainKey].push(Math.max(0, Math.min(10, row.value / 10)))
+    // sleep_score (0–100) → approximate hours (÷10); readiness_score (0–100) → 1–5 burden (inverted: 100=1 best, 0=5 worst)
+    const wearableVal = domainKey === 'sleep'
+      ? Math.max(0, Math.min(12, row.value / 10))
+      : Math.max(1, Math.min(5, 5 - (row.value / 100) * 4))
+    wearableBuckets[wk][domainKey].push(wearableVal)
   }
 
   // ── Build per-domain check-in series ────────────────────────────────────────
+  // rawScale for each domain — controls y-axis range and what gets plotted
+  const DOMAIN_RAW_SCALES: Record<string, number> = {
+    vasomotor: 20, sleep: 12, energy: 5, mood: 5, cognition: 5,
+    gsm: 5, bone: 5, weight: 5, libido: 5, cardio: 20, overall: 5,
+  }
+  const LOWER_IS_BETTER = new Set(['vasomotor', 'cardio'])
+  // Sensible fallback when no data exists yet
+  const DEFAULT_VAL: Record<string, number> = {
+    vasomotor: 10, sleep: 6, energy: 3, mood: 3, cognition: 3,
+    gsm: 3, bone: 3, weight: 3, libido: 3, cardio: 0, overall: 3,
+  }
+
   const series: Record<string, (number | null)[]> = {}
   const seriesRaw: Record<string, (number | null)[]> = {}
   const domainsMeta: DomainMeta[] = []
@@ -220,7 +236,7 @@ export async function GET(req: NextRequest) {
       const vals = weeklyBuckets[w][domainKey]
       if (vals && vals.length > 0) {
         const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-        raw[w] = domainKey === 'vasomotor' ? avg : normalizeToDisplay(domainKey, avg)
+        raw[w] = avg  // always raw — chart plots same value the symptom card shows
       }
     }
     seriesRaw[domainKey] = [...raw]
@@ -230,14 +246,15 @@ export async function GET(req: NextRequest) {
     // floor fill: weeks before first real check-in sit at 0 (visual baseline only, not data)
     for (let w = 0; w < actualWeeks; w++) { if (filled[w] === null) filled[w] = 0; else break }
     series[domainKey] = filled
-    const nonNull = filled.filter((v): v is number => v !== null)
+    const nonNull = raw.filter((v): v is number => v !== null)
+    const rawScale = DOMAIN_RAW_SCALES[domainKey]
     domainsMeta.push({
       key: domainKey,
       name: meta.name,
       accent: meta.accent,
-      baseline: nonNull[0] ?? (domainKey === 'vasomotor' ? 10 : 5),
-      current: nonNull[nonNull.length - 1] ?? (domainKey === 'vasomotor' ? 10 : 5),
-      ...(domainKey === 'vasomotor' ? { rawScale: 20, lowerIsBetter: true } : {}),
+      baseline: nonNull[0] ?? DEFAULT_VAL[domainKey] ?? 3,
+      current: nonNull[nonNull.length - 1] ?? DEFAULT_VAL[domainKey] ?? 3,
+      ...(rawScale ? { rawScale, ...(LOWER_IS_BETTER.has(domainKey) ? { lowerIsBetter: true } : {}) } : {}),
     })
   }
 

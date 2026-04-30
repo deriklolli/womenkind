@@ -261,8 +261,9 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
     return PAD.t + CHART_H - (val / 10) * CHART_H
   }
 
-  const yTicks = domain.rawScale
-    ? [0, 5, 10, 15, 20].filter(v => v <= domain.rawScale!)
+  const yTicks = domain.rawScale === 20 ? [0, 5, 10, 15, 20]
+    : domain.rawScale === 12 ? [0, 3, 6, 9, 12]
+    : domain.rawScale === 5  ? [1, 2, 3, 4, 5]
     : [0, 2, 4, 6, 8, 10]
 
   // SVG points
