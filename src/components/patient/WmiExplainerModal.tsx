@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -21,9 +24,12 @@ const DOMAINS = [
 ]
 
 export default function WmiExplainerModal({ open, onClose, score, wmiLabel, wmiMessage, hasWearable }: Props) {
-  if (!open) return null
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
-  return (
+  if (!open || !mounted) return null
+
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
@@ -101,6 +107,7 @@ export default function WmiExplainerModal({ open, onClose, score, wmiLabel, wmiM
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
