@@ -18,6 +18,7 @@ import NotificationBell from '@/components/patient/NotificationBell'
 import DashboardAlerts from '@/components/patient/DashboardAlerts'
 import PatientOverview from '@/components/provider/PatientOverview'
 import DashboardHero from '@/components/patient/DashboardHero'
+import DailyCheckinModal from '@/components/patient/DailyCheckinModal'
 import PillarTrendChart from '@/components/patient/PillarTrendChart'
 import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
@@ -419,6 +420,7 @@ export default function PatientDashboardPage() {
   )
   const [overviewLiveWmi, setOverviewLiveWmi] = useState<number | null>(null)
   const [chartDomains, setChartDomains] = useState<string[]>(['vasomotor', 'sleep', 'energy', 'mood'])
+  const [checkinModalOpen, setCheckinModalOpen] = useState(false)
 
   const [cancelConfirmBanner, setCancelConfirmBanner] = useState(false)
   const [cancelingBanner, setCancelingBanner] = useState(false)
@@ -664,10 +666,11 @@ export default function PatientDashboardPage() {
   const handleHero = useCallback(() => {
     switch (heroAction.kind) {
       case 'book_consult':
-      case 'prep_visit':
       case 'followup_overdue':
       case 'followup_recommended':
         setActiveView('schedule'); break
+      case 'prep_visit':
+        setCheckinModalOpen(true); break
       case 'join_video':
         if (heroAction.appointment.daily_room_url) {
           window.open(heroAction.appointment.daily_room_url, '_blank')
@@ -1378,6 +1381,16 @@ export default function PatientDashboardPage() {
           </div>
         </div>
       </div>
+
+      {checkinModalOpen && (
+        <DailyCheckinModal
+          onClose={() => setCheckinModalOpen(false)}
+          onSuccess={() => {
+            setCheckinModalOpen(false)
+            handleCheckinComplete()
+          }}
+        />
+      )}
     </div>
   )
 }
