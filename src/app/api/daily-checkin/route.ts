@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
           patientId: session.patientId!,
         })
 
-        await resend.emails.send({ from: FROM, to: profileData[0].email, subject: 'We noticed a change in your symptoms', html })
+        await resend.emails.send({ from: FROM, to: profileData[0].email, subject: 'A message from your care team', html })
         await db.insert(notifications).values({
           patient_id: session.patientId!,
           type:       'score_drop',
