@@ -24,6 +24,97 @@ Womenkind patients disengage in two patterns: (B) symptoms plateau after a few m
 
 ---
 
+## Notification Preferences
+
+Patients control which engagement emails they receive via category toggles in Settings. Clinical reminders (rx refill, lab results) are always sent and cannot be turned off.
+
+### New table: `notification_preferences`
+
+```sql
+CREATE TABLE notification_preferences (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id        uuid        NOT NULL UNIQUE REFERENCES patients(id),
+  checkin_reminders boolean     NOT NULL DEFAULT true,  -- weekly_nudge, missed_checkins
+  progress_updates  boolean     NOT NULL DEFAULT true,  -- monthly_recap
+  care_alerts       boolean     NOT NULL DEFAULT true,  -- score_drop, post_visit
+  updated_at        timestamptz NOT NULL DEFAULT now()
+);
+```
+
+No row = all defaults on (implicit opt-in). Row is created on first save from settings.
+
+### Category mapping
+
+| Category | Covers | Can opt out? |
+|----------|--------|-------------|
+| `checkin_reminders` | weekly_nudge, missed_checkins | Yes |
+| `progress_updates` | monthly_recap | Yes |
+| `care_alerts` | score_drop, post_visit | Yes |
+| _(always on)_ | rx_refill, lab_results_ready | No — clinical |
+
+### New API routes
+
+- `GET /api/patient/notification-preferences` — returns current prefs (defaults all true if no row)
+- `PATCH /api/patient/notification-preferences` — upserts prefs row
+- `GET /api/engagement/unsubscribe?token=X` — one-click unsubscribe, no auth required. Sets all three categories to false, renders confirmation page. Token = `HMAC-SHA256(patientId, CRON_SECRET)` — stateless.
+
+### Engagement helper update (`src/lib/engagement.ts`)
+
+Before every send, check category preference:
+
+```typescript
+const CATEGORY_MAP: Record<string, 'checkin_reminders' | 'progress_updates' | 'care_alerts'> = {
+  weekly_nudge:    'checkin_reminders',
+  missed_checkins: 'checkin_reminders',
+  monthly_recap:   'progress_updates',
+  score_drop:      'care_alerts',
+  post_visit:      'care_alerts',
+  // rx_refill and lab_results_ready not in map → always send
+}
+
+export async function isEngagementEnabled(patientId: string, triggerType: string): Promise<boolean> {
+  const category = CATEGORY_MAP[triggerType]
+  if (!category) return true  // clinical — always send
+  const prefs = await db.select().from(notification_preferences)
+    .where(eq(notification_preferences.patient_id, patientId)).limit(1)
+  if (prefs.length === 0) return true  // no row = all defaults on
+  return prefs[0][category]
+}
+```
+
+### Settings page UI (`src/app/patient/settings/page.tsx`)
+
+New "Email Notifications" card section with 3 toggle rows:
+
+| Toggle label | Subtitle |
+|-------------|---------|
+| Check-in Reminders | Weekly symptom nudges and missed check-in alerts |
+| Progress Updates | Monthly recap of your WMI trend and domain improvements |
+| Care Alerts | Notifications when your symptom scores change or after a visit |
+
+Note below toggles: *"Prescription refill and lab result notifications are always sent — they're part of your care plan."*
+
+### Email footer (all 8 templates)
+
+Every email includes two footer links:
+- **Manage preferences** → `${APP_URL}/patient/settings`
+- **Unsubscribe from all** → `${APP_URL}/api/engagement/unsubscribe?token=${hmac(patientId)}`
+
+### Additional files to create/modify
+
+**Create:**
+- `src/app/api/patient/notification-preferences/route.ts`
+- `src/app/api/engagement/unsubscribe/route.ts`
+- Drizzle migration: `notification_preferences` table
+
+**Modify:**
+- `src/lib/db/schema.ts` — add `notification_preferences` table
+- `src/lib/engagement.ts` — add `isEngagementEnabled()` helper
+- `src/app/patient/settings/page.tsx` — add notifications card
+- All 3 cron routes + 2 event hooks — call `isEngagementEnabled()` before sending
+
+---
+
 ## Trigger Map
 
 ### Fixed Cadence — every active patient
