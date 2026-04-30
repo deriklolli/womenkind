@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { db } from '@/lib/db'
-import { visits, providers, wearable_metrics } from '@/lib/db/schema'
-import { eq, and, gte } from 'drizzle-orm'
+import { visits, providers, wearable_metrics, patients, profiles, notifications } from '@/lib/db/schema'
+import { eq, and, gte, lt, desc } from 'drizzle-orm'
+import { Resend } from 'resend'
+import { alreadySentRecently, logEngagement, isEngagementEnabled, buildEngagementEmail } from '@/lib/engagement'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 // Domains always required regardless of wearable
 const BASE_DOMAINS = ['vasomotor', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
@@ -160,6 +163,69 @@ export async function POST(req: NextRequest) {
       route: '/api/daily-checkin',
       req,
     })
+
+    // ── Score drop detection (fire-and-forget, non-blocking) ──────────────────
+    ;(async () => {
+      try {
+        if (!await isEngagementEnabled(session.patientId!, 'score_drop')) return
+        if (await alreadySentRecently(session.patientId!, 'score_drop', 3)) return
+
+        const prevVisit = await db.select({ symptom_scores: visits.symptom_scores, visit_date: visits.visit_date, source: visits.source })
+          .from(visits)
+          .where(and(
+            eq(visits.patient_id, session.patientId!),
+            eq(visits.source, 'daily'),
+            lt(visits.visit_date, inserted.visit_date),
+          ))
+          .orderBy(desc(visits.visit_date))
+          .limit(1)
+
+        if (prevVisit.length === 0) return
+
+        const toWmiInput = (r: typeof prevVisit[0]) =>
+          ({ ...r, symptom_scores: r.symptom_scores as Record<string, number> | null })
+
+        const newWmi  = computeLiveWMI([{ ...inserted, source: 'daily', symptom_scores: inserted.symptom_scores as Record<string, number> | null }])
+        const prevWmi = computeLiveWMI([toWmiInput(prevVisit[0])])
+        if (newWmi === null || prevWmi === null || prevWmi === 0) return
+        if (newWmi >= prevWmi * 0.80) return  // less than 20% drop — no alert
+
+        const patientRow = await db.select({ profile_id: patients.profile_id })
+          .from(patients).where(eq(patients.id, session.patientId!)).limit(1)
+        if (!patientRow[0]) return
+        const profileData = await db.select({ email: profiles.email, first_name: profiles.first_name })
+          .from(profiles).where(eq(profiles.id, patientRow[0].profile_id)).limit(1)
+        if (!profileData[0]?.email) return
+
+        const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.womenkindhealth.com'
+        const firstName = profileData[0].first_name ?? 'there'
+        const resend    = new Resend(process.env.RESEND_API_KEY)
+        const FROM      = process.env.RESEND_FROM_EMAIL ?? 'care@womenkindhealth.com'
+
+        const html = buildEngagementEmail({
+          heading: 'We noticed a change in your symptoms',
+          bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:rgba(66,42,31,0.7);line-height:1.6;">Hi ${firstName} &mdash; your most recent check-in shows an increase in symptoms compared to last week. This can happen during treatment. If you&rsquo;re concerned, reach out to Dr. Urban directly.</p>`,
+          ctaText: 'Message Dr. Urban',
+          ctaUrl:  `${appUrl}/patient/dashboard`,
+          secondaryCtaText: 'View Your Score',
+          secondaryCtaUrl:  `${appUrl}/patient/dashboard`,
+          patientId: session.patientId!,
+        })
+
+        await resend.emails.send({ from: FROM, to: profileData[0].email, subject: 'We noticed a change in your symptoms', html })
+        await db.insert(notifications).values({
+          patient_id: session.patientId!,
+          type:       'score_drop',
+          title:      'Your symptoms may have increased',
+          body:       'We noticed a change in your recent check-in. Tap to review.',
+          link_view:  'scorecard',
+        })
+        await logEngagement(session.patientId!, 'score_drop', 'email',  { score_before: prevWmi, score_after: newWmi })
+        await logEngagement(session.patientId!, 'score_drop', 'in_app', { score_before: prevWmi, score_after: newWmi })
+      } catch (e) {
+        console.error('Score drop hook error:', e)
+      }
+    })()
 
     return NextResponse.json({ visit: inserted }, { status: 201 })
   } catch (err: any) {
