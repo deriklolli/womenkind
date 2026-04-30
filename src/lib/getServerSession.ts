@@ -42,15 +42,6 @@ export async function getServerSession(): Promise<ServerSession | null> {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return null
 
-  const patient = await db.query.patients.findFirst({
-    where: eq(patients.profile_id, user.id),
-    columns: { id: true },
-  })
-
-  if (patient) {
-    return { userId: user.id, patientId: patient.id, providerId: null, role: 'patient' }
-  }
-
   const provider = await db.query.providers.findFirst({
     where: eq(providers.profile_id, user.id),
     columns: { id: true },
@@ -58,6 +49,15 @@ export async function getServerSession(): Promise<ServerSession | null> {
 
   if (provider) {
     return { userId: user.id, patientId: null, providerId: provider.id, role: 'provider' }
+  }
+
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.profile_id, user.id),
+    columns: { id: true },
+  })
+
+  if (patient) {
+    return { userId: user.id, patientId: patient.id, providerId: null, role: 'patient' }
   }
 
   return { userId: user.id, patientId: null, providerId: null, role: 'unknown' }

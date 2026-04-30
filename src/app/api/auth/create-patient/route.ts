@@ -27,6 +27,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    if (session.role === 'provider') {
+      return NextResponse.json({ error: 'Provider accounts cannot be registered as patients' }, { status: 403 })
+    }
+
     // Fetch user metadata from Supabase to populate the profile
     const cookieStore = await cookies()
     const supabase = createServerClient(
