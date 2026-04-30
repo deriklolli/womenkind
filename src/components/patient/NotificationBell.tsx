@@ -5,7 +5,7 @@ import type { DashboardView } from './QuickActions'
 
 interface Notification {
   id: string
-  type: 'rx_refill_approved' | 'new_message' | 'new_blueprint' | 'lab_results_ready'
+  type: 'rx_refill_approved' | 'new_message' | 'new_blueprint' | 'lab_results_ready' | 'checkin_reminder' | 'score_drop' | 'rx_refill_reminder'
   title: string
   body: string | null
   link_view: string
@@ -44,6 +44,30 @@ const TYPE_ICONS: Record<string, { icon: JSX.Element; color: string }> = {
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+      </svg>
+    ),
+  },
+  checkin_reminder: {
+    color: 'text-violet bg-violet/10',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4m6 0a10 10 0 11-20 0 10 10 0 0120 0z" />
+      </svg>
+    ),
+  },
+  score_drop: {
+    color: 'text-red-500 bg-red-50',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6L9 12.75l4.286-4.286a11.948 11.948 0 014.306 6.43l.776 2.898m0 0l3.182-5.511m-3.182 5.51l-5.511-3.181" />
+      </svg>
+    ),
+  },
+  rx_refill_reminder: {
+    color: 'text-cyan-600 bg-cyan-50',
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
       </svg>
     ),
   },
