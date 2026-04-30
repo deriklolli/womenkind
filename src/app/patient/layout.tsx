@@ -6,8 +6,8 @@ import { supabase } from '@/lib/supabase-browser'
 import { useIdleTimeout } from '@/hooks/useIdleTimeout'
 import { signOutPatient } from '@/lib/signOut'
 
-// HIPAA §164.312(a)(2)(iii) automatic logoff — 20 min of inactivity.
-const IDLE_TIMEOUT_MS = 20 * 60 * 1000
+// HIPAA §164.312(a)(2)(iii) automatic logoff — 60 min of inactivity.
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -32,9 +32,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
       }
 
       // Real session always takes priority — check it first
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { data: { user }, error } = await supabase.auth.getUser()
       if (user) {
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_patient')
@@ -42,6 +40,8 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
         setChecking(false)
         return
       }
+      // Network/server error — don't log the user out, just leave them where they are
+      if (error) return
 
       // No real session — fall back to demo mode
       const demo = localStorage.getItem('womenkind_demo_patient')
