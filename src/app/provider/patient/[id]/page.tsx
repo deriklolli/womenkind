@@ -110,6 +110,7 @@ export default function PatientProfilePage() {
   const [latestEncounterNote, setLatestEncounterNote] = useState<{ assessment: string | null; plan: string | null } | null>(null)
   const [liveWmi, setLiveWmi] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [dataVersion, setDataVersion] = useState(0)
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as ProfileTab) || 'overview'
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab)
@@ -122,6 +123,13 @@ export default function PatientProfilePage() {
   useEffect(() => {
     resolveProviderId()
   }, [])
+
+  // Re-fetch when provider switches back to this tab
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadPatientData() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [patientId])
 
   // When a recording finishes uploading, re-fetch the encounter notes count
   useEffect(() => {
@@ -167,6 +175,7 @@ export default function PatientProfilePage() {
       setEncounterNotesCount(data.encounterNotesCount ?? 0)
       setLatestEncounterNote(data.latestEncounterNote ?? null)
       setLiveWmi(data.liveWmi ?? null)
+      setDataVersion(v => v + 1)
 
       // Fetch message thread count
       try {
@@ -421,6 +430,7 @@ export default function PatientProfilePage() {
             patientId={patientId}
             visits={visits}
             prescriptions={prescriptions}
+            refreshKey={dataVersion}
           />
         )}
 

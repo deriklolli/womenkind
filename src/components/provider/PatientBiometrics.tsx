@@ -16,6 +16,7 @@ interface PatientBiometricsProps {
   patientId: string
   visits?: { visit_date: string; visit_type: string }[]
   prescriptions?: { medication_name: string; prescribed_at: string | null }[]
+  refreshKey?: number
 }
 
 interface MetricRow {
@@ -329,7 +330,7 @@ function ProviderMetricChart({
   )
 }
 
-export default function PatientBiometrics({ patientId, visits = [], prescriptions = [] }: PatientBiometricsProps) {
+export default function PatientBiometrics({ patientId, visits = [], prescriptions = [], refreshKey }: PatientBiometricsProps) {
   const [metrics, setMetrics] = useState<MetricRow[]>([])
   const [status, setStatus] = useState<ConnectionStatus | null>(null)
   const [loading, setLoading] = useState(true)
@@ -338,7 +339,7 @@ export default function PatientBiometrics({ patientId, visits = [], prescription
 
   useEffect(() => {
     fetchAll()
-  }, [patientId, range])
+  }, [patientId, range, refreshKey])
 
   async function triggerSync() {
     setSyncing(true)

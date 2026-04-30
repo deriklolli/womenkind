@@ -95,13 +95,13 @@ export async function GET(req: NextRequest) {
         if (!rx.runs_out_at) continue
         const runOutDate = rx.runs_out_at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/Denver' })
         const html = buildEngagementEmail({
-          heading: `Time to refill your ${rx.medication_name}`,
+          heading: 'Time to request a refill',
           bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:rgba(66,42,31,0.7);line-height:1.6;">Your <strong>${rx.medication_name}</strong> prescription runs out around <strong>${runOutDate}</strong>. Request your refill now to avoid a gap in your treatment.</p>`,
           ctaText: 'Request Refill',
           ctaUrl:  `${appUrl}/patient/dashboard`,
           patientId: patient.id,
         })
-        await resend.emails.send({ from: FROM, to: email, subject: `Time to refill your ${rx.medication_name}`, html })
+        await resend.emails.send({ from: FROM, to: email, subject: 'Time to request a refill', html })
         await db.insert(notifications).values({
           patient_id: patient.id,
           type:       'rx_refill_reminder',
