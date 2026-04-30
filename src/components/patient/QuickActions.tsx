@@ -28,7 +28,7 @@ const primaryActions: ActionItem[] = [
   },
   {
     key: 'schedule',
-    label: 'Schedule Appointment',
+    label: 'Book Appointment',
     subtitle: 'Book your next visit',
     icon: 'calendar',
     color: '#944fed',
