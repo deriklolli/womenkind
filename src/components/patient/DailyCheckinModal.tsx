@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
-  onSuccess: (liveWmi?: number | null) => void
+  onSuccess: (liveWmi?: number | null, visit?: Record<string, any>) => void
   onClose: () => void
 }
 
@@ -136,7 +136,7 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submission failed')
       setSuccess(true)
-      setTimeout(() => onSuccess(data.liveWmi ?? null), 1200)
+      setTimeout(() => onSuccess(data.liveWmi ?? null, data.visit ?? undefined), 1200)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {

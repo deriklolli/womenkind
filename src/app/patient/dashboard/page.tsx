@@ -822,10 +822,18 @@ export default function PatientDashboardPage() {
     }
   }
 
-  const handleCheckinComplete = async (liveWmi?: number | null) => {
-    // Apply the live WMI returned directly from the POST response immediately
+  const handleCheckinComplete = async (liveWmi?: number | null, newVisit?: Record<string, any>) => {
+    // Apply score immediately
     if (liveWmi != null) setOverviewLiveWmi(liveWmi)
-    // Also re-fetch to refresh visit list (and pick up liveWmi if not passed directly)
+    // Add new visit to domain cards immediately (no re-fetch needed for boxes)
+    if (newVisit?.symptom_scores) {
+      setOverviewVisits(prev => {
+        const today = new Date().toISOString().slice(0, 10)
+        const without = prev.filter((v: any) => v.visit_date !== today || v.source !== 'daily')
+        return [...without, { ...newVisit, source: 'daily', visit_date: today }]
+      })
+    }
+    // Re-fetch for any other fields
     try {
       const res = await fetch('/api/patient/me')
       if (res.ok) {
@@ -834,6 +842,33 @@ export default function PatientDashboardPage() {
         if (liveWmi == null && me.liveWmi != null) setOverviewLiveWmi(me.liveWmi)
       }
     } catch {}
+    // Ask Bedrock to regenerate headline + body text for the new score
+    if (liveWmi != null) {
+      fetch('/api/patient/refresh-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: liveWmi }),
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.headlinePrefix && data?.overview) {
+            setOverviewIntake((prev: any) => prev ? {
+              ...prev,
+              ai_brief: {
+                ...(prev.ai_brief ?? {}),
+                live_status: {
+                  headlinePrefix: data.headlinePrefix,
+                  headlineSuffix: data.headlineSuffix,
+                  overview: data.overview,
+                  score: Math.round(liveWmi),
+                  generated_at: new Date().toISOString(),
+                },
+              },
+            } : prev)
+          }
+        })
+        .catch(() => {})
+    }
   }
 
   const handleLogout = async () => {
@@ -1392,9 +1427,9 @@ export default function PatientDashboardPage() {
       {checkinModalOpen && (
         <DailyCheckinModal
           onClose={() => setCheckinModalOpen(false)}
-          onSuccess={(liveWmi) => {
+          onSuccess={(liveWmi, visit) => {
             setCheckinModalOpen(false)
-            handleCheckinComplete(liveWmi)
+            handleCheckinComplete(liveWmi, visit)
           }}
         />
       )}

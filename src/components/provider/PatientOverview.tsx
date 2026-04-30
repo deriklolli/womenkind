@@ -45,11 +45,12 @@ interface PatientOverviewProps {
       summary?: string
       patient_blueprint?: { overview?: string }
       symptom_summary?: { overview?: string }
+      live_status?: { headlinePrefix: string; headlineSuffix: string; overview: string; score: number; generated_at?: string }
     }
     wmi_scores?: WMIScores | null
   } | null
   liveWmi?: number | null
-  onCheckinComplete?: (liveWmi?: number | null) => void
+  onCheckinComplete?: (liveWmi?: number | null, visit?: Record<string, any>) => void
   onDomainsChange?: (keys: string[]) => void
   showCheckin?: boolean
   compact?: boolean
@@ -184,9 +185,14 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
 
   const stage   = latestIntake?.ai_brief?.metadata?.menopausal_stage
   const burden  = latestIntake?.ai_brief?.metadata?.symptom_burden
-  const rawBody = view === 'provider'
+
+  // live_status is written by /api/patient/refresh-summary after each check-in
+  const liveStatus = latestIntake?.ai_brief?.live_status as
+    { headlinePrefix: string; headlineSuffix: string; overview: string; score: number } | undefined
+
+  const rawBody = liveStatus?.overview ?? (view === 'provider'
     ? latestIntake?.ai_brief?.symptom_summary?.overview
-    : latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary
+    : latestIntake?.ai_brief?.patient_blueprint?.overview ?? latestIntake?.ai_brief?.summary)
   const body = rawBody
     ? (rawBody.match(/[^.!?]+[.!?]+/g) ?? [rawBody]).slice(0, 2).join(' ').trim()
     : undefined
@@ -220,7 +226,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
     watch:     { prefix: 'Needs attention &', suffix: 'monitoring' },
     steady:    { prefix: 'Stable &', suffix: 'holding' },
   }
-  const headline = headlineMap[overallStatus]
+  // Use AI-generated headline when available (written after each check-in)
+  const headline = liveStatus
+    ? { prefix: liveStatus.headlinePrefix, suffix: liveStatus.headlineSuffix }
+    : headlineMap[overallStatus]
 
   const isInitialState = visits.length === 0
 
@@ -324,10 +333,10 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
       {checkinModal && (
         <DailyCheckinModal
           onClose={() => setCheckinModal(false)}
-          onSuccess={(liveWmi) => {
+          onSuccess={(liveWmi, visit) => {
             setCheckinModal(false)
             setTodayCheckedIn(true)
-            onCheckinComplete?.(liveWmi)
+            onCheckinComplete?.(liveWmi, visit)
           }}
         />
       )}
