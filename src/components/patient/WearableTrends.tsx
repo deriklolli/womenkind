@@ -448,6 +448,22 @@ export default function WearableTrends({ patientId, dateRange = 30, onGoToSettin
 
   return (
     <div className="space-y-4">
+      {/* Wearable source tabs */}
+      <div className="flex items-center gap-2">
+        {[{ key: 'oura', label: 'Oura Ring' }].map(tab => (
+          <button
+            key={tab.key}
+            className="flex items-center gap-2 px-4 py-2 rounded-pill text-sm font-sans font-medium bg-aubergine text-white shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" strokeLinecap="round" />
+            </svg>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Date pills + chart grid wrapper — negative top margin pulls charts up to align with sidebar */}
       <div className="-mt-[34px]">
         {/* Date range selector — right-aligned, compact row above charts */}
