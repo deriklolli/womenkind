@@ -56,7 +56,7 @@ const secondaryActions: ActionItem[] = [
   {
     key: 'scorecard',
     label: 'Symptom Tracker',
-    subtitle: 'WomenKind Menopause Index',
+    subtitle: 'Weekly check-ins',
     icon: 'scorecard',
     color: '#4ECDC4',
     bg: 'rgba(78, 205, 196, 0.08)',
