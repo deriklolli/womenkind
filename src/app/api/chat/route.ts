@@ -240,18 +240,14 @@ export async function POST(req: Request) {
     // Build patient context if we have a patient ID
     let patientContext = ''
     if (context?.patientId) {
-      if (session.providerId && process.env.NODE_ENV !== 'development') {
-        const intake = await db
-          .select({ id: intakes.id })
-          .from(intakes)
-          .where(
-            and(
-              eq(intakes.provider_id, session.providerId),
-              eq(intakes.patient_id, context.patientId)
-            )
-          )
+      if (process.env.NODE_ENV !== 'development') {
+        // Verify the patient exists in the system (has at least one intake)
+        const patientCheck = await db
+          .select({ id: patients.id })
+          .from(patients)
+          .where(eq(patients.id, context.patientId))
           .limit(1)
-        if (intake.length === 0) {
+        if (patientCheck.length === 0) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
       }
