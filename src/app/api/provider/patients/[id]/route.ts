@@ -76,6 +76,7 @@ export async function GET(
         visit_date: true,
         symptom_scores: true,
         source: true,
+        checked_in_at: true,
       },
       orderBy: [desc(visits.visit_date)],
     }),
