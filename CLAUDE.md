@@ -50,7 +50,7 @@
 - Right column main content: `PatientOverview` (`src/components/provider/PatientOverview.tsx`) — shared between provider patient profile and patient dashboard
 - `overviewIntake` state initialized with `DEMO_INTAKE` via lazy initializer (`process.env.NODE_ENV === 'development' ? DEMO_INTAKE : null`) to avoid async timing issues where state would be null on first render
 - `overviewVisits` is loaded from `/api/patient/me` response (`me.visits`) in production — dev uses fixtures. Both must stay in sync when adding new visit fields.
-- Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Symptom Tracker, Schedule Appointment, Request Rx Refill, Message Dr. Urban
+- Left nav: `QuickActions` (`src/components/patient/QuickActions.tsx`) — primary actions include Dashboard, Symptom Tracker, Book Appointment, Request Rx Refill, Message Dr. Urban
 
 ## PatientOverview component (`src/components/provider/PatientOverview.tsx`)
 - Shared between provider patient profile and patient dashboard
@@ -104,6 +104,47 @@
 - Auth token stored in Claude memory (`reference_sentry.md`) — can query issues directly via API without screenshots
 - Query unresolved issues: `GET https://sentry.io/api/0/projects/lolliprojects/javascript-nextjs/issues/?query=is:unresolved`
 - Get full stack trace: `GET https://sentry.io/api/0/issues/{id}/events/latest/`
+
+## Patient Engagement System
+
+Built 2026-04-29. Proactive email + in-app notification system to prevent patient drop-off.
+
+### New DB tables (migrated to prod)
+- `engagement_log` — deduplication/audit log for every sent message. `alreadySentRecently()` queries this to enforce frequency caps.
+- `notification_preferences` — per-patient opt-out toggles (3 boolean categories). No row = all defaults on (implicit opt-in).
+
+### Core helper: `src/lib/engagement.ts`
+- `alreadySentRecently(patientId, triggerType, withinDays)` — frequency cap check via `engagement_log`
+- `logEngagement(patientId, triggerType, channel, metadata?)` — write to `engagement_log`
+- `isEngagementEnabled(patientId, triggerType)` — checks `notification_preferences`; clinical triggers (`rx_refill`, `lab_results_ready`) always return true (not in category map)
+- `generateUnsubscribeToken(patientId)` / `verifyUnsubscribeToken(patientId, token)` — stateless HMAC-SHA256 using `CRON_SECRET`
+- `buildEngagementEmail(params)` — shared HTML builder; injects unsubscribe + manage-preferences footer links in every email
+
+### Cron routes (vercel.json registered)
+| Route | Schedule | Trigger |
+|-------|----------|---------|
+| `/api/engagement/weekly-nudge` | `0 14 * * 1` (Mon 8am MT) | Send nudge if no check-in this week |
+| `/api/engagement/monthly-recap` | `0 14 1 * *` (1st of month 8am MT) | WMI trend + top domain + check-in count |
+| `/api/engagement/daily-scan` | `0 15 * * *` (daily 9am MT) | 4 checks: missed check-ins (14d), no login (30d), rx refill (7d window), post-visit (47–71h after visit) |
+
+All cron routes use `GET` + `Authorization: Bearer ${CRON_SECRET}`.
+
+### Event hooks
+- `POST /api/daily-checkin` — fire-and-forget score-drop check after insert: if new WMI < prev WMI × 0.80, sends email + in-app notification (3-day cap)
+- `POST /api/canvas/labs/result` — marks `lab_orders.status='resulted'`, sends email + in-app notification
+
+### Notification preferences API
+- `GET /api/patient/notification-preferences` — returns prefs (defaults all true if no row)
+- `PATCH /api/patient/notification-preferences` — upserts row; accepts `checkin_reminders`, `progress_updates`, `care_alerts` booleans
+- `GET /api/engagement/unsubscribe?patientId=X&token=Y` — no-auth one-click unsubscribe; sets all 3 categories false, renders HTML confirmation page
+
+### Settings UI
+Notifications tab in `src/components/patient/PatientSettings.tsx` — 3 wired toggle rows backed by the preferences API. Note on bottom: prescription refill and lab result notifications always sent.
+
+### Key gotchas
+- `profiles` table has **no** `last_sign_in_at` column — the no-login check uses `supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })` to build a Map of `profile_id → last_sign_in_at`
+- `visits.symptom_scores` comes back as `unknown` from Drizzle — cast to `Record<string, number> | null` before passing to `computeLiveWMI()`
+- Migration route: `POST /api/debug/migrate-engagement` with `x-migration-secret: $CRON_SECRET` (already run on prod 2026-04-30)
 
 ## PostgreSQL / Drizzle gotchas
 - `ORDER BY submitted_at DESC` puts NULLs **first** in PostgreSQL — always add `ne(intakes.status, 'draft')` when querying intakes to avoid a null-submitted_at draft masking the real intake
