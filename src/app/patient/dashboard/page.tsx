@@ -1082,7 +1082,8 @@ export default function PatientDashboardPage() {
                   <AppointmentTypeSelector
                     providerId={PROVIDER_ID}
                     isMember={patient.membershipStatus === 'active'}
-                    excludeNames={hasInitialConsultation ? ['initial consultation'] : []}
+                    onlyInitial={heroAction?.kind === 'book_consult'}
+                    excludeNames={heroAction?.kind === 'book_consult' ? undefined : hasInitialConsultation ? ['initial consultation'] : []}
                     onSelect={(type) => {
                       setSelectedType(type)
                       setBookingStep('pick-time')
