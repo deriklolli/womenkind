@@ -364,7 +364,12 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
 
           {/* Floor line — flat baseline before first real check-in */}
           {firstRealWk > 0 && (
-            <line x1={PAD.l} y1={bottomY} x2={floorEndX} y2={bottomY} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
+            <>
+              <line x1={PAD.l} y1={bottomY} x2={floorEndX} y2={bottomY} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
+              {bezierPts.length > 0 && bezierPts[0][1] < bottomY && (
+                <line x1={floorEndX} y1={bottomY} x2={floorEndX} y2={bezierPts[0][1]} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
+              )}
+            </>
           )}
 
           {/* Series line — bezier only from first real check-in onward */}
@@ -393,7 +398,12 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {(wearableLinePath || firstRealWearableWk > 0) && (
             <>
               {firstRealWearableWk > 0 && (
-                <line x1={PAD.l} y1={bottomY} x2={wearableFloorEndX} y2={bottomY} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
+                <>
+                  <line x1={PAD.l} y1={bottomY} x2={wearableFloorEndX} y2={bottomY} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
+                  {wearableBezierPts.length > 0 && wearableBezierPts[0][1] < bottomY && (
+                    <line x1={wearableFloorEndX} y1={bottomY} x2={wearableFloorEndX} y2={wearableBezierPts[0][1]} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
+                  )}
+                </>
               )}
               {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />}
               {wearablePts.length > 0 && (
