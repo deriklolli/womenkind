@@ -63,7 +63,7 @@ const secondaryActions: ActionItem[] = [
   },
   {
     key: 'wearables',
-    label: 'Health Trends',
+    label: 'Wearable Data',
     subtitle: 'Oura Ring biometrics',
     icon: 'wearable',
     color: '#4ECDC4',
