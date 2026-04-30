@@ -59,34 +59,51 @@
 - `+` button next to "Areas of focus" opens a multi-select dropdown to customize which topics display
 - Overall score label: **"Your Womenkind Score"** (branded, no date) — `isInitialState` (no visits) shows "Based on WMI" pill + WMI-band headline; active state (visits exist) shows delta chip + treatment-progress headline
 - Domain cards are driven by visit `symptom_scores` (set via check-in), NOT WMI scores. WMI drives the top-level score number only.
+- Domain card values are domain-appropriate: vasomotor shows episode count, sleep shows hrs, cardio shows episode count or "None", others show `X / 5`
 - Score summary copy driven by `latestIntake.ai_brief.summary` — pass a seeded intake from the patient dashboard to show copy below the trend chip
 - Body text below score capped at 2 sentences + `line-clamp-4` (patient view uses `patient_blueprint.overview`, provider view uses `symptom_summary.overview`)
-- Props: `showCheckin` (renders daily check-in CTA banner, patient view only), `onCheckinComplete` (refetch callback), `onDomainsChange` (fires with updated `string[]` when user toggles a topic — used to sync domain selection to SymptomTrendChart)
+- Props: `showCheckin`, `onCheckinComplete`, `liveWmi` (overrides WMI score when present), `onDomainsChange` (fires `string[]` on domain toggle — synced to `chartDomains` state in dashboard which feeds PillarTrendChart)
+- `liveWmi` score resolution: `liveWmi → intakeWmi → visitOverall`. When live score is showing, displays "Live score · Last check-in: [date]" label.
+- `hasWearable` state: fetched from GET `/api/daily-checkin` response; passed to `DailyCheckinModal` to skip sleep/energy questions when Oura data is present
 
 ## Daily Check-in
-- Route: `GET /api/daily-checkin` (has today checked in?), `POST /api/daily-checkin` (submit scores)
-- Component: `src/components/patient/DailyCheckinModal.tsx` — 11-question slider modal (1=Not at all → 5=Severe)
-- 11 domains: vasomotor, sleep, energy, mood, cognition, gsm, bone, weight, libido, cardio, overall — all phrased as **burden** questions, so 5 is always bad
+- Route: `GET /api/daily-checkin` (has today checked in? returns `{ checkedIn, visit, hasWearable }`), `POST /api/daily-checkin` (submit scores)
+- Component: `src/components/patient/DailyCheckinModal.tsx` — domain-specific input types per question
+- **Domain input types**: vasomotor → counter 0–20 (episode count), sleep → hours stepper 0–12 (skipped if wearable), energy → 1–5 slider (skipped if wearable), cardio → binary toggle + episode counter, all others → 1–5 burden slider
+- 5 is always bad for sliders; vasomotor/cardio/sleep use raw counts/hours stored directly
+- Wearable-adaptive: `hasWearable=true` skips sleep + energy questions (Oura covers them passively)
 - Stored in `visits` table with `source='daily'`, `visit_type='daily_checkin'`, `appointment_id=null`
 - One check-in per day enforced by partial unique index: `visits_patient_daily_unique ON visits(patient_id, visit_date) WHERE source = 'daily'`
 - Provider is required for the visit row — POST handler queries the first active provider as a placeholder
-- **Dev bypass**: both GET and POST return mock data immediately when `NODE_ENV === 'development'` (session is provider-role in dev, not patient)
+- **Dev bypass**: both GET and POST return mock data immediately when `NODE_ENV === 'development'`
 - Debug: `POST /api/debug/reset-daily-checkin {"email": "..."}` — deletes today's daily check-in so the patient can re-answer
 
-## Symptom Trend Chart (`src/components/patient/SymptomTrendChart.tsx`)
-- Props: `visits: Visit[]`, `prescriptions?: RxMarker[]`, `activeDomains?: string[]`
-- `activeDomains` is lifted to dashboard state (`chartDomains`) — PatientOverview fires `onDomainsChange` on every toggle, dashboard updates `chartDomains`, chart re-renders. No domain toggles inside the chart itself.
-- Pure SVG, no charting library. Catmull-Rom splines. Inverted Y-axis: score 1 (best) at top, score 5 (worst) at bottom.
-- Date range tabs: 7d / 30d (default) / 90d — pill buttons in header outside the card
-- Hover: invisible wide hit paths (strokeWidth 16) sit above lines; hovered line gets a color-matched pill label at its terminal dot; all other lines dim to 20% opacity
-- Prescription markers: dashed vertical lines with medication name label, gated on `prescribed_at` in range
-- Empty state shown when fewer than 2 visits with scores exist in the selected range
-- `prescribed_at` is included in `/api/patient/me` prescriptions response and in the `Prescription` interface in PatientOverview
+## Pillar Trend Chart (`src/components/patient/PillarTrendChart.tsx`)
+- Replaces `SymptomTrendChart` on both the patient dashboard and scorecard (Symptom Tracker) views
+- Props: `patientId: string`, `activeDomains: string[]` (mirrors symptom tracker card selection), `initialDomain?: string`
+- `activeDomains` is lifted state (`chartDomains`) in the dashboard — PatientOverview fires `onDomainsChange`, dashboard updates `chartDomains`, chart dropdown updates. Adding/removing a domain card in the tracker immediately adds/removes it from the chart dropdown.
+- Data source: `GET /api/patient/pillar-trend?patientId=X` — returns 24 weekly series for all 10 domains + milestones
+- Score normalization: check-in burden (1–5, 5=worst) → display (0–10, 10=best). Vasomotor count (0–20) → `10 - (count/15)*10`. Sleep hours → `(hours/9)*10`. Wearable `sleep_score`/`readiness_score` (0–100) → `/10`.
+- **Wearable data**: production API queries `wearable_metrics` for `sleep_score` (→ sleep domain) and `readiness_score` (→ energy domain) in preference to check-in values
+- Milestones derived from: provider visits (deduplicated by date) + prescriptions (same-week rxs merged into one pin)
+- SVG chart: bezier area fill, baseline dashed marker, numbered medallion pins on dashed stems, 4-card annotation rail (first 3 milestones + most recent), bidirectional hover between pins and cards
+- X-axis: relative week labels (START / WK 6 / WK 12 / WK 18 / NOW) — always covers last 24 weeks up to today
+- Y-axis: 0–10, higher = better (scores are inverted from burden scale)
+- Dev returns fixture data with 10 domains and 5 milestones; `activeDomains[0]` guarded with optional chaining (`?.`) to handle undefined prop on first render
+- Debug: `GET /api/debug/patient-trend-data?email=...` — dumps check-ins, wearable metric types, prescriptions, visits for a patient
 
 ## WMI Scoring
-- `src/lib/wmi-scoring.ts` — `computeWMI(answers)` deterministic scoring, called at `intake/submit` time and stored in `intakes.wmi_scores` (json column)
-- Intakes submitted before `computeWMI()` was added (before Apr 26 2026) will have `wmi_scores: null` — use `/api/debug/recompute-wmi-by-email` to backfill
-- `/api/debug/recompute-wmi-by-email` — POST `{"email": "..."}` — recomputes + persists WMI for a patient's most recent non-draft intake
+- `src/lib/wmi-scoring.ts` — `computeWMI(answers)` deterministic scoring from intake, stored in `intakes.wmi_scores`
+- `computeLiveWMI(checkins, wearableMetrics?)` — rolling 7-day score from daily check-ins; wearable-first for sleep/energy
+- Per-domain normalization: vasomotor count → `min(avg,15)/15`; sleep hours → `max(0, 7-hrs)/7`; cardio count → `min(avg,5)/5`; others → `(avg-1)/4`. Backward-compat heuristic: if value ≤ 5 and none are 0, treat as legacy 1–5 burden.
+- `liveWmi` returned from `/api/patient/me` and `/api/provider/patients/[id]` — passed as prop to PatientOverview
+- Intakes submitted before `computeWMI()` was added will have `wmi_scores: null` — use `/api/debug/recompute-wmi-by-email` to backfill
+
+## Sentry
+- Org: `lolliprojects`, project: `javascript-nextjs`
+- Auth token stored in Claude memory (`reference_sentry.md`) — can query issues directly via API without screenshots
+- Query unresolved issues: `GET https://sentry.io/api/0/projects/lolliprojects/javascript-nextjs/issues/?query=is:unresolved`
+- Get full stack trace: `GET https://sentry.io/api/0/issues/{id}/events/latest/`
 
 ## PostgreSQL / Drizzle gotchas
 - `ORDER BY submitted_at DESC` puts NULLs **first** in PostgreSQL — always add `ne(intakes.status, 'draft')` when querying intakes to avoid a null-submitted_at draft masking the real intake
