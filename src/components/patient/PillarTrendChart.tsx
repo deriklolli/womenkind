@@ -360,13 +360,13 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
             const ptDate = new Date(chartStartDate.getTime() + pt.wk * 7 * 24 * 60 * 60 * 1000)
             const label = ptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             const isHovered = hoveredDot === i
-            const PILL_W = 54
+            const PILL_W = 80
             return (
               <g key={i} onMouseEnter={() => setHoveredDot(i)} onMouseLeave={() => setHoveredDot(null)} style={{ cursor: 'default' }}>
                 {isHovered && (
                   <g>
-                    <rect x={pt.x - PILL_W / 2} y={pt.y - 34} width={PILL_W} height={18} rx={9} fill={AUBERGINE} />
-                    <text x={pt.x} y={pt.y - 22} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={600} fill="white">{label}</text>
+                    <rect x={pt.x - PILL_W / 2} y={pt.y - 44} width={PILL_W} height={24} rx={12} fill={AUBERGINE} />
+                    <text x={pt.x} y={pt.y - 27} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={15} fontWeight={600} fill="white">{label}</text>
                   </g>
                 )}
                 <circle cx={pt.x} cy={pt.y} r={isHovered ? 5 : 4} fill="white" stroke={accent} strokeWidth={2} />
@@ -430,13 +430,13 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
             const ptDate = lastRaw ? new Date(chartStartDate.getTime() + lastRaw.wk * 7 * 24 * 60 * 60 * 1000) : null
             const label = ptDate ? ptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null
             const isHovered = hoveredDot === -1
-            const PILL_W = 54
+            const PILL_W = 80
             return (
               <g onMouseEnter={() => setHoveredDot(-1)} onMouseLeave={() => setHoveredDot(null)} style={{ cursor: 'default' }}>
                 {isHovered && label && (
                   <g>
-                    <rect x={lastPt[0] - PILL_W / 2} y={lastPt[1] - 34} width={PILL_W} height={18} rx={9} fill={AUBERGINE} />
-                    <text x={lastPt[0]} y={lastPt[1] - 22} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={10} fontWeight={600} fill="white">{label}</text>
+                    <rect x={lastPt[0] - PILL_W / 2} y={lastPt[1] - 44} width={PILL_W} height={24} rx={12} fill={AUBERGINE} />
+                    <text x={lastPt[0]} y={lastPt[1] - 27} textAnchor="middle" fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={15} fontWeight={600} fill="white">{label}</text>
                   </g>
                 )}
                 <circle cx={lastPt[0]} cy={lastPt[1]} r={14} fill={accent} opacity={0.15} />
