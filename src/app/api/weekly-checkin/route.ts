@@ -137,28 +137,29 @@ export async function POST(req: NextRequest) {
       columns: { id: true },
     })
 
-    if (existing) {
-      return NextResponse.json(
-        { error: 'You have already logged your symptoms this week.' },
-        { status: 409 },
-      )
-    }
-
     const [provider] = await db.select({ id: providers.id })
       .from(providers)
       .where(eq(providers.is_active, true))
       .limit(1)
 
-    const [inserted] = await db.insert(visits).values({
-      patient_id: session.patientId,
-      provider_id: provider.id,
-      appointment_id: null,
-      visit_type: 'daily_checkin',
-      visit_date: weekStart,
-      source: 'daily',
-      symptom_scores: scores,
-      checked_in_at: new Date(),
-    }).returning()
+    let inserted
+    if (existing) {
+      ;[inserted] = await db.update(visits).set({
+        symptom_scores: scores,
+        checked_in_at: new Date(),
+      }).where(eq(visits.id, existing.id)).returning()
+    } else {
+      ;[inserted] = await db.insert(visits).values({
+        patient_id: session.patientId,
+        provider_id: provider.id,
+        appointment_id: null,
+        visit_type: 'daily_checkin',
+        visit_date: weekStart,
+        source: 'daily',
+        symptom_scores: scores,
+        checked_in_at: new Date(),
+      }).returning()
+    }
 
     logPhiAccess({
       providerId: provider.id,
@@ -172,12 +173,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ visit: inserted }, { status: 201 })
   } catch (err: any) {
-    if (err.code === '23505') {
-      return NextResponse.json(
-        { error: 'You have already logged your symptoms this week.' },
-        { status: 409 },
-      )
-    }
     console.error('Weekly check-in POST error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

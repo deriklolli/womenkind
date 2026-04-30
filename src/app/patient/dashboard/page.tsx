@@ -672,7 +672,7 @@ export default function PatientDashboardPage() {
       case 'followup_recommended':
         setActiveView('schedule'); break
       case 'prep_visit':
-        router.push(`/patient/checkin/${heroAction.appointment.id}`); break
+        setCheckinModalOpen(true); break
       case 'join_video':
         if (heroAction.appointment.daily_room_url) {
           window.open(heroAction.appointment.daily_room_url, '_blank')
