@@ -32,8 +32,9 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
       if (user) {
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_provider')
-        // Reject patient sessions — both portals share the same auth cookie on this domain
-        if (user.user_metadata?.role !== 'provider') {
+        // Validate this is a provider — patient sessions share the same cookie on this domain
+        const sessionRes = await fetch('/api/auth/provider-session')
+        if (!sessionRes.ok) {
           router.replace('/provider/login')
           return
         }
