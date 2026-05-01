@@ -32,6 +32,11 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
       if (user) {
         // Clear stale demo key so it can never interfere with real auth
         localStorage.removeItem('womenkind_demo_provider')
+        // Reject patient sessions — both portals share the same auth cookie on this domain
+        if (user.user_metadata?.role !== 'provider') {
+          router.replace('/provider/login')
+          return
+        }
         setAuthorized(true)
         setChecking(false)
         return
