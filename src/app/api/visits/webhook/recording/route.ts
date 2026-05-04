@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { encounter_notes, appointments } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getDownloadUrl } from '@/lib/s3'
 
 /**
  * POST /api/visits/webhook/recording
@@ -64,13 +65,20 @@ export async function POST(req: NextRequest) {
 
     const payload = body.payload || body
     const room_name: string = payload.room_name || payload.roomName
-    const s3_url: string = payload.s3_url || payload.s3Key || payload.recording_url
+    // In HIPAA mode Daily sends s3_key (object key in customer-managed bucket).
+    // Fall back to s3_url for non-HIPAA or legacy payloads.
+    const s3_key: string | undefined = payload.s3_key
+    const s3_url_raw: string | undefined = payload.s3_url || payload.recording_url
     const duration: number = payload.duration
 
-    if (!room_name || !s3_url) {
-      console.error('[recording-webhook] Missing room_name or s3_url', body)
+    if (!room_name || (!s3_key && !s3_url_raw)) {
+      console.error('[recording-webhook] Missing room_name or recording location', body)
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
+
+    // Generate pre-signed URL when Daily gives us an S3 key (HIPAA mode).
+    // AssemblyAI requires a publicly-accessible URL, so we sign it for 1 hour.
+    const s3_url = s3_key ? await getDownloadUrl(s3_key) : s3_url_raw!
 
     // Skip very short recordings (< 30 seconds — likely test joins)
     if (duration && duration < 30) {

@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
         const runOutDate = rx.runs_out_at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/Denver' })
         const html = buildEngagementEmail({
           heading: 'Time to request a refill',
-          bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:rgba(66,42,31,0.7);line-height:1.6;">Your <strong>${rx.medication_name}</strong> prescription runs out around <strong>${runOutDate}</strong>. Request your refill now to avoid a gap in your treatment.</p>`,
+          bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:rgba(66,42,31,0.7);line-height:1.6;">Your prescription runs out around <strong>${runOutDate}</strong>. Request your refill now to avoid a gap in your treatment.</p>`,
           ctaText: 'Request Refill',
           ctaUrl:  `${appUrl}/patient/dashboard`,
           patientId: patient.id,

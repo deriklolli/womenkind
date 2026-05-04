@@ -51,7 +51,6 @@ export async function createVideoRoom({
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        name: sanitizedName,
         privacy: 'public',
         properties: {
           exp: expiresAt,
@@ -61,7 +60,7 @@ export async function createVideoRoom({
           max_participants: 4,
           start_video_off: false,
           start_audio_off: false,
-          enable_recording: 'cloud',
+          enable_recording: 's3',
         },
       }),
     })
