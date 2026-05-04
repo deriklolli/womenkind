@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const maxDuration = 60
 
 import { db } from '@/lib/db'
-import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles } from '@/lib/db/schema'
+import { patients, intakes, visits, prescriptions, lab_orders, provider_notes, profiles, appointments } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { invokeModel } from '@/lib/bedrock'
@@ -96,11 +96,25 @@ async function getPatientContext(patientId: string) {
   }
 }
 
+async function verifyIntakeBelongsToPatient(intakeId: string, patientId: string | undefined): Promise<boolean> {
+  if (!patientId) return false
+  const rows = await db
+    .select({ id: intakes.id })
+    .from(intakes)
+    .where(and(eq(intakes.id, intakeId), eq(intakes.patient_id, patientId)))
+    .limit(1)
+  return rows.length > 0
+}
+
 async function executeAction(action: string, params: Record<string, any>, context: ChatContext | undefined, sessionProviderId: string | null) {
   try {
     switch (action) {
       case 'add_risk_flag': {
         const { intakeId, flagType, flag } = params
+
+        if (!await verifyIntakeBelongsToPatient(intakeId, context?.patientId)) {
+          return { success: false, error: 'Forbidden — intake does not belong to current patient' }
+        }
 
         const intakeRows = await db
           .select({ ai_brief: intakes.ai_brief })
@@ -126,6 +140,10 @@ async function executeAction(action: string, params: Record<string, any>, contex
 
       case 'remove_risk_flag': {
         const { intakeId: iId, flagType: fType, flag: fText } = params
+
+        if (!await verifyIntakeBelongsToPatient(iId, context?.patientId)) {
+          return { success: false, error: 'Forbidden — intake does not belong to current patient' }
+        }
 
         const intakeRows = await db
           .select({ ai_brief: intakes.ai_brief })
@@ -167,6 +185,10 @@ async function executeAction(action: string, params: Record<string, any>, contex
       case 'update_ai_brief': {
         const { intakeId: uIntakeId, field, operation, value } = params
 
+        if (!await verifyIntakeBelongsToPatient(uIntakeId, context?.patientId)) {
+          return { success: false, error: 'Forbidden — intake does not belong to current patient' }
+        }
+
         const intakeRows = await db
           .select({ ai_brief: intakes.ai_brief })
           .from(intakes)
@@ -201,6 +223,10 @@ async function executeAction(action: string, params: Record<string, any>, contex
 
       case 'update_symptom_severity': {
         const { intakeId: sIntakeId, domain, severity } = params
+
+        if (!await verifyIntakeBelongsToPatient(sIntakeId, context?.patientId)) {
+          return { success: false, error: 'Forbidden — intake does not belong to current patient' }
+        }
 
         const intakeRows = await db
           .select({ ai_brief: intakes.ai_brief })
@@ -244,13 +270,16 @@ export async function POST(req: Request) {
     let patientContext = ''
     if (context?.patientId) {
       if (process.env.NODE_ENV !== 'development') {
-        // Verify the patient exists in the system (has at least one intake)
-        const patientCheck = await db
-          .select({ id: patients.id })
-          .from(patients)
-          .where(eq(patients.id, context.patientId))
+        // Verify the requesting provider has a care relationship with this patient
+        const relationship = await db
+          .select({ id: appointments.id })
+          .from(appointments)
+          .where(and(
+            eq(appointments.patient_id, context.patientId),
+            eq(appointments.provider_id, session.providerId!)
+          ))
           .limit(1)
-        if (patientCheck.length === 0) {
+        if (relationship.length === 0) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
       }
