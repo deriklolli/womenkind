@@ -1430,6 +1430,7 @@ export default function PatientDashboardPage() {
       {checkinModalOpen && (
         <DailyCheckinModal
           onClose={() => setCheckinModalOpen(false)}
+          appointmentId={heroAction.kind === 'prep_visit' ? heroAction.appointment.id : undefined}
           onSuccess={(liveWmi, visit) => {
             setCheckinModalOpen(false)
             // If this check-in was for the prep_visit appointment, collapse the banner immediately

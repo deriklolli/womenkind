@@ -3,7 +3,7 @@ import { getServerSession } from '@/lib/getServerSession'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { db } from '@/lib/db'
 import { visits, appointments } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and, gte } from 'drizzle-orm'
 
 /**
  * POST /api/checkin
@@ -139,10 +139,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const visit = await db.query.visits.findFirst({
+    let visit = await db.query.visits.findFirst({
       where: eq(visits.appointment_id, appointmentId),
       columns: { id: true, checked_in_at: true, symptom_scores: true },
     })
+
+    // Fallback: if no appointment-linked visit, check for any daily check-in in the last 14 days.
+    // This handles check-ins submitted before the appointmentId was threaded through (legacy data).
+    if (!visit) {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - 14)
+      const cutoffStr = cutoff.toISOString().split('T')[0]
+      visit = await db.query.visits.findFirst({
+        where: and(
+          eq(visits.patient_id, appt.patient_id),
+          eq(visits.source, 'daily'),
+          gte(visits.visit_date, cutoffStr),
+        ),
+        columns: { id: true, checked_in_at: true, symptom_scores: true },
+      }) ?? undefined
+    }
 
     return NextResponse.json({ checkedIn: !!visit?.checked_in_at, visit })
   } catch (err: any) {

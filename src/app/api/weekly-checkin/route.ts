@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { scores } = await req.json()
+    const { scores, appointmentId } = await req.json()
 
     if (!scores) {
       return NextResponse.json({ error: 'scores is required' }, { status: 400 })
@@ -150,12 +150,13 @@ export async function POST(req: NextRequest) {
       ;[inserted] = await db.update(visits).set({
         symptom_scores: scores,
         checked_in_at: new Date(),
+        ...(appointmentId ? { appointment_id: appointmentId } : {}),
       }).where(eq(visits.id, existing.id)).returning()
     } else {
       ;[inserted] = await db.insert(visits).values({
         patient_id: session.patientId,
         provider_id: provider.id,
-        appointment_id: null,
+        appointment_id: appointmentId ?? null,
         visit_type: 'daily_checkin',
         visit_date: weekStart,
         source: 'daily',

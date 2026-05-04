@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 interface Props {
   onSuccess: (liveWmi?: number | null, visit?: Record<string, any>) => void
   onClose: () => void
+  appointmentId?: string
 }
 
 const STANDARD_QUESTIONS = [
@@ -95,7 +96,7 @@ function buildInitialScores(): Record<string, number> {
   }
 }
 
-export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
+export default function DailyCheckinModal({ onSuccess, onClose, appointmentId }: Props) {
   const [scores, setScores] = useState<Record<string, number>>(buildInitialScores)
   const [cardioYes, setCardioYes] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -131,7 +132,7 @@ export default function DailyCheckinModal({ onSuccess, onClose }: Props) {
       const res = await fetch('/api/weekly-checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scores }),
+        body: JSON.stringify({ scores, ...(appointmentId ? { appointmentId } : {}) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submission failed')
