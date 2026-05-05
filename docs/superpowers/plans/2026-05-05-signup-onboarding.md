@@ -1269,26 +1269,31 @@ git commit -m "feat: replace dark intake with light theme (was /intake2)"
 **Files:**
 - Modify: `src/app/api/intake/submit/route.ts`
 
-- [ ] **Step 1: Find where the brief generation completes**
+- [ ] **Step 1: Locate the exact insertion point**
 
-Open `src/app/api/intake/submit/route.ts`. Find the line after `generateClinicalBrief()` completes and the brief is written to `intakes.ai_brief`.
+Open `src/app/api/intake/submit/route.ts`. The route already imports `patients` (line 9) and has `export const maxDuration = 300` (line 12) — do not touch either. Do not touch `generateClinicalBrief()` or any of the brief/component generation logic.
 
-- [ ] **Step 2: Add the status update after brief generation**
+Find line 98: `// Send intake confirmation emails (fire and forget)`. The `onboarding_status` update goes **immediately before this line** — after the intake is submitted and WMI/brief are processed, but before emails fire.
 
-After the `ai_brief` update, add:
+- [ ] **Step 2: Add the status update**
+
+Insert the following block at line 98, pushing the email send down:
 
 ```typescript
-// Add to imports at top:
-import { patients } from '@/lib/db/schema'
-
-// After the ai_brief is written to the intakes table, add:
-await db
-  .update(patients)
-  .set({ onboarding_status: 'active' })
-  .where(eq(patients.id, patientId))
+// Advance patient to active now that intake is submitted.
+// Brief generation failing (above) should NOT block this — the brief can be
+// regenerated via /api/generate-briefs. Patients stuck at 'paid' can't reach
+// their dashboard.
+if (patientId) {
+  await db
+    .update(patients)
+    .set({ onboarding_status: 'active' })
+    .where(eq(patients.id, patientId))
+    .catch((err) => console.error('Failed to advance onboarding_status:', err))
+}
 ```
 
-Where `patientId` is already resolved earlier in the route. This must happen AFTER brief generation — not before — so the patient only reaches `active` when their intake is fully processed.
+The `.catch()` keeps existing error tolerance — a DB update failure won't break the submission response. `patientId` is already resolved from `req.json()` at the top of the route.
 
 - [ ] **Step 3: Run tsc**
 
