@@ -7,6 +7,7 @@ import { db } from '@/lib/db'
 import { intakes, patients, profiles } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { invokeModel } from '@/lib/bedrock'
+import { computeWMI } from '@/lib/wmi-scoring'
 import crypto from 'crypto'
 
 /**
@@ -129,7 +130,8 @@ Return this exact JSON structure:
     brief = match ? JSON.parse(match[0]) : { raw_brief: text }
   }
 
-  await db.update(intakes).set({ ai_brief: brief }).where(eq(intakes.id, intakeId))
+  const wmiScores = computeWMI(answers)
+  await db.update(intakes).set({ ai_brief: brief, wmi_scores: wmiScores }).where(eq(intakes.id, intakeId))
 
   // 6. Send password reset so she can log in
   await adminClient.auth.resetPasswordForEmail(email, {
