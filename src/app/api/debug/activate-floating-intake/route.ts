@@ -5,8 +5,8 @@ export const maxDuration = 300
 import { createClient } from '@supabase/supabase-js'
 import { db } from '@/lib/db'
 import { intakes, patients, profiles } from '@/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
-import { invokeModel } from '@/lib/bedrock'
+import { eq } from 'drizzle-orm'
+import { generateClinicalBrief } from '@/lib/intake-brief'
 import { computeWMI } from '@/lib/wmi-scoring'
 import crypto from 'crypto'
 
@@ -90,47 +90,9 @@ export async function POST(req: NextRequest) {
     })
     .where(eq(intakes.id, intakeId))
 
-  // 5. Generate brief
-  const patientProfile = buildPatientProfile(answers)
-  const text = await invokeModel({
-    maxTokens: 8192,
-    system: `You are a menopause-specialist clinical intake analyst for Womenkind, a telehealth menopause care platform. Transform patient intake questionnaire data into a structured, clinically actionable pre-visit brief for the reviewing provider.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Generate a clinical brief for this patient. Return ONLY a JSON object with no markdown wrapping.
-
-PATIENT INTAKE DATA:
-${patientProfile}
-
-Return this exact JSON structure:
-{
-  "symptom_summary": {
-    "overview": "2-3 sentence clinical snapshot",
-    "domains": [{ "domain": "...", "severity": "none|mild|moderate|severe", "findings": "...", "patient_language": "..." }]
-  },
-  "risk_flags": { "urgent": [], "contraindications": [], "considerations": [] },
-  "treatment_pathway": {
-    "recommended_approach": "...",
-    "options": [{ "treatment": "...", "rationale": "...", "considerations": "..." }],
-    "patient_preferences": "..."
-  },
-  "suggested_questions": [{ "question": "...", "context": "..." }],
-  "metadata": { "menopausal_stage": "...", "symptom_burden": "low|moderate|high|severe", "complexity": "straightforward|moderate|complex", "generated_at": "${new Date().toISOString()}" }
-}`,
-      },
-    ],
-  })
-
-  let brief: any
-  try {
-    brief = JSON.parse(text)
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/)
-    brief = match ? JSON.parse(match[0]) : { raw_brief: text }
-  }
-
+  // 5. Compute WMI + generate brief using the canonical pipeline
   const wmiScores = computeWMI(answers)
+  const brief = await generateClinicalBrief(answers, wmiScores)
   await db.update(intakes).set({ ai_brief: brief, wmi_scores: wmiScores }).where(eq(intakes.id, intakeId))
 
   // 6. Send password reset so she can log in
@@ -147,19 +109,4 @@ Return this exact JSON structure:
     email,
     name: fullName,
   })
-}
-
-function buildPatientProfile(answers: Record<string, any>): string {
-  const lines: string[] = []
-  const add = (label: string, val: any) => {
-    if (val !== undefined && val !== null && val !== '') {
-      lines.push(`${label}: ${Array.isArray(val) ? val.join(', ') : val}`)
-    }
-  }
-  for (const [k, v] of Object.entries(answers)) {
-    if (v !== undefined && v !== null && v !== '') {
-      lines.push(`${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
-    }
-  }
-  return lines.join('\n')
 }
