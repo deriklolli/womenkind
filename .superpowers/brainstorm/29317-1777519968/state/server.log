@@ -1,0 +1,11 @@
+{"type":"server-started","port":63289,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:63289","screen_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content","state_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/state"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content/triggers.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      Missed check-ins\n      Patient hasn't done their weekly symptom check-in for 2 or more weeks in a row — gentle \"we noticed you've been away\" message","choice":"missed-checkins","id":null,"timestamp":1777520505876}
+{"source":"user-event","type":"click","text":"B\n    \n      Score dropped significantly\n      WMI or domain score drops noticeably between check-ins — \"we saw your symptoms may have increased, here's what to do\"","choice":"score-drop","id":null,"timestamp":1777520511392}
+{"source":"user-event","type":"click","text":"G\n    \n      Post-visit follow-up\n      48 hours after a consultation — \"how are you feeling about your care plan?\" check-in email","choice":"post-visit","id":null,"timestamp":1777520617175}
+{"source":"user-event","type":"click","text":"H\n    \n      Haven't logged in (30+ days)\n      Patient goes completely dark — re-engagement email reminding them the care team is here","choice":"no-login","id":null,"timestamp":1777520627008}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content/waiting-1.html"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content/engagement-map.html"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content/engagement-map-v2.html"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/29317-1777519968/content/waiting-2.html"}
+{"type":"server-stopped","reason":"idle timeout"}

@@ -1,0 +1,165 @@
+<h2>WomenKind Mobile App — Feature Brainstorm</h2>
+<p class="subtitle">The core SMS check-in flow is locked in. Pick any additional features that resonate — we'll use this to scope the app.</p>
+
+<div class="section">
+  <div class="label">Core (already decided)</div>
+  <div style="background: #1a1a2e; border: 1px solid #7c3aed; border-radius: 12px; padding: 16px 20px; margin-bottom: 8px; display:flex; align-items:center; gap:14px;">
+    <span style="font-size:24px">📱</span>
+    <div>
+      <strong style="color:#a78bfa">Weekly SMS → Deep Link → Check-in</strong>
+      <p style="margin:4px 0 0; color:#9ca3af; font-size:14px">Text arrives Monday morning. Tap link. App opens to check-in. Done in 60 seconds.</p>
+    </div>
+    <span style="margin-left:auto; background:#7c3aed; color:white; font-size:11px; padding:3px 10px; border-radius:20px; white-space:nowrap">IN SCOPE</span>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Health Tracking</div>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="wearable" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Wearable Sync (Apple Health / Oura)</h3>
+        <p>Auto-fills sleep & energy from your ring or watch. Check-in asks fewer questions.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="symptom_photos" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Symptom Photo Log</h3>
+        <p>Quick photo attachments to a symptom entry — e.g. hot flash rash, bloating. Visible to provider.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="mood_journal" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Daily Mood / Notes Journal</h3>
+        <p>Free-text or voice memo attached to a day's entry. Private or shareable with provider.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="period" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Cycle Tracking</h3>
+        <p>Log period days and flow. Correlates with symptom spikes in the trend chart.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Medication & Treatment</div>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="rx_reminder" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Medication Reminders</h3>
+        <p>Push notification at a set time each day: "Take your estradiol." Tap to log it as taken.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="rx_refill" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>One-Tap Refill Request</h3>
+        <p>App surfaces "Refill due soon" banner. One tap sends the request to the provider.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="rx_history" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Prescription Timeline</h3>
+        <p>Visual timeline of when medications started, changed dose, or were discontinued.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Care & Communication</div>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="messaging" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Secure Messaging (In-App)</h3>
+        <p>Message Dr. Urban directly. Supports text and image attachments. Push notifications for replies.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="visit_prep" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Visit Prep Checklist</h3>
+        <p>Before your appointment: "Here's what to bring up based on your recent check-ins."</p>
+      </div>
+    </div>
+    <div class="option" data-choice="visit_notes" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>After-Visit Summary</h3>
+        <p>AI-generated note after each visit: what was discussed, next steps, treatment changes.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="labs" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Lab Results Push Alert</h3>
+        <p>"Your labs are ready." Tap to view results with plain-English interpretation.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Progress & Motivation</div>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="streak" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Check-in Streak</h3>
+        <p>Streak counter + badge for consistent tracking. Shown on the home screen.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="monthly_recap" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Monthly Progress Report</h3>
+        <p>Auto-generated PDF-style recap: score change, best domain, worst domain, milestones.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="wins" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Wins Board</h3>
+        <p>Surfaced moments like "Sleep improved 30% this month" or "Longest hot-flash-free streak."</p>
+      </div>
+    </div>
+    <div class="option" data-choice="blueprint" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>Health Blueprint (In-App)</h3>
+        <p>Your personalized treatment overview — readable anytime, not buried in onboarding.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Scheduling</div>
+  <div class="options" data-multiselect>
+    <div class="option" data-choice="booking" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>In-App Appointment Booking</h3>
+        <p>Book, reschedule, or cancel visits. Calendar integration (add to Apple/Google cal).</p>
+      </div>
+    </div>
+    <div class="option" data-choice="appt_reminder" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Appointment Reminders</h3>
+        <p>Push at 24h and 1h before. Includes join-video-call button for telehealth visits.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:24px">Select everything that interests you (multi-select), then tell me in the terminal. No need to limit yourself — we'll prioritize together.</p>

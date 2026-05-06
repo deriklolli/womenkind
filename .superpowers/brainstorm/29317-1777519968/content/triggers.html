@@ -1,0 +1,72 @@
+<h2>Which behaviors should trigger a message?</h2>
+<p class="subtitle">Select all that should fire an email or in-app notification. We'll decide channel per trigger next.</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="missed-checkins" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Missed check-ins</h3>
+      <p>Patient hasn't done their weekly symptom check-in for 2 or more weeks in a row — gentle "we noticed you've been away" message</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="score-drop" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Score dropped significantly</h3>
+      <p>WMI or domain score drops noticeably between check-ins — "we saw your symptoms may have increased, here's what to do"</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="score-plateau" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Score plateau (no improvement 4+ weeks)</h3>
+      <p>Scores flat for a month — proactive "let's talk about adjusting your plan" nudge to book a follow-up</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="treatment-milestone" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Treatment milestones</h3>
+      <p>1 month, 3 months, 6 months on HRT / treatment plan — celebration + what to expect next</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="score-milestone" onclick="toggleSelect(this)">
+    <div class="letter">E</div>
+    <div class="content">
+      <h3>Score improvement milestone</h3>
+      <p>WMI improves by 20%+ — celebrate the win, reinforce the habit</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="no-appt" onclick="toggleSelect(this)">
+    <div class="letter">F</div>
+    <div class="content">
+      <h3>No follow-up booked after visit</h3>
+      <p>X days after a consultation with no follow-up scheduled — reminder to book next visit</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="post-visit" onclick="toggleSelect(this)">
+    <div class="letter">G</div>
+    <div class="content">
+      <h3>Post-visit follow-up</h3>
+      <p>48 hours after a consultation — "how are you feeling about your care plan?" check-in email</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="no-login" onclick="toggleSelect(this)">
+    <div class="letter">H</div>
+    <div class="content">
+      <h3>Haven't logged in (30+ days)</h3>
+      <p>Patient goes completely dark — re-engagement email reminding them the care team is here</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 24px">Click multiple to select all that apply, then tell me in the terminal.</p>

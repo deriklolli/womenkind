@@ -1,0 +1,3 @@
+{"type":"server-started","port":62140,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:62140","screen_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/45411-1777565308/content","state_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/45411-1777565308/state"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/45411-1777565308/content/features.html"}
+{"type":"server-stopped","reason":"idle timeout"}

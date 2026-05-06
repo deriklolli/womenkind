@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Womenkind · Pillar trend explorations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --aubergine:#280f49;--aubergine-deep:#1b0a33;
+    --violet:#944fed;--violet-soft:#b78cf5;--violet-tint:#efe3ff;
+    --cream:#f7f3ee;--cream-deep:#efe8df;
+    --warm:#422a1f;--warm-soft:#5a3e2a;
+    --tan:#d4b896;--terra:#c97c5d;--sky:#5d9ed5;--sage:#8aab7d;--rose:#c47884;--amber:#d8a341;
+    --line:rgba(66,42,31,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Plus Jakarta Sans',sans-serif;color:var(--warm);background:var(--cream)}
+  .serif{font-family:'Playfair Display',serif}
+  .it{font-style:italic}
+  button{font:inherit;cursor:pointer}
+
+  /* artboard inner card */
+  .ab{
+    width:100%;height:100%;background:#fff;border-radius:24px;border:1px solid var(--line);
+    padding:34px 36px 32px;display:flex;flex-direction:column;gap:22px;overflow:hidden;position:relative;
+  }
+  .ab-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .ab-head h2{font-family:'Playfair Display',serif;font-weight:400;font-size:30px;color:var(--aubergine);letter-spacing:-.01em;line-height:1.05}
+  .ab-head h2 small{display:block;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--violet);font-weight:700;margin-bottom:6px}
+  .ab-head .desc{font-size:13px;color:var(--warm-soft);line-height:1.55;max-width:420px;margin-top:6px}
+
+  /* pillar selector — shared style, dropdown variants below */
+  .picker{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--cream);border:1px solid var(--line);border-radius:14px;font-size:13px;color:var(--warm);cursor:pointer;min-width:230px;justify-content:space-between}
+  .picker .l{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--warm-soft);font-weight:700;display:block;margin-bottom:1px}
+  .picker .nm{font-family:'Playfair Display',serif;font-size:18px;color:var(--aubergine);line-height:1}
+  .picker .car{font-size:14px;color:var(--violet)}
+
+  /* milestone pin shared */
+  .pin{cursor:pointer}
+  .pin .stem{stroke-dasharray:2 3;opacity:.6}
+
+  /* top: title */
+  .stage{padding:48px 60px 32px;max-width:1280px;margin:0 auto}
+  .stage h1{font-family:'Playfair Display',serif;font-weight:400;font-size:42px;color:var(--aubergine);letter-spacing:-.01em;line-height:1.05}
+  .stage h1 .it{color:var(--violet)}
+  .stage .sub{font-size:14px;color:var(--warm-soft);max-width:680px;line-height:1.6;margin-top:10px}
+  .stage .sub b{color:var(--aubergine);font-weight:600}
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>Pillar trends &mdash; <span class="it">three explorations</span></h1>
+  <p class="sub">Three ways to plot a single pillar over time with milestones (consults, prescriptions, dose changes) inline on the curve. Each opens from the same dropdown that hangs off your existing pillar grid. Click any chart card&rsquo;s <b>focus</b> button to see it full-bleed.</p>
+</div>
+
+<div id="canvas-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+  // ─── shared data ───
+  const PILLARS = [
+    { key:'sleep',     name:'Sleep',          accent:'#5d9ed5', baseline:3, current:8, unit:'/10' },
+    { key:'vasomotor', name:'Vasomotor',      accent:'#c97c5d', baseline:2, current:8, unit:'/10' },
+    { key:'mood',      name:'Mood',           accent:'#7c6bc4', baseline:3, current:7, unit:'/10' },
+    { key:'brain',     name:'Brain & Cognition', accent:'#944fed', baseline:3, current:7, unit:'/10' },
+    { key:'hormonal',  name:'Hormonal',       accent:'#c47884', baseline:4, current:7, unit:'/10' },
+  ];
+
+  // 24 weekly readings, calibrated to feel real
+  const SERIES = {
+    sleep:     [3,3,3,4,4,3,4,5,5,6,6,6,6,7,7,7,7,8,8,8,7,8,8,8],
+    vasomotor: [2,2,2,3,3,4,4,4,5,5,6,6,7,7,7,7,8,8,8,8,8,8,8,8],
+    mood:      [3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,7,7,7,7,7],
+    brain:     [3,3,3,3,3,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,7,7,7,7],
+    hormonal:  [4,4,4,4,4,4,5,5,5,5,5,6,6,6,6,7,7,7,7,7,7,7,7,7],
+  };
+
+  // milestones — week index 0..23, ordered
+  const MILESTONES = [
+    { wk:0,  type:'visit',     short:'Intake',    title:'Intake completed',
+      body:'Full perimenopause history captured. Baseline scorecard set.' },
+    { wk:1,  type:'visit',     short:'Visit 1',   title:'First consult · Dr. Urban',
+      body:'45-minute intake. Plan: HRT trial + sleep hygiene.' },
+    { wk:2,  type:'rx',        short:'Estradiol', title:'Started Estradiol 0.05mg patch',
+      body:'Twice-weekly transdermal patch + Progesterone 100mg nightly.' },
+    { wk:9,  type:'dose',      short:'Dose ↑',    title:'Estradiol increased to 0.075mg',
+      body:'Hot flashes still 6&times;/day. Dose stepped up; sleep already improving.' },
+    { wk:13, type:'visit',     short:'Visit 2',   title:'Follow-up · Mo 3',
+      body:'"Significant improvement, mood much better." Recommend continue.' },
+    { wk:17, type:'rx',        short:'Topical',   title:'Topical estradiol added',
+      body:'For GSM. Localized; no change to systemic regimen.' },
+    { wk:22, type:'lab',       short:'Labs',      title:'Labs drawn',
+      body:'Estradiol 78pg/mL · FSH 42 IU/L. Within personalized target range.' },
+  ];
+
+  const WEEKS = Array.from({length:24}, (_,i)=>i);
+  const ICON = {
+    visit: <path d="M3 5h18v14H3z M3 9h18 M8 3v4 M16 3v4" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round"/>,
+    rx:    <path d="M7 4h6a3 3 0 010 6H7V4zm0 6l8 10 M11 14h6" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    dose:  <path d="M5 12h14 M14 7l5 5-5 5" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+    lab:   <path d="M9 3h6 M10 3v6L4 19a2 2 0 002 2h12a2 2 0 002-2L14 9V3" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>,
+  };
+
+  // shared pillar dropdown
+  function PillarPicker({ value, onChange }){
+    const [open, setOpen] = React.useState(false);
+    const cur = PILLARS.find(p=>p.key===value);
+    return (
+      <div style={{position:'relative'}}>
+        <button className="picker" onClick={()=>setOpen(o=>!o)} style={{borderColor: open ? 'var(--violet)' : 'var(--line)'}}>
+          <span style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{width:10,height:10,borderRadius:99,background:cur.accent,display:'inline-block'}}></span>
+            <span><span className="l">Pillar</span><span className="nm">{cur.name}</span></span>
+          </span>
+          <span className="car">{open?'▴':'▾'}</span>
+        </button>
+        {open && (
+          <div style={{position:'absolute',top:'calc(100% + 6px)',left:0,right:0,background:'#fff',
+            border:'1px solid var(--line)',borderRadius:14,padding:6,zIndex:5,
+            boxShadow:'0 16px 40px -16px rgba(40,15,73,.25)'}}>
+            {PILLARS.map(p=>(
+              <button key={p.key} onClick={()=>{ onChange(p.key); setOpen(false); }}
+                style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',width:'100%',
+                  border:0,background:p.key===value?'var(--cream)':'transparent',color:'var(--warm)',
+                  borderRadius:10,fontSize:13,textAlign:'left',cursor:'pointer'}}>
+                <span style={{width:8,height:8,borderRadius:99,background:p.accent}}></span>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--aubergine)'}}>{p.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ───────────────────────────────────────────────────────
+  // VARIANT A — "Editorial timeline" — large area chart, milestones as
+  // numbered pins above the line with vertical stems and a
+  // story-style annotation rail below
+  // ───────────────────────────────────────────────────────
+  function TrendVariantA(){
+    const [pk, setPk] = React.useState('sleep');
+    const [hover, setHover] = React.useState(null); // milestone idx
+    const p = PILLARS.find(x=>x.key===pk);
+    const data = SERIES[pk];
+
+    const W=1100, H=380, pad={l:54,r:36,t:62,b:46};
+    const xMax = data.length-1;
+    const xs = data.map((_,i)=>pad.l + (W-pad.l-pad.r)*(i/xMax));
+    const ys = data.map(v=>pad.t + (H-pad.t-pad.b)*(1 - v/10));
+    const path = xs.map((x,i)=>{
+      if (i===0) return `M${x},${ys[i]}`;
+      const px=xs[i-1],py=ys[i-1],cx=(px+x)/2;
+      return `C${cx},${py} ${cx},${ys[i]} ${x},${ys[i]}`;
+    }).join(' ');
+    const area = `${path} L${xs[xs.length-1]},${H-pad.b} L${xs[0]},${H-pad.b} Z`;
+    const baselineY = pad.t + (H-pad.t-pad.b)*(1 - p.baseline/10);
+
+    const ms = MILESTONES.map((m,i)=>({...m,
+      x:pad.l + (W-pad.l-pad.r)*(m.wk/xMax),
+      y:pad.t + (H-pad.t-pad.b)*(1 - data[m.wk]/10),
+      idx:i+1,
+    }));
+
+    return (
+      <div className="ab">
+        <div className="ab-head">
+          <h2><small>Variant A &middot; Editorial timeline</small>{p.name} over time</h2>
+          <PillarPicker value={pk} onChange={setPk}/>
+        </div>
+
+        <div style={{flex:1,display:'flex',flexDirection:'column',gap:14,minHeight:0}}>
+          <div style={{flex:1,minHeight:0,position:'relative'}}>
+            <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%'}}>
+              <defs>
+                <linearGradient id="a-area" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stopColor={p.accent} stopOpacity=".35"/>
+                  <stop offset="1" stopColor={p.accent} stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              {/* gridlines */}
+              {[0,2,4,6,8,10].map(v=>{
+                const y = pad.t + (H-pad.t-pad.b)*(1-v/10);
+                return (<g key={v}>
+                  <line x1={pad.l} x2={W-pad.r} y1={y} y2={y} stroke="rgba(66,42,31,.06)"/>
+                  <text x={pad.l-12} y={y+4} fontSize="10" textAnchor="end" fill="rgba(66,42,31,.5)" fontWeight="600">{v}</text>
+                </g>);
+              })}
+              {/* baseline */}
+              <line x1={pad.l} x2={W-pad.r} y1={baselineY} y2={baselineY} stroke="rgba(66,42,31,.45)" strokeDasharray="3 4"/>
+              <text x={pad.l+6} y={baselineY-6} fontSize="10" fill="rgba(66,42,31,.6)" fontWeight="700" letterSpacing=".1em">BASELINE · {p.baseline}</text>
+
+              {/* area + line */}
+              <path d={area} fill="url(#a-area)"/>
+              <path d={path} fill="none" stroke={p.accent} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+
+              {/* current dot */}
+              <circle cx={xs[xs.length-1]} cy={ys[ys.length-1]} r="14" fill={p.accent} opacity=".15"/>
+              <circle cx={xs[xs.length-1]} cy={ys[ys.length-1]} r="6" fill="#fff" stroke={p.accent} strokeWidth="2.5"/>
+
+              {/* milestone pins */}
+              {ms.map((m,i)=>(
+                <g key={i} className="pin" onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(null)}>
+                  <line className="stem" x1={m.x} y1={m.y} x2={m.x} y2={pad.t-18} stroke="var(--aubergine)" strokeWidth="1"/>
+                  <circle cx={m.x} cy={pad.t-30} r={hover===i?15:13} fill={hover===i?p.accent:'#fff'} stroke={p.accent} strokeWidth="1.8" style={{transition:'all .2s'}}/>
+                  <text x={m.x} y={pad.t-26} fontSize="12" textAnchor="middle"
+                    fill={hover===i?'#fff':p.accent} fontFamily="'Playfair Display',serif" fontStyle="italic">{m.idx}</text>
+                  <circle cx={m.x} cy={m.y} r="4.5" fill="#fff" stroke={p.accent} strokeWidth="2"/>
+                </g>
+              ))}
+              {/* x labels */}
+              {[0,6,12,18,23].map(w=>{
+                const x = pad.l + (W-pad.l-pad.r)*(w/xMax);
+                const lbl = w===0?'Start':w===23?'Now':`Wk ${w}`;
+                return <text key={w} x={x} y={H-12} fontSize="10" textAnchor="middle" fill="rgba(66,42,31,.55)" fontWeight="700" letterSpacing=".12em">{lbl.toUpperCase()}</text>;
+              })}
+            </svg>
+          </div>
+
+          {/* annotation rail */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4, 1fr)',gap:10}}>
+            {[0,1,2,3].map(i=>{
+              const m = ms[i==3 ? ms.length-1 : i];
+              const isHovered = hover === ms.indexOf(m);
+              return (
+                <div key={i} onMouseEnter={()=>setHover(ms.indexOf(m))} onMouseLeave={()=>setHover(null)}
+                  style={{padding:'12px 14px',borderRadius:12,background:isHovered?p.accent:'var(--cream)',
+                    color:isHovered?'#fff':'var(--warm)',transition:'all .25s'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                    <span style={{width:18,height:18,borderRadius:99,background:isHovered?'#fff':p.accent,
+                      color:isHovered?p.accent:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',
+                      fontFamily:"'Playfair Display',serif",fontStyle:'italic',fontSize:11}}>{ms.indexOf(m)+1}</span>
+                    <span style={{fontSize:9.5,letterSpacing:'.18em',textTransform:'uppercase',fontWeight:700,opacity:.7}}>Wk {m.wk} &middot; {m.short}</span>
+                  </div>
+                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,lineHeight:1.2,color:isHovered?'#fff':'var(--aubergine)'}}>{m.title}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ───────────────────────────────────────────────────────
+  // VARIANT B — "Stem & lozenge" — softer line, milestones are
+  // colored vertical bands across the whole chart with rotated
+  // labels at the top. Hover band → highlights & rich tooltip.
+  // ───────────────────────────────────────────────────────
+  function TrendVariantB(){
+    const [pk, setPk] = React.useState('vasomotor');
+    const [hover, setHover] = React.useState(null);
+    const p = PILLARS.find(x=>x.key===pk);
+    const data = SERIES[pk];
+
+    const W=1100, H=420, pad={l:50,r:30,t:80,b:54};
+    const xMax = data.length-1;
+    const xs = data.map((_,i)=>pad.l + (W-pad.l-pad.r)*(i/xMax));
+    const ys = data.map(v=>pad.t + (H-pad.t-pad.b)*(1 - v/10));
+
+    // segmented line: slightly bolder weight in the segment that contains active band
+    const path = xs.map((x,i)=>{
+      if (i===0) return `M${x},${ys[i]}`;
+      const px=xs[i-1],py=ys[i-1],cx=(px+x)/2;
+      return `C${cx},${py} ${cx},${ys[i]} ${x},${ys[i]}`;
+    }).join(' ');
+
+    const ms = MILESTONES.map((m,i)=>({...m,
+      x: pad.l + (W-pad.l-pad.r)*(m.wk/xMax),
+      y: pad.t + (H-pad.t-pad.b)*(1-data[m.wk]/10),
+    }));
+
+    const tooltip = hover != null ? ms[hover] : null;
+
+    return (
+      <div className="ab">
+        <div className="ab-head">
+          <h2><small>Variant B &middot; Banded chapters</small>{p.name} chapters</h2>
+          <PillarPicker value={pk} onChange={setPk}/>
+        </div>
+
+        <div style={{flex:1,minHeight:0,position:'relative'}}>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%'}}>
+            <defs>
+              <linearGradient id="b-area" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stopColor={p.accent} stopOpacity=".25"/>
+                <stop offset="1" stopColor={p.accent} stopOpacity="0"/>
+              </linearGradient>
+            </defs>
+
+            {/* chapter bands — between consecutive milestones */}
+            {ms.map((m,i)=>{
+              const next = ms[i+1];
+              const x1 = m.x;
+              const x2 = next ? next.x : W-pad.r;
+              const isHover = hover===i;
+              return (
+                <g key={i} onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(null)}>
+                  <rect x={x1} y={pad.t-12} width={x2-x1} height={H-pad.t-pad.b+24}
+                    fill={p.accent} opacity={isHover?.10:.04}
+                    style={{transition:'opacity .25s'}}/>
+                  {i>0 && <line x1={x1} y1={pad.t-12} x2={x1} y2={H-pad.b+12}
+                    stroke={p.accent} strokeWidth="1" strokeDasharray="2 4" opacity=".5"/>}
+                </g>
+              );
+            })}
+
+            {/* gridlines */}
+            {[0,2,4,6,8,10].map(v=>{
+              const y = pad.t + (H-pad.t-pad.b)*(1-v/10);
+              return (<g key={v}>
+                <line x1={pad.l} x2={W-pad.r} y1={y} y2={y} stroke="rgba(66,42,31,.06)"/>
+                <text x={pad.l-10} y={y+4} fontSize="10" textAnchor="end" fill="rgba(66,42,31,.45)" fontWeight="600">{v}</text>
+              </g>);
+            })}
+
+            {/* line */}
+            <path d={`${path} L${xs[xs.length-1]},${H-pad.b} L${xs[0]},${H-pad.b} Z`} fill="url(#b-area)"/>
+            <path d={path} fill="none" stroke={p.accent} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round"/>
+
+            {/* milestone lozenges (top of band) */}
+            {ms.map((m,i)=>{
+              const next = ms[i+1];
+              const cx = (m.x + (next?next.x:W-pad.r))/2;
+              const isHover = hover===i;
+              return (
+                <g key={i} onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(null)} style={{cursor:'pointer'}}>
+                  <rect x={m.x+6} y={20} width={(next?next.x:W-pad.r)-m.x-12} height={28}
+                    rx="14" fill={isHover?p.accent:'#fff'} stroke={p.accent} strokeWidth="1.4"
+                    style={{transition:'all .25s'}}/>
+                  <g transform={`translate(${m.x+18}, 27)`} color={isHover?'#fff':p.accent}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" x="0" y="0">{ICON[m.type]}</svg>
+                  </g>
+                  <text x={m.x+38} y={39} fontSize="11.5" fill={isHover?'#fff':'var(--aubergine)'}
+                    fontFamily="'Playfair Display',serif" fontStyle="italic" style={{transition:'fill .25s'}}>{m.short}</text>
+                </g>
+              );
+            })}
+
+            {/* current end dot */}
+            <circle cx={xs[xs.length-1]} cy={ys[ys.length-1]} r="14" fill={p.accent} opacity=".15"/>
+            <circle cx={xs[xs.length-1]} cy={ys[ys.length-1]} r="6" fill="#fff" stroke={p.accent} strokeWidth="2.5"/>
+            <text x={xs[xs.length-1]+18} y={ys[ys.length-1]+5} fontSize="22" fontFamily="'Playfair Display',serif"
+              fill="var(--aubergine)">{p.current}<tspan fontSize="12" fill="rgba(66,42,31,.5)" fontStyle="italic">/10</tspan></text>
+
+            {/* x labels */}
+            {[0,6,12,18,23].map(w=>{
+              const x = pad.l + (W-pad.l-pad.r)*(w/xMax);
+              const lbl = w===0?'Start':w===23?'Now':`Wk ${w}`;
+              return <text key={w} x={x} y={H-16} fontSize="10" textAnchor="middle" fill="rgba(66,42,31,.55)" fontWeight="700" letterSpacing=".12em">{lbl.toUpperCase()}</text>;
+            })}
+          </svg>
+
+          {/* tooltip floats over chart */}
+          {tooltip && (
+            <div style={{position:'absolute', left:`${(tooltip.x/W)*100}%`, top:60,
+              transform:'translateX(-50%)', background:'var(--aubergine)', color:'#fff',
+              padding:'12px 14px', borderRadius:12, maxWidth:260, fontSize:12, lineHeight:1.5,
+              boxShadow:'0 16px 40px -10px rgba(40,15,73,.4)', pointerEvents:'none', zIndex:5}}>
+              <div style={{fontSize:9.5,letterSpacing:'.2em',textTransform:'uppercase',color:'var(--tan)',fontWeight:700,marginBottom:4}}>Wk {tooltip.wk} &middot; {tooltip.short}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,marginBottom:6,lineHeight:1.2}}>{tooltip.title}</div>
+              <div style={{color:'rgba(255,255,255,.78)'}} dangerouslySetInnerHTML={{__html:tooltip.body}}/>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ───────────────────────────────────────────────────────
+  // VARIANT C — "Vertical journey"
+  // Milestones live in a left column as a story. The chart on
+  // the right is small and dense. Active milestone bolds its
+  // segment of the line and its end-points.
+  // ───────────────────────────────────────────────────────
+  function TrendVariantC(){
+    const [pk, setPk] = React.useState('mood');
+    const [active, setActive] = React.useState(2);
+    const p = PILLARS.find(x=>x.key===pk);
+    const data = SERIES[pk];
+
+    const ms = MILESTONES.map((m,i)=>({...m, idx:i}));
+    const range = active < ms.length-1
+      ? { from: ms[active].wk, to: ms[active+1].wk }
+      : { from: ms[active].wk, to: 23 };
+    const valFrom = data[range.from], valTo = data[range.to];
+    const delta = valTo - valFrom;
+
+    const W=620, H=340, pad={l:42,r:24,t:30,b:40};
+    const xMax = data.length-1;
+    const xs = data.map((_,i)=>pad.l + (W-pad.l-pad.r)*(i/xMax));
+    const ys = data.map(v=>pad.t + (H-pad.t-pad.b)*(1 - v/10));
+    const path = xs.map((x,i)=>{
+      if (i===0) return `M${x},${ys[i]}`;
+      const px=xs[i-1],py=ys[i-1],cx=(px+x)/2;
+      return `C${cx},${py} ${cx},${ys[i]} ${x},${ys[i]}`;
+    }).join(' ');
+    // segment path for active range
+    const segXs = xs.slice(range.from, range.to+1);
+    const segYs = ys.slice(range.from, range.to+1);
+    const segPath = segXs.map((x,i)=>{
+      if (i===0) return `M${x},${segYs[i]}`;
+      const px=segXs[i-1],py=segYs[i-1],cx=(px+x)/2;
+      return `C${cx},${py} ${cx},${segYs[i]} ${x},${segYs[i]}`;
+    }).join(' ');
+
+    return (
+      <div className="ab">
+        <div className="ab-head">
+          <h2><small>Variant C &middot; Vertical journey</small>{p.name}, told as a journey</h2>
+          <PillarPicker value={pk} onChange={setPk}/>
+        </div>
+
+        <div style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1.2fr',gap:30,minHeight:0}}>
+          {/* left: milestone story */}
+          <div style={{overflowY:'auto',paddingRight:8}}>
+            <div style={{position:'relative',paddingLeft:22}}>
+              <div style={{position:'absolute',left:9,top:8,bottom:8,width:2,
+                background:`linear-gradient(${p.accent}, ${p.accent}33)`}}></div>
+              {ms.map((m,i)=>{
+                const isActive = i===active;
+                return (
+                  <button key={i} onClick={()=>setActive(i)}
+                    style={{display:'block',width:'100%',textAlign:'left',border:0,background:'transparent',
+                      padding:'10px 14px 14px 18px', borderRadius:12, marginBottom:4,
+                      backgroundColor:isActive?'var(--cream)':'transparent', cursor:'pointer',position:'relative'}}>
+                    <span style={{position:'absolute',left:-15,top:14,width:18,height:18,borderRadius:99,
+                      background:isActive?p.accent:'#fff', border:`2px solid ${p.accent}`,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      color:isActive?'#fff':p.accent,fontFamily:"'Playfair Display',serif",fontStyle:'italic',fontSize:10}}>{i+1}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                      <span style={{fontSize:9.5,letterSpacing:'.18em',textTransform:'uppercase',color:p.accent,fontWeight:700}}>Wk {m.wk} &middot; {m.short}</span>
+                    </div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,color:'var(--aubergine)',lineHeight:1.2,marginBottom:isActive?6:0}}>{m.title}</div>
+                    {isActive && <div style={{fontSize:12.5,color:'var(--warm-soft)',lineHeight:1.5}} dangerouslySetInnerHTML={{__html:m.body}}/>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* right: chart */}
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            {/* delta callout for active range */}
+            <div style={{background:'var(--cream)',borderRadius:14,padding:'14px 16px',display:'flex',alignItems:'center',gap:14}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:9.5,letterSpacing:'.18em',textTransform:'uppercase',color:p.accent,fontWeight:700,marginBottom:4}}>Chapter {active+1} &middot; Wk {range.from} &rarr; {range.to}</div>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,color:'var(--aubergine)',lineHeight:1.2}}>{ms[active].short}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontFamily:"'Playfair Display',serif",fontSize:30,color:'var(--aubergine)',lineHeight:1}}>
+                  {valFrom}<span style={{color:'rgba(66,42,31,.4)',margin:'0 6px',fontStyle:'italic',fontSize:18}}>&rarr;</span>{valTo}
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:delta>=0?p.accent:'var(--rose)',background:`${p.accent}1a`,
+                  padding:'3px 8px',borderRadius:99,display:'inline-block',marginTop:4}}>
+                  {delta>=0?'+':''}{delta} pts in this chapter
+                </div>
+              </div>
+            </div>
+
+            <div style={{flex:1,minHeight:0,position:'relative'}}>
+              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:'100%'}}>
+                {/* gridlines */}
+                {[0,2,4,6,8,10].map(v=>{
+                  const y = pad.t + (H-pad.t-pad.b)*(1-v/10);
+                  return (<g key={v}>
+                    <line x1={pad.l} x2={W-pad.r} y1={y} y2={y} stroke="rgba(66,42,31,.06)"/>
+                    <text x={pad.l-8} y={y+4} fontSize="9" textAnchor="end" fill="rgba(66,42,31,.45)" fontWeight="600">{v}</text>
+                  </g>);
+                })}
+                {/* dim full line */}
+                <path d={path} fill="none" stroke={p.accent} strokeWidth="1.6" opacity=".25"
+                  strokeLinejoin="round" strokeLinecap="round"/>
+                {/* highlighted segment */}
+                <path d={segPath} fill="none" stroke={p.accent} strokeWidth="3.2"
+                  strokeLinejoin="round" strokeLinecap="round"/>
+                {/* segment endpoints big */}
+                <circle cx={xs[range.from]} cy={ys[range.from]} r="10" fill={p.accent} opacity=".18"/>
+                <circle cx={xs[range.from]} cy={ys[range.from]} r="5" fill="#fff" stroke={p.accent} strokeWidth="2"/>
+                <circle cx={xs[range.to]} cy={ys[range.to]} r="10" fill={p.accent} opacity=".18"/>
+                <circle cx={xs[range.to]} cy={ys[range.to]} r="5" fill="#fff" stroke={p.accent} strokeWidth="2"/>
+
+                {/* all milestone dots — small */}
+                {ms.map((m,i)=>(
+                  <circle key={i} cx={pad.l + (W-pad.l-pad.r)*(m.wk/xMax)}
+                    cy={pad.t + (H-pad.t-pad.b)*(1-data[m.wk]/10)}
+                    r={i===active?0:3} fill="#fff" stroke={p.accent} strokeWidth="1.5"/>
+                ))}
+
+                {/* x labels */}
+                {[0,12,23].map(w=>{
+                  const x = pad.l + (W-pad.l-pad.r)*(w/xMax);
+                  const lbl = w===0?'Start':w===23?'Now':`Wk ${w}`;
+                  return <text key={w} x={x} y={H-12} fontSize="9.5" textAnchor="middle" fill="rgba(66,42,31,.55)" fontWeight="700" letterSpacing=".12em">{lbl.toUpperCase()}</text>;
+                })}
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // mount canvas with three artboards
+  ReactDOM.createRoot(document.getElementById('canvas-root')).render(
+    <DesignCanvas>
+      <DCSection id="trend" title="Pillar trend over time" subtitle="Pick a pillar in the dropdown · milestones inline">
+        <DCArtboard id="A" label="A · Editorial timeline" width={1180} height={620}><TrendVariantA/></DCArtboard>
+        <DCArtboard id="B" label="B · Banded chapters"    width={1180} height={620}><TrendVariantB/></DCArtboard>
+        <DCArtboard id="C" label="C · Vertical journey"   width={1180} height={620}><TrendVariantC/></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+</script>
+</body>
+</html>

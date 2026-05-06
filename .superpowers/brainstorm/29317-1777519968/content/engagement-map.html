@@ -1,0 +1,137 @@
+<h2>Womenkind Engagement System</h2>
+<p class="subtitle">Every message in the system — when it fires, what channel, and what it says</p>
+
+<style>
+  .timeline { display: flex; flex-direction: column; gap: 10px; margin: 24px 0; }
+  .row { display: grid; grid-template-columns: 140px 90px 90px 1fr; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 10px; background: #faf8f5; border: 1px solid rgba(66,42,31,0.08); }
+  .row.header { background: none; border: none; padding: 4px 16px; }
+  .row.section-label { background: rgba(148,79,237,0.06); border-color: rgba(148,79,237,0.15); }
+  .trigger-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; color: #280f49; }
+  .section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(148,79,237,0.7); grid-column: 1/-1; }
+  .tag { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; }
+  .tag.email { background: rgba(93,158,213,0.12); color: #2d7ab5; }
+  .tag.inapp { background: rgba(148,79,237,0.1); color: #7c3aed; }
+  .tag.both { background: rgba(66,42,31,0.07); color: #280f49; }
+  .channels { display: flex; flex-direction: column; gap: 4px; }
+  .desc { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; color: rgba(66,42,31,0.6); line-height: 1.5; }
+  .col-header { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(66,42,31,0.35); }
+  .freq { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; color: rgba(66,42,31,0.45); font-style: italic; }
+  .tone-pill { display: inline-block; padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; margin-top: 3px; }
+  .tone-warm { background: rgba(232,168,56,0.12); color: #b5780a; }
+  .tone-clinical { background: rgba(239,68,68,0.08); color: #b91c1c; }
+  .tone-celebrate { background: rgba(74,200,160,0.12); color: #0e7a5a; }
+</style>
+
+<div class="timeline">
+
+  <!-- Header -->
+  <div class="row header">
+    <div class="col-header">Trigger</div>
+    <div class="col-header">Frequency cap</div>
+    <div class="col-header">Channel</div>
+    <div class="col-header">Message intent</div>
+  </div>
+
+  <!-- Fixed cadence -->
+  <div class="row section-label">
+    <div class="section-title">⏱ Fixed Cadence — every patient</div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">Weekly check-in nudge</div>
+      <div class="freq">Mondays, 8am MT</div>
+    </div>
+    <div class="freq">7 days</div>
+    <div class="channels">
+      <span class="tag both">Email + in-app</span>
+    </div>
+    <div>
+      <div class="desc">"Your weekly symptom check-in takes 60 seconds — tap to log how you're feeling this week."</div>
+      <span class="tone-pill tone-clinical">Clinical · brief</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">Monthly progress recap</div>
+      <div class="freq">1st of month, 8am MT</div>
+    </div>
+    <div class="freq">28 days</div>
+    <div class="channels">
+      <span class="tag email">Email only</span>
+    </div>
+    <div>
+      <div class="desc">WMI trend + top improving domain + days checked in + CTA to book follow-up if no upcoming appointment.</div>
+      <span class="tone-pill tone-celebrate">Celebratory · data-rich</span>
+    </div>
+  </div>
+
+  <!-- Behavior triggers -->
+  <div class="row section-label">
+    <div class="section-title">⚡ Behavior-Based — fires on patient activity</div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">Score dropped</div>
+      <div class="freq">On check-in save</div>
+    </div>
+    <div class="freq">3 days</div>
+    <div class="channels">
+      <span class="tag both">Email + in-app</span>
+    </div>
+    <div>
+      <div class="desc">WMI drops 20%+ from previous check-in. "We noticed your symptoms may have increased. Here's what to do and when to reach out."</div>
+      <span class="tone-pill tone-clinical">Clinical · actionable</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">Post-visit follow-up</div>
+      <div class="freq">48hr after visit note</div>
+    </div>
+    <div class="freq">30 days</div>
+    <div class="channels">
+      <span class="tag email">Email only</span>
+    </div>
+    <div>
+      <div class="desc">"How are you feeling about your care plan? Your next check-in is a great way to track progress — we're here if you have questions."</div>
+      <span class="tone-pill tone-warm">Warm · supportive</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">Missed 2+ check-ins</div>
+      <div class="freq">Daily scan detects</div>
+    </div>
+    <div class="freq">7 days</div>
+    <div class="channels">
+      <span class="tag email">Email only</span>
+    </div>
+    <div>
+      <div class="desc">"Life gets busy — we get it. Your symptom data is most useful when it's consistent. Jump back in whenever you're ready."</div>
+      <span class="tone-pill tone-warm">Warm · no guilt</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="trigger-name">No login 30+ days</div>
+      <div class="freq">Daily scan detects</div>
+    </div>
+    <div class="freq">14 days</div>
+    <div class="channels">
+      <span class="tag email">Email only</span>
+    </div>
+    <div>
+      <div class="desc">"We're still here whenever you need us. Your care team hasn't gone anywhere — log in to pick up where you left off."</div>
+      <span class="tone-pill tone-warm">Warmest · personal</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 8px">Does this match what you had in mind? Let me know in the terminal.</p>
