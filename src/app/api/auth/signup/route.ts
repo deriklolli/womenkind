@@ -5,15 +5,17 @@ import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
 import { profiles, patients } from '@/lib/db/schema'
 import { Resend } from 'resend'
+import { generateVerificationToken } from '@/lib/auth-tokens'
+import { buildEngagementEmail, FROM } from '@/lib/engagement'
 
 /**
  * POST /api/auth/signup
  *
  * Server-side signup that bypasses Supabase's SMTP entirely:
  * 1. Creates the Supabase auth user via admin client (email pre-confirmed)
- * 2. Creates profiles + patients rows in RDS
+ * 2. Creates profiles + patients rows in RDS (onboarding_status='unverified')
  * 3. Signs the user in and returns session cookies
- * 4. Sends welcome email via Resend
+ * 4. Sends verification email via Resend
  *
  * Body: { firstName, lastName, email, password }
  */
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
   const userId = adminData.user.id
 
   // Step 2: Create RDS records
+  let patientId: string
   try {
     await db.insert(profiles).values({
       id: userId,
@@ -61,7 +64,13 @@ export async function POST(req: NextRequest) {
       email,
     }).onConflictDoNothing()
 
-    await db.insert(patients).values({ profile_id: userId }).onConflictDoNothing()
+    const [patient] = await db
+      .insert(patients)
+      .values({ profile_id: userId, onboarding_status: 'unverified' })
+      .onConflictDoNothing()
+      .returning({ id: patients.id })
+
+    patientId = patient.id
   } catch (dbErr: any) {
     // Clean up the Supabase auth user if RDS fails so the user can retry
     await adminClient.auth.admin.deleteUser(userId)
@@ -89,17 +98,25 @@ export async function POST(req: NextRequest) {
     // Still return ok — user can log in manually
   }
 
-  // Step 4: Send welcome email via Resend (fire-and-forget)
-  const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    const resend = new Resend(resendKey)
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://womenkind.vercel.app').replace(/\/+$/, '')
+  // Step 4: Send verification email via Resend (fire-and-forget)
+  if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.womenkindhealth.com').replace(/\/+$/, '')
+    const { token, ts } = generateVerificationToken(patientId)
+    const verifyUrl = `${appUrl}/signup/verified?patientId=${patientId}&token=${token}&ts=${ts}`
+
     resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Womenkind <onboarding@resend.dev>',
+      from: FROM,
       to: email,
-      subject: `Welcome to Womenkind, ${firstName}`,
-      html: `<p>Hi ${firstName}, your account is ready. <a href="${appUrl}/intake">Start your intake survey</a>.</p>`,
-    }).catch(e => console.error('[signup] Welcome email failed:', e))
+      subject: 'Verify your email — Womenkind Health',
+      html: buildEngagementEmail({
+        patientId,
+        heading: 'Verify your email address',
+        bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:#422a1f;line-height:1.6;">Hi ${firstName}, click below to verify your email and continue setting up your Womenkind account.</p><p style="margin:0;font-size:14px;color:rgba(66,42,31,0.6);">This link expires in 24 hours.</p>`,
+        ctaText: 'Verify my email',
+        ctaUrl: verifyUrl,
+      }),
+    }).catch((err) => console.error('[signup] Verification email send error:', err))
   }
 
   return response
