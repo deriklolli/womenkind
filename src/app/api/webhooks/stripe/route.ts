@@ -4,7 +4,7 @@ export const maxDuration = 60
 
 import { getStripe } from '@/lib/stripe'
 import { db } from '@/lib/db'
-import { intakes, subscriptions, appointments } from '@/lib/db/schema'
+import { intakes, subscriptions, appointments, patients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { createVideoRoom } from '@/lib/daily-video'
@@ -71,6 +71,19 @@ export async function POST(req: NextRequest) {
             patientId: metadata.patientId,
             providerId: metadata.providerId,
             stripeSessionId: session.id,
+          })
+        } else if (metadata.type === 'onboarding_membership') {
+          // New onboarding flow: advance patient status to 'paid'
+          const subscriptionId =
+            typeof session.subscription === 'string'
+              ? session.subscription
+              : session.subscription?.id || null
+
+          await handleOnboardingMembership({
+            patientId: metadata.patientId,
+            plan: metadata.plan || null,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
           })
         } else if (metadata.type === 'membership') {
           // Membership subscription started
@@ -488,6 +501,37 @@ async function handleAppointmentPayment(data: {
       }
     }
   }
+}
+
+/**
+ * Handle onboarding membership: advance onboarding_status to 'paid', create subscription record
+ */
+async function handleOnboardingMembership(data: {
+  patientId: string
+  plan: string | null
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+}) {
+  if (!data.patientId) return
+
+  // Advance to 'paid' — idempotent (no-op if already paid or active)
+  await db
+    .update(patients)
+    .set({
+      onboarding_status: 'paid',
+      ...(data.plan ? { membership_plan: data.plan } : {}),
+    })
+    .where(eq(patients.id, data.patientId))
+
+  await db.insert(subscriptions).values({
+    patient_id: data.patientId,
+    stripe_customer_id: data.stripeCustomerId,
+    stripe_subscription_id: data.stripeSubscriptionId,
+    plan_type: 'membership',
+    status: 'active',
+  }).catch((err: any) => {
+    console.error('[STRIPE] Failed to create onboarding subscription record:', err.message)
+  })
 }
 
 /**

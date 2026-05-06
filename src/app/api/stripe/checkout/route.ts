@@ -24,7 +24,35 @@ export async function POST(req: NextRequest) {
     if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const stripe = getStripe()
-    const { intakeId: bodyIntakeId, patientEmail, addMembership } = await req.json()
+    const { intakeId: bodyIntakeId, patientEmail, addMembership, type, plan } = await req.json()
+
+    // ── Onboarding membership flow ──────────────────────────────────────────
+    if (type === 'onboarding_membership') {
+      const patientId = authSession.patientId
+      if (!patientId) {
+        return NextResponse.json({ error: 'Patient record not found' }, { status: 400 })
+      }
+
+      if (!STRIPE_PRICES.membership) {
+        return NextResponse.json({ error: 'Membership price not configured' }, { status: 500 })
+      }
+
+      const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+
+      const onboardingSession = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        line_items: [{ price: STRIPE_PRICES.membership, quantity: 1 }],
+        metadata: {
+          type: 'onboarding_membership',
+          patientId,
+          plan: plan || '',
+        },
+        success_url: `${origin}/signup/resume?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/signup/resume`,
+      })
+
+      return NextResponse.json({ sessionId: onboardingSession.id, url: onboardingSession.url })
+    }
 
     if (!STRIPE_PRICES.intake) {
       return NextResponse.json(
