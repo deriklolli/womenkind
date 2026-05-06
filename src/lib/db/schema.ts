@@ -18,13 +18,15 @@ export const profiles = pgTable('profiles', {
 
 // ── Patients ─────────────────────────────────────────────────────────────────
 export const patients = pgTable('patients', {
-  id:            uuid('id').primaryKey().defaultRandom(),
-  profile_id:    uuid('profile_id').notNull().references(() => profiles.id),
-  date_of_birth: text('date_of_birth'),
-  state:         text('state'),
-  phone:         text('phone'),
-  is_active:     boolean('is_active').notNull().default(true),
-  created_at:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  id:                uuid('id').primaryKey().defaultRandom(),
+  profile_id:        uuid('profile_id').notNull().references(() => profiles.id),
+  date_of_birth:     text('date_of_birth'),
+  state:             text('state'),
+  phone:             text('phone'),
+  is_active:         boolean('is_active').notNull().default(true),
+  onboarding_status: text('onboarding_status').notNull().default('active'),
+  membership_plan:   text('membership_plan'),
+  created_at:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── Providers ─────────────────────────────────────────────────────────────────
