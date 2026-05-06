@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
-import { profiles, intakes, subscriptions, care_presentations, providers, visits, prescriptions, wearable_metrics } from '@/lib/db/schema'
+import { profiles, intakes, subscriptions, care_presentations, providers, visits, prescriptions, wearable_metrics, patients } from '@/lib/db/schema'
 import { eq, and, ne, desc, gte } from 'drizzle-orm'
 import { computeLiveWMI } from '@/lib/wmi-scoring'
 
@@ -67,6 +67,11 @@ export async function GET() {
   const profile = await db.query.profiles.findFirst({
     where: eq(profiles.id, session.userId),
     columns: { first_name: true, last_name: true, email: true },
+  })
+
+  const patientRecord = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    columns: { onboarding_status: true },
   })
 
   const name = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Patient'
@@ -182,6 +187,7 @@ export async function GET() {
 
   return NextResponse.json({
     patientId,
+    onboardingStatus: patientRecord?.onboarding_status ?? 'active',
     providerId: provider?.id ?? null,
     name,
     email,

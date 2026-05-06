@@ -781,6 +781,12 @@ export default function PatientDashboardPage() {
 
       const me = await meRes.json()
 
+      // Gate: mid-funnel patients → send back to onboarding resume
+      if (me.onboardingStatus && ['unverified', 'verified', 'paid'].includes(me.onboardingStatus)) {
+        router.replace('/signup/resume')
+        return
+      }
+
       // Gate: no submitted intake → send to intake flow
       if (!me.intakeStatus || me.intakeStatus === 'draft') {
         router.replace('/intake')

@@ -95,6 +95,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Advance onboarding_status from paid → active
+    if (patientId) {
+      await db
+        .update(patients)
+        .set({ onboarding_status: 'active' })
+        .where(eq(patients.id, patientId))
+        .catch((err) => console.error('Failed to advance onboarding_status:', err))
+    }
+
     // Send intake confirmation emails (fire and forget)
     if (patientId && process.env.RESEND_API_KEY) {
       sendIntakeEmails({ patientId, intakeId }).catch(err =>
