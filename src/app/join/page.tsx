@@ -42,6 +42,9 @@ export default async function JoinPage() {
     if (patient?.onboarding_status === 'active') {
       redirect('/patient/dashboard')
     }
+    if (['unverified', 'verified', 'paid'].includes(patient?.onboarding_status ?? '')) {
+      redirect('/signup/resume')
+    }
   }
 
   return (

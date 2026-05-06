@@ -38,7 +38,7 @@ export default async function VerifiedPage({ searchParams }: Props) {
 
   // Verify the session matches this patientId
   const session = await getServerSession()
-  if (!session || session.patientId !== patientId) {
+  if (!session || session.role !== 'patient' || session.patientId !== patientId) {
     redirect('/patient/login?next=/signup/resume')
   }
 

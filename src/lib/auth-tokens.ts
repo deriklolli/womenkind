@@ -1,5 +1,5 @@
 // src/lib/auth-tokens.ts
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 
 // Token expires after 24 hours. Message = "verify:{patientId}:{timestamp}"
 export function generateVerificationToken(patientId: string): { token: string; ts: string } {
@@ -20,5 +20,5 @@ export function verifyVerificationToken(
   if (Date.now() - tsNum > 24 * 60 * 60 * 1000) return false
   const message = `verify:${patientId}:${ts}`
   const expected = createHmac('sha256', process.env.CRON_SECRET!).update(message).digest('hex')
-  return expected === token
+  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(token, 'hex'))
 }

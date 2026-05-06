@@ -6,7 +6,7 @@ import { patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { Resend } from 'resend'
 import { generateVerificationToken } from '@/lib/auth-tokens'
-import { buildEngagementEmail, FROM } from '@/lib/engagement'
+import { buildEngagementEmail, FROM, alreadySentRecently, logEngagement } from '@/lib/engagement'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No email on file' }, { status: 400 })
   }
 
+  const recentlySent = await alreadySentRecently(patient.id, 'email_verification_resend', 0.007)
+  if (recentlySent) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.womenkindhealth.com'
   const { token, ts } = generateVerificationToken(patient.id)
   const verifyUrl = `${appUrl}/signup/verified?patientId=${patient.id}&token=${token}&ts=${ts}`
@@ -48,6 +53,8 @@ export async function POST(req: NextRequest) {
       ctaUrl: verifyUrl,
     }),
   })
+
+  await logEngagement(patient.id, 'email_verification_resend', 'email')
 
   return NextResponse.json({ ok: true })
 }

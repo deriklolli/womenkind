@@ -6,12 +6,21 @@ import { useState } from 'react'
 export default function VerifyEmailPage() {
   const [resent, setResent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleResend() {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/auth/resend-verification', { method: 'POST' })
-      if (res.ok) setResent(true)
+      if (res.ok) {
+        setResent(true)
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error === 'Too many requests' ? 'Please wait a few minutes before resending.' : 'Failed to resend. Please try again.')
+      }
+    } catch {
+      setError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -42,6 +51,9 @@ export default function VerifyEmailPage() {
         <p style={{ margin: '0 0 32px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
           We sent a verification link to your email address. Click it to continue setting up your account.
         </p>
+        {error && (
+          <p style={{ fontSize: '14px', color: '#c0392b', marginBottom: '12px' }}>{error}</p>
+        )}
         {resent ? (
           <p style={{ fontSize: '14px', color: '#944fed', fontWeight: 600 }}>
             Email resent — check your inbox (and spam folder).
