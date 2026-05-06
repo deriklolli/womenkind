@@ -1,0 +1,69 @@
+// src/app/signup/verify/page.tsx
+'use client'
+
+import { useState } from 'react'
+
+export default function VerifyEmailPage() {
+  const [resent, setResent] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function handleResend() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/resend-verification', { method: 'POST' })
+      if (res.ok) setResent(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#f7f3ee',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
+      padding: '24px',
+    }}>
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '20px',
+        padding: '48px',
+        maxWidth: '480px',
+        width: '100%',
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: '40px', marginBottom: '16px' }}>📬</div>
+        <h1 style={{ margin: '0 0 12px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
+          Check your inbox
+        </h1>
+        <p style={{ margin: '0 0 32px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
+          We sent a verification link to your email address. Click it to continue setting up your account.
+        </p>
+        {resent ? (
+          <p style={{ fontSize: '14px', color: '#944fed', fontWeight: 600 }}>
+            Email resent — check your inbox (and spam folder).
+          </p>
+        ) : (
+          <button
+            onClick={handleResend}
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#944fed',
+              fontSize: '14px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              textDecoration: 'underline',
+              padding: 0,
+            }}
+          >
+            {loading ? 'Sending...' : "Didn't get it? Resend the email"}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
