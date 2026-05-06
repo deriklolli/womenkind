@@ -1,14 +1,11 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { useRouter } from 'next/navigation'
 
 function SignUpContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const nextPath = searchParams.get('next') || '/get-started'
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -42,13 +39,16 @@ function SignUpContent() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Sign up failed')
+        setError(data.error || 'Something went wrong')
         return
       }
-
-      // Session cookies are set server-side — refresh the client session then redirect
-      await supabase.auth.refreshSession()
-      router.push(nextPath)
+      // Store selected plan in cookie for Stripe checkout
+      const params = new URLSearchParams(window.location.search)
+      const plan = params.get('plan')
+      if (plan) {
+        document.cookie = `wk_selected_plan=${encodeURIComponent(plan)};path=/;max-age=3600;samesite=lax`
+      }
+      router.push('/signup/verify')
     } catch (err: any) {
       setError(err.message || 'Sign up failed')
     } finally {
@@ -219,9 +219,5 @@ function SignUpContent() {
 }
 
 export default function SignUpPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-cream" />}>
-      <SignUpContent />
-    </Suspense>
-  )
+  return <SignUpContent />
 }
