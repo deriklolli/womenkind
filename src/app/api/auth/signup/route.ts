@@ -67,8 +67,11 @@ export async function POST(req: NextRequest) {
     const [patient] = await db
       .insert(patients)
       .values({ profile_id: userId, onboarding_status: 'unverified' })
-      .onConflictDoNothing()
       .returning({ id: patients.id })
+
+    if (!patient) {
+      throw new Error('Patient insert returned no row')
+    }
 
     patientId = patient.id
   } catch (dbErr: any) {
