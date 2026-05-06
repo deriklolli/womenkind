@@ -1,86 +1,59 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { patients } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { verifyVerificationToken } from '@/lib/auth-tokens'
+import { getServerSession } from '@/lib/getServerSession'
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+interface Props {
+  searchParams: { patientId?: string; token?: string; ts?: string }
+}
 
-export default function VerifiedPage() {
-  const router = useRouter()
-  const [fadeIn, setFadeIn] = useState(false)
-  const [userName, setUserName] = useState('')
+export default async function VerifiedPage({ searchParams }: Props) {
+  const { patientId, token, ts } = searchParams
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setFadeIn(true))
-    })
-
-    // Get the user's name and ensure patient record exists
-    const setupPatient = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-
-      if (session.user.user_metadata?.first_name) {
-        setUserName(session.user.user_metadata.first_name)
-      }
-
-      // Create patient record if it doesn't exist
-      try {
-        await fetch('/api/auth/create-patient', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: session.user.id }),
-        })
-      } catch (err) {
-        console.error('Failed to create patient record:', err)
-      }
-    }
-    setupPatient()
-  }, [])
-
-  return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-      <div
-        className={`w-full max-w-md transition-all duration-1000 ease-out
-          ${fadeIn ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Image
-            src="/womenkind-logo-dark.png"
-            alt="Womenkind"
-            width={600}
-            height={135}
-            className="h-[120px] w-auto mx-auto mb-2"
-            priority
-          />
-        </div>
-
-        {/* Verified card */}
-        <div className="bg-white rounded-card shadow-lg shadow-aubergine/5 p-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet/10 border-2 border-violet/20 mb-5">
-            <svg className="w-8 h-8 text-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-
-          <h2 className="font-sans font-semibold text-xl text-aubergine mb-3">
-            {userName ? `Welcome, ${userName}` : 'Email verified'}
-          </h2>
-          <p className="text-sm font-sans text-aubergine/50 leading-relaxed mb-8">
-            Your account is ready. Start your intake survey to help your provider understand your health history and goals.
-          </p>
-
-          <button
-            onClick={() => router.push('/intake')}
-            className="w-full py-3.5 rounded-full font-sans text-sm font-semibold
-                       bg-violet text-white hover:bg-violet/90
-                       transition-all duration-300"
-          >
-            Begin your intake survey
-          </button>
+  if (!patientId || !token || !ts) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f7f3ee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '48px', maxWidth: '480px', textAlign: 'center' }}>
+          <h1 style={{ color: '#280f49', fontWeight: 400 }}>Invalid link</h1>
+          <p style={{ color: 'rgba(66,42,31,0.7)' }}>This verification link is missing required parameters. Please request a new one.</p>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  const valid = verifyVerificationToken(patientId, token, ts)
+
+  if (!valid) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f7f3ee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', Arial, sans-serif" }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: '20px', padding: '48px', maxWidth: '480px', textAlign: 'center' }}>
+          <h1 style={{ color: '#280f49', fontWeight: 400 }}>Link expired or invalid</h1>
+          <p style={{ color: 'rgba(66,42,31,0.7)' }}>Verification links expire after 24 hours. Please sign in and request a new one.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Verify the session matches this patientId
+  const session = await getServerSession()
+  if (!session || session.patientId !== patientId) {
+    redirect('/patient/login?next=/signup/resume')
+  }
+
+  // Advance status from unverified → verified (idempotent)
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    columns: { onboarding_status: true },
+  })
+
+  if (patient?.onboarding_status === 'unverified') {
+    await db
+      .update(patients)
+      .set({ onboarding_status: 'verified' })
+      .where(eq(patients.id, patientId))
+  }
+
+  redirect('/signup/resume')
 }
