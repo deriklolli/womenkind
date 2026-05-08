@@ -11,8 +11,9 @@ type Plan = {
   key: string
   name: string
   tag: string
+  entryPrice: string
+  entryLabel: string
   price: string
-  period: string
   prepay: string
   entry: string
   who: string
@@ -27,8 +28,9 @@ const PLANS: Plan[] = [
     key: 'foundations',
     name: 'Foundations',
     tag: 'Tier 1',
+    entryPrice: '$295',
+    entryLabel: 'Discovery visit',
     price: '$129',
-    period: '/ month',
     prepay: '$1,290 annual prepay — 2 months free',
     entry: '$295 Discovery visit (15-min intake review & care plan preview)',
     who: 'For the woman in early perimenopause who wants a midlife specialist relationship before symptoms escalate — or before she\'s ready for HRT.',
@@ -46,8 +48,9 @@ const PLANS: Plan[] = [
     key: 'vitality',
     name: 'Vitality',
     tag: 'Tier 2 · Core',
+    entryPrice: '$650',
+    entryLabel: 'Initial consultation',
     price: '$249',
-    period: '/ month',
     prepay: '$2,490 annual prepay — 2 months free',
     entry: '$650 comprehensive consultation (1–2 hr with Dr. Urban)',
     who: 'For the woman ready for HRT, or already on it, who wants ongoing specialty care with predictable costs and a clinician who actually knows her.',
@@ -69,8 +72,9 @@ const PLANS: Plan[] = [
     key: 'concierge',
     name: 'Concierge',
     tag: 'Tier 3 · Premium',
+    entryPrice: '$650',
+    entryLabel: 'Initial consultation',
     price: '$549',
-    period: '/ month',
     prepay: '$5,490 annual prepay — 2 months free',
     entry: '$650 comprehensive consultation (1–2 hr with Dr. Urban)',
     who: 'For the Park City patient considering Cenegenics. Same depth of access, focused on what actually matters for midlife women — at a third of the price.',
@@ -171,17 +175,34 @@ export default async function JoinPage() {
                   {plan.name}
                 </p>
 
+                {/* Upfront charge — shown large */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
                   <span style={{ fontSize: '48px', fontWeight: 400, color: plan.highlighted ? '#ffffff' : '#280f49', lineHeight: 1, letterSpacing: '-0.02em' }}>
-                    {plan.price}
+                    {plan.entryPrice}
                   </span>
-                  <span style={{ fontSize: '14px', color: plan.highlighted ? 'rgba(255,255,255,0.55)' : 'rgba(66,42,31,0.5)' }}>
-                    {plan.period}
+                  <span style={{ fontSize: '13px', color: plan.highlighted ? 'rgba(255,255,255,0.55)' : 'rgba(66,42,31,0.5)' }}>
+                    {plan.entryLabel}
                   </span>
                 </div>
-                <p style={{ margin: '0 0 20px', fontSize: '12px', fontStyle: 'italic', color: plan.highlighted ? 'rgba(255,255,255,0.6)' : 'rgba(66,42,31,0.5)' }}>
-                  {plan.prepay}
-                </p>
+
+                {/* Monthly + first month free */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '15px', color: plan.highlighted ? 'rgba(255,255,255,0.7)' : 'rgba(66,42,31,0.6)' }}>
+                    then {plan.price}/mo
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    backgroundColor: plan.highlighted ? 'rgba(148,79,237,0.35)' : 'rgba(148,79,237,0.12)',
+                    color: plan.highlighted ? '#d4a8ff' : '#944fed',
+                    padding: '3px 8px',
+                    borderRadius: '100px',
+                  }}>
+                    First month free
+                  </span>
+                </div>
 
                 <div style={{
                   padding: '12px 0',
