@@ -1,6 +1,7 @@
 // src/app/join/page.tsx
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { patients } from '@/lib/db/schema'
@@ -117,9 +118,9 @@ export default async function JoinPage() {
     }}>
       <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
-            Womenkind Health
-          </p>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+            <Image src="/womenkind-logo-dark.png" alt="Womenkind" width={180} height={40} style={{ objectFit: 'contain' }} />
+          </div>
           <h1 style={{ margin: '0 0 16px', fontSize: '36px', fontWeight: 400, color: '#280f49', lineHeight: 1.2 }}>
             Choose your membership
           </h1>
