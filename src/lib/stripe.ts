@@ -27,7 +27,18 @@ export function getStripe() {
  */
 export const STRIPE_PRICES = {
   intake: process.env.STRIPE_PRICE_INTAKE || '',
-  membership: process.env.STRIPE_PRICE_MEMBERSHIP || '',
+  membership: {
+    foundations: process.env.STRIPE_PRICE_MEMBERSHIP_FOUNDATIONS || '',
+    vitality: process.env.STRIPE_PRICE_MEMBERSHIP_VITALITY || '',
+    concierge: process.env.STRIPE_PRICE_MEMBERSHIP_CONCIERGE || '',
+  },
+}
+
+export function getMembershipPriceId(plan: string): string {
+  const prices = STRIPE_PRICES.membership
+  if (plan === 'foundations') return prices.foundations
+  if (plan === 'concierge') return prices.concierge
+  return prices.vitality // default to vitality
 }
 
 /**
