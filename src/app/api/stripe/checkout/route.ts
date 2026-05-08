@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripe, STRIPE_PRICES } from '@/lib/stripe'
+import { getStripe, STRIPE_PRICES, getMembershipPriceId } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { intakes, subscriptions, providers } from '@/lib/db/schema'
 import { eq, isNotNull, and } from 'drizzle-orm'
@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Patient record not found' }, { status: 400 })
       }
 
-      if (!STRIPE_PRICES.membership) {
+      const membershipPriceId = getMembershipPriceId(plan || '')
+      if (!membershipPriceId) {
         return NextResponse.json({ error: 'Membership price not configured' }, { status: 500 })
       }
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
       const onboardingSession = await stripe.checkout.sessions.create({
         mode: 'subscription',
-        line_items: [{ price: STRIPE_PRICES.membership, quantity: 1 }],
+        line_items: [{ price: membershipPriceId, quantity: 1 }],
         metadata: {
           type: 'onboarding_membership',
           patientId,
@@ -132,8 +133,9 @@ export async function POST(req: NextRequest) {
     const lineItems: { price: string; quantity: number }[] = [
       { price: STRIPE_PRICES.intake, quantity: 1 },
     ]
-    if (addMembership && STRIPE_PRICES.membership) {
-      lineItems.push({ price: STRIPE_PRICES.membership, quantity: 1 })
+    if (addMembership) {
+      const legacyMembershipPrice = getMembershipPriceId('vitality')
+      if (legacyMembershipPrice) lineItems.push({ price: legacyMembershipPrice, quantity: 1 })
     }
 
     // Determine success URL:

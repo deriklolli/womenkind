@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripe, STRIPE_PRICES } from '@/lib/stripe'
+import { getStripe, getMembershipPriceId } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { subscriptions } from '@/lib/db/schema'
 import { eq, isNotNull, and } from 'drizzle-orm'
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const stripe = getStripe()
     const { intakeId, stripeCustomerId } = await req.json()
 
-    if (!STRIPE_PRICES.membership) {
+    if (!getMembershipPriceId('vitality')) {
       return NextResponse.json(
         { error: 'Stripe membership price not configured.' },
         { status: 500 }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       ...(customerId ? { customer: customerId } : {}),
       line_items: [
         {
-          price: STRIPE_PRICES.membership,
+          price: getMembershipPriceId('vitality'),
           quantity: 1,
         },
       ],
