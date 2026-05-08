@@ -104,6 +104,11 @@ export default async function JoinPage() {
   }
 
   return (
+    <>
+    <style>{`
+      .join-btn { transition: opacity 0.15s, transform 0.15s; }
+      .join-btn:hover { opacity: 0.85; transform: scale(1.02); }
+    `}</style>
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f7f3ee',
@@ -208,13 +213,13 @@ export default async function JoinPage() {
                       borderBottom: `1px solid ${plan.highlighted ? 'rgba(255,255,255,0.08)' : 'rgba(66,42,31,0.06)'}`,
                       position: 'relative',
                     }}>
-                      <span style={{ position: 'absolute', left: 0, color: plan.highlighted ? 'rgba(148,79,237,0.9)' : '#944fed' }}>—</span>
+                      <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#944fed', display: 'inline-block' }} />
                       {f}
                     </li>
                   ))}
                 </ul>
 
-                <div style={{
+                <div className="join-btn" style={{
                   display: 'block',
                   backgroundColor: plan.highlighted ? '#944fed' : '#280f49',
                   color: '#ffffff',
@@ -232,5 +237,6 @@ export default async function JoinPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
