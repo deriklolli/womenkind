@@ -6,28 +6,84 @@ import { db } from '@/lib/db'
 import { patients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-const PLANS = [
+type Plan = {
+  key: string
+  name: string
+  tag: string
+  price: string
+  period: string
+  prepay: string
+  entry: string
+  who: string
+  includesLabel: string
+  features: string[]
+  highlighted?: boolean
+  badge?: string
+}
+
+const PLANS: Plan[] = [
   {
-    key: 'standard',
-    name: 'Standard',
-    price: '$X/mo',
-    description: 'Plan description TBD',
-    features: ['Feature 1 TBD', 'Feature 2 TBD', 'Feature 3 TBD'],
+    key: 'foundations',
+    name: 'Foundations',
+    tag: 'Tier 1',
+    price: '$129',
+    period: '/ month',
+    prepay: '$1,290 annual prepay — 2 months free',
+    entry: '$295 Discovery visit (15-min intake review & care plan preview)',
+    who: 'For the woman in early perimenopause who wants a midlife specialist relationship before symptoms escalate — or before she\'s ready for HRT.',
+    includesLabel: 'Includes',
+    features: [
+      'One 15-min telehealth check-in per quarter',
+      'Secure messaging via the Womenkind platform',
+      'Symptom tracker',
+      'Personalized care presentation tailored to your intake',
+      'Oura integration — patient-facing dashboard',
+      'Member discount (25%) on supplement protocols via Fullscript',
+    ],
   },
   {
-    key: 'premium',
-    name: 'Premium',
-    price: '$X/mo',
-    description: 'Plan description TBD',
-    features: ['Everything in Standard', 'Feature 4 TBD', 'Feature 5 TBD'],
+    key: 'vitality',
+    name: 'Vitality',
+    tag: 'Tier 2 · Core',
+    price: '$249',
+    period: '/ month',
+    prepay: '$2,490 annual prepay — 2 months free',
+    entry: '$650 comprehensive consultation (1–2 hr with Dr. Urban)',
+    who: 'For the woman ready for HRT, or already on it, who wants ongoing specialty care with predictable costs and a clinician who actually knows her.',
+    includesLabel: 'Includes',
+    features: [
+      'One 30-min visit per quarter (video or in-office)',
+      'Unlimited secure messaging — 1 business day response',
+      'Full HRT prescription management',
+      'Annual hormone & wellness panel included',
+      'Negotiated cash lab pricing (40–60% under retail)',
+      'Oura data flows into your chart — Dr. Urban reviews before each visit',
+      'Personalized care plan, updated after each consultation',
+      'Member discount (25%) on supplement protocols via Fullscript',
+    ],
     highlighted: true,
+    badge: 'Most members',
   },
   {
-    key: 'elite',
-    name: 'Elite',
-    price: '$X/mo',
-    description: 'Plan description TBD',
-    features: ['Everything in Premium', 'Feature 6 TBD', 'Feature 7 TBD'],
+    key: 'concierge',
+    name: 'Concierge',
+    tag: 'Tier 3 · Premium',
+    price: '$549',
+    period: '/ month',
+    prepay: '$5,490 annual prepay — 2 months free',
+    entry: '$650 comprehensive consultation (1–2 hr with Dr. Urban)',
+    who: 'For the Park City patient considering Cenegenics. Same depth of access, focused on what actually matters for midlife women — at a third of the price.',
+    includesLabel: 'Everything in Vitality, plus',
+    features: [
+      'One 60-min visit per month with Dr. Urban',
+      'Same-day messaging response',
+      'Two comprehensive panels per year + reactive labs at cost',
+      'Active Oura monitoring — outreach when patterns shift',
+      'Quarterly hormone-correlation review with biometric data',
+      'Priority scheduling & in-office availability',
+      'Annual longevity review & 12-month plan',
+      'Partner/spouse may join consultations',
+    ],
   },
 ]
 
@@ -54,7 +110,7 @@ export default async function JoinPage() {
       fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
       padding: '48px 24px',
     }}>
-      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
             Womenkind Health
@@ -63,11 +119,11 @@ export default async function JoinPage() {
             Choose your membership
           </h1>
           <p style={{ margin: 0, fontSize: '18px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
-            All memberships include your initial intake assessment and access to Dr. Urban.
+            All memberships include a personalized intake and access to Dr. Urban.
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
           {PLANS.map((plan) => (
             <Link
               key={plan.key}
@@ -80,27 +136,84 @@ export default async function JoinPage() {
                 padding: '40px 32px',
                 border: plan.highlighted ? 'none' : '1px solid rgba(66,42,31,0.1)',
                 cursor: 'pointer',
-                transition: 'transform 0.15s',
-                height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
+                position: 'relative',
               }}>
-                <p style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: plan.highlighted ? 'rgba(255,255,255,0.6)' : 'rgba(66,42,31,0.45)' }}>
+                {plan.badge && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '32px',
+                    backgroundColor: '#944fed',
+                    color: '#ffffff',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    padding: '5px 12px',
+                    borderRadius: '4px',
+                  }}>
+                    {plan.badge}
+                  </div>
+                )}
+
+                <p style={{ margin: '0 0 2px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: plan.highlighted ? 'rgba(255,255,255,0.5)' : 'rgba(66,42,31,0.45)' }}>
+                  {plan.tag}
+                </p>
+                <p style={{ margin: '0 0 16px', fontSize: '28px', fontWeight: 400, color: plan.highlighted ? '#ffffff' : '#280f49', letterSpacing: '-0.01em' }}>
                   {plan.name}
                 </p>
-                <p style={{ margin: '0 0 4px', fontSize: '32px', fontWeight: 400, color: plan.highlighted ? '#ffffff' : '#280f49' }}>
-                  {plan.price}
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '48px', fontWeight: 400, color: plan.highlighted ? '#ffffff' : '#280f49', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                    {plan.price}
+                  </span>
+                  <span style={{ fontSize: '14px', color: plan.highlighted ? 'rgba(255,255,255,0.55)' : 'rgba(66,42,31,0.5)' }}>
+                    {plan.period}
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 20px', fontSize: '12px', fontStyle: 'italic', color: plan.highlighted ? 'rgba(255,255,255,0.6)' : 'rgba(66,42,31,0.5)' }}>
+                  {plan.prepay}
                 </p>
-                <p style={{ margin: '0 0 24px', fontSize: '15px', color: plan.highlighted ? 'rgba(255,255,255,0.7)' : 'rgba(66,42,31,0.7)', lineHeight: 1.5 }}>
-                  {plan.description}
+
+                <div style={{
+                  padding: '12px 0',
+                  borderTop: `1px solid ${plan.highlighted ? 'rgba(255,255,255,0.15)' : 'rgba(66,42,31,0.1)'}`,
+                  borderBottom: `1px solid ${plan.highlighted ? 'rgba(255,255,255,0.15)' : 'rgba(66,42,31,0.1)'}`,
+                  marginBottom: '20px',
+                  fontSize: '12px',
+                  color: plan.highlighted ? 'rgba(255,255,255,0.65)' : 'rgba(66,42,31,0.6)',
+                  lineHeight: 1.5,
+                }}>
+                  <span style={{ fontWeight: 600, color: plan.highlighted ? 'rgba(255,255,255,0.85)' : 'rgba(66,42,31,0.8)' }}>Entry visit: </span>
+                  {plan.entry}
+                </div>
+
+                <p style={{ margin: '0 0 20px', fontSize: '14px', fontStyle: 'italic', color: plan.highlighted ? 'rgba(255,255,255,0.7)' : 'rgba(66,42,31,0.6)', lineHeight: 1.55 }}>
+                  {plan.who}
                 </p>
-                <ul style={{ margin: '0 0 32px', padding: '0 0 0 20px', listStyle: 'disc', flex: 1 }}>
+
+                <p style={{ margin: '0 0 12px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: plan.highlighted ? 'rgba(255,255,255,0.5)' : 'rgba(66,42,31,0.4)' }}>
+                  {plan.includesLabel}
+                </p>
+                <ul style={{ margin: '0 0 28px', padding: 0, listStyle: 'none', flex: 1 }}>
                   {plan.features.map((f) => (
-                    <li key={f} style={{ marginBottom: '8px', fontSize: '14px', color: plan.highlighted ? 'rgba(255,255,255,0.85)' : 'rgba(66,42,31,0.8)' }}>
+                    <li key={f} style={{
+                      marginBottom: '0',
+                      padding: '8px 0 8px 16px',
+                      fontSize: '13.5px',
+                      color: plan.highlighted ? 'rgba(255,255,255,0.8)' : 'rgba(66,42,31,0.75)',
+                      lineHeight: 1.5,
+                      borderBottom: `1px solid ${plan.highlighted ? 'rgba(255,255,255,0.08)' : 'rgba(66,42,31,0.06)'}`,
+                      position: 'relative',
+                    }}>
+                      <span style={{ position: 'absolute', left: 0, color: plan.highlighted ? 'rgba(148,79,237,0.9)' : '#944fed' }}>—</span>
                       {f}
                     </li>
                   ))}
                 </ul>
+
                 <div style={{
                   display: 'block',
                   backgroundColor: plan.highlighted ? '#944fed' : '#280f49',
