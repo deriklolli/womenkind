@@ -27,6 +27,7 @@ export function getStripe() {
  */
 export const STRIPE_PRICES = {
   intake: process.env.STRIPE_PRICE_INTAKE || '',
+  entryDiscovery: process.env.STRIPE_PRICE_ENTRY_DISCOVERY || '',
   membership: {
     foundations: process.env.STRIPE_PRICE_MEMBERSHIP_FOUNDATIONS || '',
     vitality: process.env.STRIPE_PRICE_MEMBERSHIP_VITALITY || '',
@@ -38,7 +39,14 @@ export function getMembershipPriceId(plan: string): string {
   const prices = STRIPE_PRICES.membership
   if (plan === 'foundations') return prices.foundations
   if (plan === 'concierge') return prices.concierge
-  return prices.vitality // default to vitality
+  return prices.vitality
+}
+
+// Returns the one-time entry visit price for a given plan.
+// Foundations uses a 15-min discovery ($295); all other tiers use the full intake ($650).
+export function getEntryVisitPriceId(plan: string): string {
+  if (plan === 'foundations') return STRIPE_PRICES.entryDiscovery
+  return STRIPE_PRICES.intake
 }
 
 /**

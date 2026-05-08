@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripe, STRIPE_PRICES, getMembershipPriceId } from '@/lib/stripe'
+import { getStripe, STRIPE_PRICES, getMembershipPriceId, getEntryVisitPriceId } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { intakes, subscriptions, providers } from '@/lib/db/schema'
 import { eq, isNotNull, and } from 'drizzle-orm'
@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
       }
 
       const membershipPriceId = getMembershipPriceId(plan || '')
-      if (!membershipPriceId) {
+      const entryVisitPriceId = getEntryVisitPriceId(plan || '')
+      if (!membershipPriceId || !entryVisitPriceId) {
         return NextResponse.json({ error: 'Membership price not configured' }, { status: 500 })
       }
 
@@ -42,7 +43,18 @@ export async function POST(req: NextRequest) {
 
       const onboardingSession = await stripe.checkout.sessions.create({
         mode: 'subscription',
-        line_items: [{ price: membershipPriceId, quantity: 1 }],
+        line_items: [
+          { price: entryVisitPriceId, quantity: 1 },
+          { price: membershipPriceId, quantity: 1 },
+        ],
+        subscription_data: {
+          trial_period_days: 30,
+          metadata: {
+            type: 'onboarding_membership',
+            patientId,
+            plan: plan || '',
+          },
+        },
         metadata: {
           type: 'onboarding_membership',
           patientId,
