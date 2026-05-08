@@ -35,8 +35,22 @@ jest.mock('@/lib/stripe', () => ({
   })),
   STRIPE_PRICES: {
     intake: 'price_test_intake_123',
-    membership: 'price_test_membership_456',
+    entryDiscovery: 'price_test_discovery_789',
+    membership: {
+      foundations: 'price_test_foundations_111',
+      vitality: 'price_test_vitality_222',
+      concierge: 'price_test_concierge_333',
+    },
   },
+  getMembershipPriceId: jest.fn((plan: string) => {
+    if (plan === 'foundations') return 'price_test_foundations_111'
+    if (plan === 'concierge') return 'price_test_concierge_333'
+    return 'price_test_vitality_222'
+  }),
+  getEntryVisitPriceId: jest.fn((plan: string) => {
+    if (plan === 'foundations') return 'price_test_discovery_789'
+    return 'price_test_intake_123'
+  }),
 }))
 
 // Mock Drizzle db
