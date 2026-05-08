@@ -214,7 +214,7 @@ export default async function JoinPage() {
                       borderBottom: `1px solid ${plan.highlighted ? 'rgba(255,255,255,0.08)' : 'rgba(66,42,31,0.06)'}`,
                       position: 'relative',
                     }}>
-                      <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#944fed', display: 'inline-block' }} />
+                      <span style={{ position: 'absolute', left: 0, color: '#944fed', fontWeight: 600, fontSize: '12px' }}>✓</span>
                       {f}
                     </li>
                   ))}
