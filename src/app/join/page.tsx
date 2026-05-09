@@ -113,6 +113,10 @@ export default async function JoinPage() {
     <style>{`
       .join-btn { transition: opacity 0.15s, transform 0.15s; }
       .join-btn:hover { opacity: 0.85; transform: scale(1.02); }
+      .tier-card { transition: box-shadow 0.2s, transform 0.2s; }
+      .tier-card:hover { transform: translateY(-3px); }
+      .tier-card-white:hover { box-shadow: 0 12px 40px rgba(66,42,31,0.14); }
+      .tier-card-dark:hover { box-shadow: 0 12px 40px rgba(40,15,73,0.32); }
     `}</style>
     <div style={{
       minHeight: '100vh',
@@ -140,7 +144,7 @@ export default async function JoinPage() {
               href={`/signup?plan=${plan.key}`}
               style={{ textDecoration: 'none' }}
             >
-              <div style={{
+              <div className={`tier-card ${plan.highlighted ? 'tier-card-dark' : 'tier-card-white'}`} style={{
                 backgroundColor: plan.highlighted ? '#280f49' : '#ffffff',
                 borderRadius: '20px',
                 padding: '40px 32px',
