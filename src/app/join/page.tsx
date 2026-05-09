@@ -78,7 +78,7 @@ const PLANS: Plan[] = [
     who: 'For the Park City patient considering Cenegenics. Same depth of access, focused on what actually matters for midlife women — at a third of the price.',
     includesLabel: 'Everything in Vitality, plus',
     features: [
-      'One 60-min visit per month with Dr. Urban',
+      'Up to 3 quarterly visits with Dr. Urban',
       'Same-day messaging response',
       'Two comprehensive panels per year + reactive labs at cost',
       'Active Oura monitoring — outreach when patterns shift',
