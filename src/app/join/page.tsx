@@ -145,6 +145,7 @@ export default async function JoinPage() {
                 borderRadius: '20px',
                 padding: '40px 32px',
                 border: plan.highlighted ? 'none' : '1px solid rgba(66,42,31,0.1)',
+                boxShadow: plan.highlighted ? '0 8px 32px rgba(40,15,73,0.18)' : '0 4px 20px rgba(66,42,31,0.08)',
                 cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
