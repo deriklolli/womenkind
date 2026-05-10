@@ -36,13 +36,8 @@ export default async function VerifiedPage({ searchParams }: Props) {
     )
   }
 
-  // Verify the session matches this patientId
-  const session = await getServerSession()
-  if (!session || session.role !== 'patient' || session.patientId !== patientId) {
-    redirect('/patient/login?next=/signup/resume')
-  }
-
-  // Advance status from unverified → verified (idempotent)
+  // Advance status from unverified → verified (idempotent, before session check
+  // so the update persists even if the user isn't logged in on this device)
   const patient = await db.query.patients.findFirst({
     where: eq(patients.id, patientId),
     columns: { onboarding_status: true },
@@ -53,6 +48,12 @@ export default async function VerifiedPage({ searchParams }: Props) {
       .update(patients)
       .set({ onboarding_status: 'verified' })
       .where(eq(patients.id, patientId))
+  }
+
+  // Now ensure the user is logged in before continuing
+  const session = await getServerSession()
+  if (!session || session.role !== 'patient' || session.patientId !== patientId) {
+    redirect('/patient/login?next=/signup/resume')
   }
 
   redirect('/signup/resume')
