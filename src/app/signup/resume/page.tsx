@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { patients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getStripe } from '@/lib/stripe'
 import TierCheckoutCards from '@/components/onboarding/TierCheckoutCards'
+import QuickCheckoutButton from '@/components/onboarding/QuickCheckoutButton'
 
 interface Props {
   searchParams: { session_id?: string }
@@ -48,8 +50,40 @@ export default async function ResumePage({ searchParams }: Props) {
     redirect('/patient/dashboard')
   }
 
-  // Verified state gets the full-width /join layout
+  // Read plan cookie set during signup
+  const cookieStore = await cookies()
+  const selectedPlan = cookieStore.get('wk_selected_plan')?.value
+
+  // Verified state — if plan cookie present, go straight to payment; otherwise show tier cards
   if (status === 'verified') {
+    if (selectedPlan) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          backgroundColor: '#f7f3ee',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
+          padding: '24px',
+        }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '48px', maxWidth: '480px', width: '100%' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
+              Womenkind Health
+            </p>
+            <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
+              Complete your membership
+            </h1>
+            <p style={{ margin: '0 0 28px', fontSize: '15px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
+              Your email is verified. You'll be charged for the entry visit today — first month free.
+            </p>
+            <QuickCheckoutButton plan={selectedPlan} />
+          </div>
+        </div>
+      )
+    }
+
+    // No cookie (e.g. verified on a different device) — show full tier layout
     return (
       <div style={{
         minHeight: '100vh',
