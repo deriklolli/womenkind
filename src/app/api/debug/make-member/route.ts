@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email') ?? 'dlolli@gmail.com'
+  const plan = req.nextUrl.searchParams.get('plan') ?? 'vitality'
 
   const patientRows = await db
     .select({ id: patients.id })
@@ -47,16 +48,16 @@ export async function POST(req: NextRequest) {
   if (existing) {
     await db
       .update(subscriptions)
-      .set({ status: 'active', plan_type: 'membership', current_period_end: renewalDate })
+      .set({ status: 'active', plan_type: plan, current_period_end: renewalDate })
       .where(eq(subscriptions.patient_id, patient.id))
   } else {
     await db.insert(subscriptions).values({
       patient_id: patient.id,
       status: 'active',
-      plan_type: 'membership',
+      plan_type: plan,
       current_period_end: renewalDate,
     })
   }
 
-  return NextResponse.json({ ok: true, email, patientId: patient.id, renewal: renewalDate })
+  return NextResponse.json({ ok: true, email, plan, patientId: patient.id, renewal: renewalDate })
 }
