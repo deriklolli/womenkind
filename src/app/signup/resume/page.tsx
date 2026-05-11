@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { patients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getStripe } from '@/lib/stripe'
-import CheckoutButton from '@/components/onboarding/CheckoutButton'
+import TierCheckoutCards from '@/components/onboarding/TierCheckoutCards'
 
 interface Props {
   searchParams: { session_id?: string }
@@ -62,7 +62,7 @@ export default async function ResumePage({ searchParams }: Props) {
         backgroundColor: '#ffffff',
         borderRadius: '20px',
         padding: '48px',
-        maxWidth: '480px',
+        maxWidth: '560px',
         width: '100%',
       }}>
         <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
@@ -98,13 +98,13 @@ export default async function ResumePage({ searchParams }: Props) {
 
         {status === 'verified' && (
           <>
-            <h1 style={{ margin: '0 0 16px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
-              Complete your membership
+            <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
+              Choose your membership
             </h1>
-            <p style={{ margin: '0 0 32px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
-              Your email is verified. Set up your membership to access the intake form and schedule your first visit.
+            <p style={{ margin: '0 0 24px', fontSize: '15px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
+              Your email is verified. Select a plan to continue — you'll be charged for the entry visit today, with your first membership month free.
             </p>
-            <CheckoutButton />
+            <TierCheckoutCards />
           </>
         )}
 
