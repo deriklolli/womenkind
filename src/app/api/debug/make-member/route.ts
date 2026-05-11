@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { subscriptions, patients, profiles } from '@/lib/db/schema'
-import { eq, ilike } from 'drizzle-orm'
+import { eq, ilike, or } from 'drizzle-orm'
 
 // GET  ?name=casey   → search patients by name (for lookup)
 // POST ?email=x@y.z  → activate membership for that patient
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     .select({ id: patients.id, email: profiles.email, first_name: profiles.first_name, last_name: profiles.last_name, onboarding_status: patients.onboarding_status })
     .from(patients)
     .innerJoin(profiles, eq(patients.profile_id, profiles.id))
-    .where(ilike(profiles.last_name, `%${name}%`))
+    .where(or(ilike(profiles.last_name, `%${name}%`), ilike(profiles.first_name, `%${name}%`)))
     .limit(20)
   return NextResponse.json(rows)
 }
