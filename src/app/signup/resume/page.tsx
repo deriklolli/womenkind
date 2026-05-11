@@ -48,6 +48,30 @@ export default async function ResumePage({ searchParams }: Props) {
     redirect('/patient/dashboard')
   }
 
+  // Verified state gets the full-width /join layout
+  if (status === 'verified') {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f7f3ee',
+        fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
+        padding: '48px 24px',
+      }}>
+        <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <h1 style={{ margin: '0 0 12px', fontSize: '36px', fontWeight: 400, color: '#280f49' }}>
+              Choose your membership
+            </h1>
+            <p style={{ margin: 0, fontSize: '18px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
+              Your email is verified. Select a plan — you'll be charged for the entry visit today, with your first month free.
+            </p>
+          </div>
+          <TierCheckoutCards />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -62,7 +86,7 @@ export default async function ResumePage({ searchParams }: Props) {
         backgroundColor: '#ffffff',
         borderRadius: '20px',
         padding: '48px',
-        maxWidth: '560px',
+        maxWidth: '480px',
         width: '100%',
       }}>
         <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
@@ -93,18 +117,6 @@ export default async function ResumePage({ searchParams }: Props) {
             >
               Resend verification email
             </Link>
-          </>
-        )}
-
-        {status === 'verified' && (
-          <>
-            <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
-              Choose your membership
-            </h1>
-            <p style={{ margin: '0 0 24px', fontSize: '15px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
-              Your email is verified. Select a plan to continue — you'll be charged for the entry visit today, with your first membership month free.
-            </p>
-            <TierCheckoutCards />
           </>
         )}
 
