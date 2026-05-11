@@ -80,6 +80,8 @@ jest.mock('@/lib/stripe', () => ({
     intake: 'price_test_intake_123',
     membership: 'price_test_membership_456',
   },
+  MEMBER_PLAN_TYPES: ['membership', 'vitality', 'foundations', 'concierge'],
+  isMemberPlan: (p: string) => ['membership', 'vitality', 'foundations', 'concierge'].includes(p),
 }))
 
 // ── Auth mock ─────────────────────────────────────────────────────────────────

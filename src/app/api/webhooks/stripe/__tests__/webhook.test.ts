@@ -65,6 +65,8 @@ jest.mock('@/lib/stripe', () => ({
     checkout: { sessions: { create: jest.fn() } },
   })),
   STRIPE_PRICES: { intake: 'price_test_intake', membership: 'price_test_membership' },
+  MEMBER_PLAN_TYPES: ['membership', 'vitality', 'foundations', 'concierge'],
+  isMemberPlan: (p: string) => ['membership', 'vitality', 'foundations', 'concierge'].includes(p),
 }))
 
 // ── External service mocks ────────────────────────────────────────────────────

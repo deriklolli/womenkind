@@ -51,6 +51,8 @@ jest.mock('@/lib/stripe', () => ({
     if (plan === 'foundations') return 'price_test_discovery_789'
     return 'price_test_intake_123'
   }),
+  MEMBER_PLAN_TYPES: ['membership', 'vitality', 'foundations', 'concierge'],
+  isMemberPlan: (p: string) => ['membership', 'vitality', 'foundations', 'concierge'].includes(p),
 }))
 
 // Mock Drizzle db
