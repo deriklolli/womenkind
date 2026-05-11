@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { profiles, subscriptions } from '@/lib/db/schema'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, inArray } from 'drizzle-orm'
+import { MEMBER_PLAN_TYPES } from '@/lib/stripe'
 
 /**
  * GET /api/patient/settings
@@ -33,7 +34,7 @@ export async function GET() {
   const sub = await db.query.subscriptions.findFirst({
     where: and(
       eq(subscriptions.patient_id, patientId),
-      eq(subscriptions.plan_type, 'membership')
+      inArray(subscriptions.plan_type, [...MEMBER_PLAN_TYPES])
     ),
     columns: { status: true, current_period_end: true },
     orderBy: [desc(subscriptions.created_at)],

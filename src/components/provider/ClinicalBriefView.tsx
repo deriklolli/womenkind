@@ -7,6 +7,7 @@ import { useRecording } from '@/lib/recording-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { QUESTIONS, SECTIONS } from '@/lib/intake-questions'
 import { devFixtures } from '@/lib/dev-fixtures'
+import { isMemberPlan } from '@/lib/stripe'
 
 type Tab = 'command' | 'soap' | 'symptoms' | 'risks' | 'treatment' | 'questions' | 'intake'
 
@@ -75,7 +76,7 @@ export default function ClinicalBriefView({ intakeId, showHeader = true }: Props
             setIntake({ ...found, patient_id: pid })
             setIsMember(
               (fx.subscriptions || []).some(
-                (s: any) => s.plan_type === 'membership' && s.status === 'active'
+                (s: any) => isMemberPlan(s.plan_type) && s.status === 'active'
               )
             )
             setLoading(false)

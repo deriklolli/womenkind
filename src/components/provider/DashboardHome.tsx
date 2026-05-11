@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { devFixtures } from '@/lib/dev-fixtures'
+import { isMemberPlan } from '@/lib/stripe'
 
 interface TodayAppointment {
   id: string
@@ -208,7 +209,7 @@ export default function DashboardHome() {
               ) : (
                 appointments.map(appt => {
                   const name = [appt.patients?.profiles?.first_name, appt.patients?.profiles?.last_name].filter(Boolean).join(' ') || 'Unknown'
-                  const isMember = appt.patients?.subscriptions?.some(s => s.plan_type === 'membership' && s.status === 'active')
+                  const isMember = appt.patients?.subscriptions?.some(s => isMemberPlan(s.plan_type) && s.status === 'active')
                   return (
                     <div key={appt.id} className="px-6 py-3.5 flex items-center gap-3">
                       <div className="text-center w-[68px] flex-shrink-0">

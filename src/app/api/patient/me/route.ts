@@ -120,13 +120,10 @@ export async function GET() {
       gte(wearable_metrics.metric_date, sevenDaysAgoStr)
     ))
 
-  // Membership
+  // Membership — match any plan type (foundations, vitality, concierge, membership)
   const sub = await db.query.subscriptions.findFirst({
-    where: and(
-      eq(subscriptions.patient_id, patientId),
-      eq(subscriptions.plan_type, 'membership')
-    ),
-    columns: { status: true, current_period_end: true },
+    where: eq(subscriptions.patient_id, patientId),
+    columns: { status: true, current_period_end: true, plan_type: true },
     orderBy: [desc(subscriptions.created_at)],
   })
 

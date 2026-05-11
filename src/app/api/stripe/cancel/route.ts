@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripe } from '@/lib/stripe'
+import { getStripe, MEMBER_PLAN_TYPES } from '@/lib/stripe'
 import { db } from '@/lib/db'
 import { subscriptions } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 
 /**
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     const subscription = await db.query.subscriptions.findFirst({
       where: and(
         eq(subscriptions.patient_id, patientId),
-        eq(subscriptions.plan_type, 'membership'),
+        inArray(subscriptions.plan_type, [...MEMBER_PLAN_TYPES]),
         eq(subscriptions.status, 'active')
       ),
     })

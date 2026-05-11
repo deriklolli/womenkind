@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import VisitPrepPanel from './VisitPrepPanel'
 import { devFixtures } from '@/lib/dev-fixtures'
+import { isMemberPlan } from '@/lib/stripe'
 
 interface Appointment {
   id: string
@@ -159,7 +160,7 @@ export default function AppointmentsList({ providerId }: Props) {
                     ? `${apt.patients.profiles.first_name || ''} ${apt.patients.profiles.last_name || ''}`.trim()
                     : 'Patient'
                   const isMember = apt.patients?.subscriptions?.some(
-                    (s) => s.plan_type === 'membership' && s.status === 'active'
+                    (s) => isMemberPlan(s.plan_type) && s.status === 'active'
                   )
 
                   return (

@@ -39,6 +39,13 @@ export const STRIPE_PRICES = {
   },
 }
 
+/** All plan_type values that indicate an active paid membership */
+export const MEMBER_PLAN_TYPES = ['membership', 'vitality', 'foundations', 'concierge'] as const
+export type MemberPlanType = typeof MEMBER_PLAN_TYPES[number]
+export function isMemberPlan(planType: string | null | undefined): boolean {
+  return MEMBER_PLAN_TYPES.includes(planType as MemberPlanType)
+}
+
 export function getMembershipPriceId(plan: string): string {
   const prices = STRIPE_PRICES.membership
   if (plan === 'foundations') return prices.foundations

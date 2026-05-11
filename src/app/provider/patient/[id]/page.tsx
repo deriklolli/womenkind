@@ -16,6 +16,7 @@ import { getProviderSession } from '@/lib/getProviderSession'
 import { devFixtures } from '@/lib/dev-fixtures'
 import ClinicalBriefView from '@/components/provider/ClinicalBriefView'
 import ChatWidget from '@/components/provider/ChatWidget'
+import { isMemberPlan } from '@/lib/stripe'
 
 interface PatientProfile {
   id: string
@@ -266,7 +267,7 @@ export default function PatientProfilePage() {
   const getSymptomBurden = () => getLatestIntake()?.ai_brief?.metadata?.symptom_burden || null
 
   const getActiveMembership = () =>
-    subscriptions.find((s) => s.plan_type === 'membership' && s.status === 'active')
+    subscriptions.find((s) => isMemberPlan(s.plan_type) && s.status === 'active')
 
   const getCurrentTreatment = () => {
     const latestVisitWithTreatment = visits.find((v) => v.treatment_updates)

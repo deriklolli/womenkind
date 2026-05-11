@@ -10,6 +10,7 @@ import DashboardHome from '@/components/provider/DashboardHome'
 import { devFixtures } from '@/lib/dev-fixtures'
 import { useChatContext } from '@/lib/chat-context'
 import { getProviderSession } from '@/lib/getProviderSession'
+import { isMemberPlan } from '@/lib/stripe'
 import { signOutProvider } from '@/lib/signOut'
 
 type DashboardTab = ProviderTab
@@ -291,7 +292,7 @@ export default function ProviderDashboard() {
                   const age = getPatientAge(patient.date_of_birth)
                   const visitCount = patient.visits?.length || 0
                   const hasMembership = patient.subscriptions?.some(
-                    (s) => s.plan_type === 'membership' && s.status === 'active'
+                    (s) => isMemberPlan(s.plan_type) && s.status === 'active'
                   )
                   const latestVisitDate = patient.visits?.sort((a, b) =>
                     new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime()

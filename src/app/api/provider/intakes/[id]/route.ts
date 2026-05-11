@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { db } from '@/lib/db'
 import { intakes, subscriptions } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
+import { MEMBER_PLAN_TYPES } from '@/lib/stripe'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession()
@@ -28,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (row.patient_id) {
     const sub = await db.query.subscriptions.findFirst({
       where: (s, { and, eq: eqOp }) =>
-        and(eqOp(s.patient_id, row.patient_id!), eqOp(s.plan_type, 'membership'), eqOp(s.status, 'active')),
+        and(eqOp(s.patient_id, row.patient_id!), inArray(s.plan_type, [...MEMBER_PLAN_TYPES]), eqOp(s.status, 'active')),
     })
     isMember = !!sub
   }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { appointments, appointment_types, provider_availability, subscriptions, patients } from '@/lib/db/schema'
-import { eq, and, gte, lte, ne, isNotNull } from 'drizzle-orm'
-import { getStripe } from '@/lib/stripe'
+import { eq, and, gte, lte, ne, isNotNull, inArray } from 'drizzle-orm'
+import { getStripe, MEMBER_PLAN_TYPES } from '@/lib/stripe'
 import { isSlotAvailable, getDayOfWeek } from '@/lib/scheduling'
 import { createCalendarEvent } from '@/lib/google-calendar'
 import { createVideoRoom } from '@/lib/daily-video'
@@ -355,7 +355,7 @@ export async function POST(req: NextRequest) {
     const membership = await db.query.subscriptions.findFirst({
       where: and(
         eq(subscriptions.patient_id, patientId),
-        eq(subscriptions.plan_type, 'membership'),
+        inArray(subscriptions.plan_type, [...MEMBER_PLAN_TYPES]),
         eq(subscriptions.status, 'active')
       ),
     })
