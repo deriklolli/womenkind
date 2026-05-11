@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export const metadata = {
   title: 'Womenkind — Coming Soon',
   description: 'Physician-led menopause and midlife care. Launching soon.',
@@ -11,6 +13,16 @@ export default function ComingSoonPage() {
     >
       {/* Subtle warm gradient top bar */}
       <div className="h-1 w-full bg-gradient-to-r from-violet via-terracota to-natural opacity-80" />
+
+      {/* Nav */}
+      <div className="flex justify-end px-8 py-5">
+        <Link
+          href="/join"
+          className="text-sm font-semibold text-white border border-white/20 rounded-full px-5 py-2 hover:bg-white/10 transition-colors"
+        >
+          Get started →
+        </Link>
+      </div>
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
