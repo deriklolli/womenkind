@@ -502,10 +502,11 @@ export default function PatientDashboardPage() {
       const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&includeCanceled=true`)
       const data = await res.json()
       const now = new Date()
+      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
       const all = data.appointments || []
       setAppointments(
         all
-          .filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now)
+          .filter((a: any) => a.status === 'confirmed' && new Date(a.starts_at) > twoHoursAgo)
           .slice(0, 3)
       )
       const isInitial = (a: any) =>
@@ -588,10 +589,11 @@ export default function PatientDashboardPage() {
         const res = await fetch(`/api/scheduling/appointments?patientId=${patient.patientId}&includeCanceled=true`)
         const data = await res.json()
         const now = new Date()
+        const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
         const all = data.appointments || []
         setAppointments(
           all
-            .filter((a: any) => a.status === 'confirmed' && new Date(a.ends_at) > now)
+            .filter((a: any) => a.status === 'confirmed' && new Date(a.starts_at) > twoHoursAgo)
             .slice(0, 3)
         )
         const isInitial = (a: any) =>
@@ -649,7 +651,7 @@ export default function PatientDashboardPage() {
       starts_at: a.starts_at,
       ends_at: a.ends_at,
       encounterNoteFinalized: a.encounter_note_finalized ?? false,
-      daily_room_url: a.daily_room_url ?? null,
+      daily_room_url: a.video_room_url ?? null,
     })),
     prescriptions: overviewPrescriptions.map((p: any) => ({
       runs_out_at: p.runs_out_at ?? null,
