@@ -129,13 +129,7 @@ export default function DashboardHero({ action, onPrimaryClick, patientFirstName
         />
       )
     case 'all_caught_up':
-      return (
-        <HeroCream
-          eyebrow="You're on track"
-          headline="All caught up"
-          body="Nothing to action right now. Keep up your weekly check-ins to keep your data flowing."
-        />
-      )
+      return null
   }
 }
 
