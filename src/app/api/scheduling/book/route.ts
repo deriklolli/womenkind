@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
       ),
     })
 
-    const isMember = !!membership
+    const isMember = !!membership || appointmentType.price_cents === 0
 
     // 5. Get patient info for Stripe / calendar
     const patient = await db.query.patients.findFirst({
