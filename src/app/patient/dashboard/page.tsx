@@ -632,7 +632,7 @@ export default function PatientDashboardPage() {
   const dashboardPhase: DashboardPhase = (() => {
     if (!patient) return 'intake_done'
     if (!patient.intakeStatus || patient.intakeStatus === 'draft') return 'intake_done'
-    if (appointments.length > 0) return 'appointment_booked'
+    if (hasInitialConsultation || appointments.length > 0) return 'appointment_booked'
     if (patient.presentationStatus === 'viewed') return 'care_plan_viewed'
     if (patient.presentationStatus === 'sent') return 'care_plan_ready'
     return 'intake_done'
