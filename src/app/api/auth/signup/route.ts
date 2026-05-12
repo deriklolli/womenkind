@@ -101,25 +101,29 @@ export async function POST(req: NextRequest) {
     // Still return ok — user can log in manually
   }
 
-  // Step 4: Send verification email via Resend (fire-and-forget)
+  // Step 4: Send verification email via Resend (awaited — fire-and-forget loses the call in serverless)
   if (process.env.RESEND_API_KEY) {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.womenkindhealth.com').replace(/\/+$/, '')
-    const { token, ts } = generateVerificationToken(patientId)
-    const verifyUrl = `${appUrl}/signup/verified?patientId=${patientId}&token=${token}&ts=${ts}`
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.womenkindhealth.com').replace(/\/+$/, '')
+      const { token, ts } = generateVerificationToken(patientId)
+      const verifyUrl = `${appUrl}/signup/verified?patientId=${patientId}&token=${token}&ts=${ts}`
 
-    resend.emails.send({
-      from: FROM,
-      to: email,
-      subject: 'Verify your email — Womenkind Health',
-      html: buildEngagementEmail({
-        patientId,
-        heading: 'Verify your email address',
-        bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:#422a1f;line-height:1.6;">Hi ${firstName}, click below to verify your email and continue setting up your Womenkind account.</p><p style="margin:0 0 8px;font-size:14px;color:rgba(66,42,31,0.6);">This link expires in 24 hours.</p><p style="margin:0;font-size:14px;color:rgba(66,42,31,0.45);">Don't see this email? Check your spam or junk folder.</p>`,
-        ctaText: 'Verify my email',
-        ctaUrl: verifyUrl,
-      }),
-    }).catch((err) => console.error('[signup] Verification email send error:', err))
+      await resend.emails.send({
+        from: FROM,
+        to: email,
+        subject: 'Verify your email — Womenkind Health',
+        html: buildEngagementEmail({
+          patientId,
+          heading: 'Verify your email address',
+          bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:#422a1f;line-height:1.6;">Hi ${firstName}, click below to verify your email and continue setting up your Womenkind account.</p><p style="margin:0 0 8px;font-size:14px;color:rgba(66,42,31,0.6);">This link expires in 24 hours.</p><p style="margin:0;font-size:14px;color:rgba(66,42,31,0.45);">Don't see this email? Check your spam or junk folder.</p>`,
+          ctaText: 'Verify my email',
+          ctaUrl: verifyUrl,
+        }),
+      })
+    } catch (err) {
+      console.error('[signup] Verification email send error:', err)
+    }
   }
 
   return response
