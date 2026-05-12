@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { patients, profiles, intakes, care_presentations } from '@/lib/db/schema'
+import { patients, profiles, intakes, care_presentations, appointments, appointment_types } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { createClient } from '@supabase/supabase-js'
 
@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   let rdsPatient = null
   let intakeRecord = null
   let presentations: any[] = []
+  let apptRecords: any[] = []
 
   if (supabaseUser) {
     rdsProfile = await db.query.profiles.findFirst({
@@ -43,6 +44,13 @@ export async function GET(req: NextRequest) {
         columns: { id: true, status: true, created_at: true },
         orderBy: [desc(care_presentations.created_at)],
       })
+
+      apptRecords = await db.query.appointments.findMany({
+        where: eq(appointments.patient_id, rdsPatient.id),
+        with: { appointment_types: { columns: { name: true } } },
+        columns: { id: true, status: true, starts_at: true, is_paid: true },
+        orderBy: [desc(appointments.starts_at)],
+      })
     }
   }
 
@@ -55,5 +63,6 @@ export async function GET(req: NextRequest) {
     rdsPatient: rdsPatient ?? null,
     intakeRecord: intakeRecord ?? null,
     presentations,
+    appointments: apptRecords,
   })
 }
