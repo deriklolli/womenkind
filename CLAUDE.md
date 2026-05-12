@@ -1,5 +1,13 @@
 # WomenKind — Claude Code guidance
 
+## Obsidian Brain Vault
+- Location: `/Users/deriklolli/Projects/WOMENKIND/brain/` (sibling to the codebase)
+- Entry point: `brain/CONTEXT.md` — read this to orient at the start of any session
+- When the user says "update Obsidian" or "add to the vault", write files directly to that path — no git commit needed
+- New decision → `Decisions/YYYY-MM-DD-<topic>.md` | New bug → append to `Bugs/Known-Issues.md` | Session summary → prepend to `Project/Session-Log.md` | Feature shipped → update `Project/Roadmap.md`
+- Session backup protocol: see `brain/AI/Claude-Onboarding.md` → "Session Backup Protocol" section
+- Notion Feature Changelog page ID: `352245f0-40d6-81c5-aec1-fef2bc48d14a`
+
 ## Stack
 - Next.js 14 App Router on Vercel (prod: `womenkind.vercel.app`, auto-deploys from `main`)
 - Supabase **Auth only** — all app tables live on AWS RDS PostgreSQL, accessed via Drizzle ORM

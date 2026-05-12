@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Womenkind Membership Tiers — Proposal for Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1F2937;
+    --ink-soft: #4B5563;
+    --ink-mute: #6B7280;
+    --rule: #E5E7EB;
+    --rule-soft: #F3F4F6;
+    --paper: #FFFFFF;
+    --cream: #FAF8F4;
+    --blush: #F7EEE8;
+    --terra: #B5582F;
+    --terra-deep: #8C3F1E;
+    --sage: #5C6B5E;
+    --plum: #4A3B4D;
+    --gold: #C28A3D;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.6;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .serif {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* ───────── Layout ───────── */
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ───────── Cover ───────── */
+
+  .cover {
+    padding: 96px 32px 80px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .cover-inner {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--terra);
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+
+  .cover h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 64px;
+    line-height: 1.05;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+
+  .cover h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--terra);
+  }
+
+  .cover .deck {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    font-weight: 300;
+    max-width: 620px;
+    margin-bottom: 56px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .meta-grid > div > .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink-mute);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .meta-grid > div > .value {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ───────── Section base ───────── */
+
+  section {
+    padding: 80px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  section:nth-child(even) {
+    background: var(--paper);
+  }
+
+  .section-num {
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--terra);
+    margin-bottom: 16px;
+  }
+
+  h2.section-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 40px;
+    line-height: 1.1;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    color: var(--ink);
+  }
+
+  h2.section-title em {
+    font-style: italic;
+    color: var(--terra);
+  }
+
+  .section-lead {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-weight: 300;
+    max-width: 680px;
+    margin-bottom: 48px;
+  }
+
+  p { margin-bottom: 16px; color: var(--ink-soft); }
+  p:last-child { margin-bottom: 0; }
+
+  strong { color: var(--ink); font-weight: 500; }
+
+  /* ───────── Strategic frame ───────── */
+
+  .frame {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 16px;
+  }
+
+  .frame > div {
+    background: var(--paper);
+    padding: 28px 24px;
+  }
+
+  .frame-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--terra);
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .frame-value {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    line-height: 1.25;
+    color: var(--ink);
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+
+  .frame-note {
+    font-size: 13px;
+    color: var(--ink-mute);
+    line-height: 1.5;
+  }
+
+  /* ───────── Competitive landscape ───────── */
+
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+
+  .comp-table thead th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+    padding: 12px 16px 12px 0;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .comp-table tbody td {
+    padding: 18px 16px 18px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    color: var(--ink-soft);
+  }
+
+  .comp-table tbody tr.highlight td {
+    background: var(--blush);
+    color: var(--ink);
+  }
+
+  .comp-table tbody tr.highlight td:first-child {
+    padding-left: 16px;
+  }
+
+  .comp-table .clinic-name {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .comp-table .clinic-loc {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 2px;
+  }
+
+  /* ───────── Tier cards ───────── */
+
+  .tiers {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  .tier {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 36px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .tier.featured {
+    border-color: var(--terra);
+    border-width: 2px;
+    padding: 35px 31px 31px;
+  }
+
+  .tier .badge {
+    position: absolute;
+    top: -12px;
+    left: 32px;
+    background: var(--terra);
+    color: var(--paper);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 5px 10px;
+  }
+
+  .tier-name {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .tier-name em {
+    font-style: italic;
+    color: var(--terra);
+  }
+
+  .tier-tag {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+    font-weight: 500;
+    margin-bottom: 28px;
+  }
+
+  .tier-price {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .tier-price .amount {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 52px;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .tier-price .unit {
+    font-size: 14px;
+    color: var(--ink-mute);
+  }
+
+  .tier-prepay {
+    font-size: 12px;
+    color: var(--terra);
+    font-style: italic;
+    font-family: 'Fraunces', Georgia, serif;
+    margin-bottom: 28px;
+  }
+
+  .tier-entry {
+    font-size: 13px;
+    color: var(--ink-mute);
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 24px;
+  }
+
+  .tier-entry strong { color: var(--ink); font-weight: 500; }
+
+  .tier-who {
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin-bottom: 24px;
+  }
+
+  .tier-includes-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--terra);
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+
+  .tier ul {
+    list-style: none;
+    margin-bottom: 24px;
+  }
+
+  .tier ul li {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    padding: 8px 0 8px 18px;
+    position: relative;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .tier ul li:last-child { border-bottom: none; }
+
+  .tier ul li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--terra);
+  }
+
+  .tier ul li strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .tier-totals {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .tier-totals .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+    margin-bottom: 4px;
+  }
+
+  .tier-totals .figure {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  /* ───────── Comparison matrix ───────── */
+
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 13.5px;
+  }
+
+  .matrix thead th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--ink);
+    background: var(--cream);
+  }
+
+  .matrix thead th:first-child { padding-left: 0; }
+
+  .matrix thead th.col-tier {
+    color: var(--ink);
+    font-family: 'Fraunces', Georgia, serif;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 16px;
+    font-style: italic;
+  }
+
+  .matrix tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    color: var(--ink-soft);
+  }
+
+  .matrix tbody td:first-child {
+    padding-left: 0;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .matrix .yes { color: var(--terra); font-weight: 500; }
+  .matrix .no { color: var(--ink-mute); }
+
+  .matrix tbody tr.totals td {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 16px;
+    color: var(--ink);
+    border-top: 2px solid var(--ink);
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  /* ───────── Roadmap ───────── */
+
+  .roadmap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-top: 16px;
+  }
+
+  .road-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 28px;
+  }
+
+  .road-phase {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .road-card.now .road-phase { color: var(--terra); }
+  .road-card.next .road-phase { color: var(--sage); }
+
+  .road-card h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 18px;
+    color: var(--ink);
+  }
+
+  .road-card ul {
+    list-style: none;
+  }
+
+  .road-card ul li {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    padding: 10px 0 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .road-card ul li:last-child { border-bottom: none; }
+
+  /* ───────── Pull quote ───────── */
+
+  .pullquote {
+    margin: 48px 0;
+    padding: 32px 40px;
+    background: var(--blush);
+    border-left: 3px solid var(--terra);
+  }
+
+  .pullquote p {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    line-height: 1.4;
+    font-style: italic;
+    color: var(--ink);
+    font-weight: 300;
+    margin: 0;
+  }
+
+  /* ───────── Footer ───────── */
+
+  footer {
+    padding: 56px 32px;
+    background: var(--ink);
+    color: var(--rule);
+    text-align: center;
+  }
+
+  footer .mark {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 28px;
+    color: var(--paper);
+    margin-bottom: 8px;
+  }
+
+  footer .mark em {
+    font-style: italic;
+    color: var(--terra);
+  }
+
+  footer p {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin: 0;
+  }
+
+  /* ───────── Print ───────── */
+
+  @media print {
+    body { background: var(--paper); }
+    section { page-break-inside: avoid; padding: 40px 0; }
+    .tier { page-break-inside: avoid; }
+  }
+
+  @media (max-width: 760px) {
+    .cover { padding: 64px 24px 56px; }
+    .cover h1 { font-size: 44px; }
+    .wrap { padding: 0 24px; }
+    .meta-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .frame { grid-template-columns: 1fr; }
+    .tiers { grid-template-columns: 1fr; }
+    .roadmap { grid-template-columns: 1fr; }
+    h2.section-title { font-size: 30px; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER ═══════════════ -->
+
+<div class="cover">
+  <div class="cover-inner">
+    <div class="eyebrow">Membership proposal · Prepared for Dr. Joseph Urban</div>
+    <h1>Three doors<br>into <em>Womenkind</em>.</h1>
+    <p class="deck">A tiered membership structure built around what we deliver today, priced for Park City, and positioned against the actual local landscape — from Salt Lake's specialists to Cenegenics across town.</p>
+
+    <div class="meta-grid">
+      <div>
+        <div class="label">Prepared by</div>
+        <div class="value">Derik Lolli</div>
+      </div>
+      <div>
+        <div class="label">Market</div>
+        <div class="value">Park City, UT</div>
+      </div>
+      <div>
+        <div class="label">Current state</div>
+        <div class="value">$650 intake · $200/mo</div>
+      </div>
+      <div>
+        <div class="label">Status</div>
+        <div class="value">Draft for review</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ 01 STRATEGY ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">01</div>
+    <h2 class="section-title">The strategic <em>frame</em>.</h2>
+    <p class="section-lead">Womenkind sits in a lane no one in our region currently occupies. Three competitive intersections define our position — and price our tiers.</p>
+
+    <div class="frame">
+      <div>
+        <div class="frame-label">Specialty</div>
+        <div class="frame-value">Women only.<br>Midlife focused.</div>
+        <div class="frame-note">Peak Medical and Heron treat both sexes. Cenegenics treats longevity, not midlife specifically.</div>
+      </div>
+      <div>
+        <div class="frame-label">Provider</div>
+        <div class="frame-value">MD-led.<br>Time given.</div>
+        <div class="frame-note">Peak Medical is FNP-led. The DTC apps (Midi, Alloy, Evernow) are 15-minute encounters.</div>
+      </div>
+      <div>
+        <div class="frame-label">Platform</div>
+        <div class="frame-value">EMR-native.<br>Wearable-aware.</div>
+        <div class="frame-note">No competitor in the Wasatch region pulls Oura data into the clinical record. We do.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 02 LANDSCAPE ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">02</div>
+    <h2 class="section-title">The competitive <em>landscape</em>.</h2>
+    <p class="section-lead">Five local and regional competitors define the price corridor. Our $650 initial sits comfortably in the middle of cash-pay specialists; our current $200/mo monthly is priced like Salt Lake, not Park City.</p>
+
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Clinic</th>
+          <th>Initial</th>
+          <th>Ongoing</th>
+          <th>Provider</th>
+          <th>Women only</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="clinic-name">Peak Medical</div>
+            <div class="clinic-loc">Park City, UT</div>
+          </td>
+          <td>Free assessment</td>
+          <td>~$120–150/mo equiv. (pellets every 3–4 mo)</td>
+          <td>FNP</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="clinic-name">Uplift For Her</div>
+            <div class="clinic-loc">Salt Lake City, UT</div>
+          </td>
+          <td>$325 hormone / $435 wellness+labs</td>
+          <td>$275/follow-up · no membership</td>
+          <td>MD</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="clinic-name">Heron Wellness</div>
+            <div class="clinic-loc">Salt Lake City, UT</div>
+          </td>
+          <td>$385</td>
+          <td>Variable membership · 25% supplement discount</td>
+          <td>MD</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="clinic-name">U of U Midlife Women's</div>
+            <div class="clinic-loc">SLC + Park City</div>
+          </td>
+          <td>Insurance copay</td>
+          <td>Per-visit · insurance billed</td>
+          <td>MD/DO MSCP</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="clinic-name">Cenegenics Park City</div>
+            <div class="clinic-loc">Park City, UT</div>
+          </td>
+          <td>$4,495–$13,000 assessment</td>
+          <td>$550–$750/mo program + $350–$600/mo supplies</td>
+          <td>DO (OB/GYN + Age Mgmt)</td>
+          <td>No</td>
+        </tr>
+        <tr class="highlight">
+          <td>
+            <div class="clinic-name">Womenkind</div>
+            <div class="clinic-loc">Park City, UT</div>
+          </td>
+          <td>$650 (1–2 hr with MD)</td>
+          <td>$129 / $249 / $549</td>
+          <td>MD (Urban)</td>
+          <td><strong>Yes</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pullquote">
+      <p>"Cenegenics charges $14–21K/year for performance longevity. Uplift charges $275/visit forever. We offer a third path — predictable, women-only, and built around the patient's data."</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 03 TIERS ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">03</div>
+    <h2 class="section-title">Three tiers, one <em>practice</em>.</h2>
+    <p class="section-lead">Each tier is buildable with what we have today: the intake form, MD/NP consultations, video and in-office visits, prescriptions, labs, the personalized care presentation, and our existing Oura integration.</p>
+
+    <div class="tiers">
+
+      <!-- Foundations -->
+      <div class="tier">
+        <div class="tier-name">Foundations</div>
+        <div class="tier-tag">Tier 1</div>
+        <div class="tier-price">
+          <span class="amount">$129</span>
+          <span class="unit">/ month</span>
+        </div>
+        <div class="tier-prepay">$1,290 annual prepay (2 months free)</div>
+        <div class="tier-entry">
+          <strong>Entry visit:</strong> $295 Discovery (15-min intake review &amp; care plan preview)
+        </div>
+        <div class="tier-who">For the woman in early perimenopause who wants a midlife specialist relationship before symptoms escalate — or before she's ready for HRT.</div>
+        <div class="tier-includes-label">Includes</div>
+        <ul>
+          <li>One <strong>15-min</strong> telehealth check-in per quarter</li>
+          <li>Secure messaging via the Womenkind platform</li>
+          <li>Symptom tracker</li>
+          <li>Personalized care presentation tailored to her intake</li>
+          <li><strong>Oura integration</strong> — patient-facing dashboard</li>
+          <li>Member discount (25%) on supplement protocols via Fullscript</li>
+        </ul>
+        <div class="tier-totals">
+          <div>
+            <div class="label">Year 1 all-in</div>
+            <div class="figure">$1,838</div>
+          </div>
+          <div>
+            <div class="label">Year 2+</div>
+            <div class="figure">$1,548</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vitality (FEATURED) -->
+      <div class="tier featured">
+        <div class="badge">Most members</div>
+        <div class="tier-name"><em>Vitality</em></div>
+        <div class="tier-tag">Tier 2 · Core</div>
+        <div class="tier-price">
+          <span class="amount">$249</span>
+          <span class="unit">/ month</span>
+        </div>
+        <div class="tier-prepay">$2,490 annual prepay (2 months free)</div>
+        <div class="tier-entry">
+          <strong>Entry visit:</strong> $650 comprehensive consultation (1–2 hr with Dr. Urban)
+        </div>
+        <div class="tier-who">For the woman ready for HRT, or already on it, who wants ongoing specialty care with predictable costs and a clinician who actually knows her.</div>
+        <div class="tier-includes-label">Includes</div>
+        <ul>
+          <li>One <strong>30-min</strong> visit per quarter (video or in-office)</li>
+          <li>Unlimited secure messaging (1 business day response)</li>
+          <li><strong>Full HRT prescription management</strong></li>
+          <li><strong>Annual hormone + wellness panel included</strong> (CBC, CMP, lipid, A1c, full thyroid, hormone panel, vitamin D)</li>
+          <li>Negotiated cash lab pricing (40–60% under retail)</li>
+          <li><strong>Oura data flows into her chart</strong> — Dr. Urban reviews trends before each visit</li>
+          <li>Personalized care plan, updated after each consultation</li>
+          <li>Member discount (25%) on supplement protocols via Fullscript</li>
+        </ul>
+        <div class="tier-totals">
+          <div>
+            <div class="label">Year 1 all-in</div>
+            <div class="figure">$3,638</div>
+          </div>
+          <div>
+            <div class="label">Year 2+</div>
+            <div class="figure">$2,988</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Concierge -->
+      <div class="tier">
+        <div class="tier-name">Concierge</div>
+        <div class="tier-tag">Tier 3 · Premium</div>
+        <div class="tier-price">
+          <span class="amount">$549</span>
+          <span class="unit">/ month</span>
+        </div>
+        <div class="tier-prepay">$5,490 annual prepay (2 months free)</div>
+        <div class="tier-entry">
+          <strong>Entry visit:</strong> $650 comprehensive consultation
+        </div>
+        <div class="tier-who">For the Park City patient considering Cenegenics. Same depth of access, focused on what actually matters for midlife women — at a third of the price.</div>
+        <div class="tier-includes-label">Everything in Vitality, plus</div>
+        <ul>
+          <li>One <strong>60-min</strong> visit per month with Dr. Urban</li>
+          <li>Same-day messaging response</li>
+          <li><strong>Two comprehensive panels per year</strong> + reactive labs at cost</li>
+          <li>Active Oura monitoring — outreach when patterns shift</li>
+          <li>Quarterly hormone-correlation review with biometric data</li>
+          <li>Priority scheduling &amp; in-office availability</li>
+          <li>Annual longevity review &amp; 12-month plan</li>
+          <li>Partner/spouse may join consultations</li>
+        </ul>
+        <div class="tier-totals">
+          <div>
+            <div class="label">Year 1 all-in</div>
+            <div class="figure">$7,238</div>
+          </div>
+          <div>
+            <div class="label">Year 2+</div>
+            <div class="figure">$6,588</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 04 FEATURE MATRIX ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">04</div>
+    <h2 class="section-title">Feature <em>matrix</em>.</h2>
+    <p class="section-lead">Side-by-side. Every line item is something we can deliver day one with our existing platform, processes, and Oura integration.</p>
+
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="col-tier">Foundations</th>
+          <th class="col-tier">Vitality</th>
+          <th class="col-tier">Concierge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Monthly</td>
+          <td>$129</td>
+          <td>$249</td>
+          <td>$549</td>
+        </tr>
+        <tr>
+          <td>Annual prepay</td>
+          <td>$1,290</td>
+          <td>$2,490</td>
+          <td>$5,490</td>
+        </tr>
+        <tr>
+          <td>Entry consultation</td>
+          <td>$295 (15 min)</td>
+          <td>$650 (1–2 hr)</td>
+          <td>$650 (1–2 hr)</td>
+        </tr>
+        <tr>
+          <td>Personalized care presentation</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Visit cadence</td>
+          <td>15 min · quarterly</td>
+          <td>30 min · quarterly</td>
+          <td>60 min · monthly</td>
+        </tr>
+        <tr>
+          <td>Visit format</td>
+          <td>Video</td>
+          <td>Video or in-office</td>
+          <td>Video or in-office</td>
+        </tr>
+        <tr>
+          <td>Messaging response time</td>
+          <td>2 business days</td>
+          <td>1 business day</td>
+          <td>Same day</td>
+        </tr>
+        <tr>
+          <td>HRT prescription management</td>
+          <td class="no">—</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Labs included</td>
+          <td class="no">—</td>
+          <td>Annual panel</td>
+          <td>Semi-annual + reactive</td>
+        </tr>
+        <tr>
+          <td>Oura integration</td>
+          <td>Patient-facing</td>
+          <td>Clinician sees data</td>
+          <td>Active monitoring</td>
+        </tr>
+        <tr>
+          <td>Oura data in pre-visit prep</td>
+          <td class="no">—</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Symptom tracker</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <td>Supplement discount (Fullscript)</td>
+          <td>25% member</td>
+          <td>25% member</td>
+          <td>25% member</td>
+        </tr>
+        <tr class="totals">
+          <td>Year 1 all-in</td>
+          <td>$1,838</td>
+          <td>$3,638</td>
+          <td>$7,238</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 05 ROADMAP ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">05</div>
+    <h2 class="section-title">What we ship <em>now</em> vs. <em>next</em>.</h2>
+    <p class="section-lead">Day one launches with what we already deliver. The roadmap below maps features that strengthen each tier as we add capabilities — without changing the price.</p>
+
+    <div class="roadmap">
+
+      <div class="road-card now">
+        <div class="road-phase">Day 1 — Available now</div>
+        <h3>Built into every tier</h3>
+        <ul>
+          <li>Adaptive intake form &amp; pre-visit clinical brief</li>
+          <li>15, 30, and 60-minute consultations</li>
+          <li>Telehealth video visits via the Womenkind platform</li>
+          <li>In-office visits at our Park City location</li>
+          <li>HRT &amp; ancillary prescriptions via DoseSpot</li>
+          <li>Lab ordering with negotiated cash pricing</li>
+          <li>Personalized care presentation, generated post-intake</li>
+          <li>Oura integration — patient and clinician views</li>
+          <li>Health Gorilla clinical record exchange</li>
+          <li>Fullscript supplement dispensary with member pricing</li>
+        </ul>
+      </div>
+
+      <div class="road-card next">
+        <div class="road-phase">Quarter 2–4 — Roadmap</div>
+        <h3>Strengthens each tier</h3>
+        <ul>
+          <li>Apple Watch &amp; Whoop integrations (Oura is live; others queued)</li>
+          <li>Continuous glucose monitor program for Concierge tier</li>
+          <li>DEXA scan partnership with a Park City imaging center</li>
+          <li>Advanced cardiometabolic biomarker panel (ApoB, Lp(a), hs-CRP)</li>
+          <li>GLP-1 / metabolic health service line</li>
+          <li>Mental health warm-handoff network</li>
+          <li>Mira at-home hormone testing integration</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 06 RATIONALE ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">06</div>
+    <h2 class="section-title">Why these <em>numbers</em>.</h2>
+    <p class="section-lead">Three pricing decisions, each grounded in a specific competitor signal.</p>
+
+    <p style="margin-top: 16px;"><strong>$650 intake stays.</strong> It's higher than Uplift ($435) and Heron ($385) but dramatically less than Cenegenics ($4,495+). It justifies the 1–2 hour MD consultation and the personalized care presentation — and it's consistent with where your existing patients enter today. No reason to change it.</p>
+
+    <p><strong>$249 Vitality replaces $200/mo.</strong> A $49 monthly increase in exchange for an annual lab panel, formal Oura clinical integration, and a clearer service definition. Existing patients get the upgraded scope; new patients see a Park City-priced tier that still undercuts Cenegenics' $550 floor by half. Annual prepay at $2,490 ($208/mo effective) gives committed patients a meaningful discount.</p>
+
+    <p><strong>$549 Concierge defines the ceiling.</strong> Priced just under Cenegenics' lowest monthly fee, this tier captures the high-net-worth Park City buyer who wants depth without buying into longevity-tech maximalism. Most members won't choose it — but its existence makes Vitality look like the obvious value.</p>
+
+    <p><strong>Lab pricing &amp; insurance posture.</strong> Womenkind operates as an out-of-network cash-pay practice. The annual panel included in Vitality and the semi-annual panels in Concierge run through our negotiated Labcorp/Quest cash rates — typically 40–60% below what insurance would be billed. Members pay no additional cost for the included panels; reactive labs are at our negotiated cash rate. Superbills are available for members who wish to submit to their insurance for possible reimbursement.</p>
+
+    <div class="pullquote">
+      <p>"The strongest pricing argument we can make in Park City is honesty: we're not the cheapest hormone clinic and we're not Cenegenics. We're the women's specialty clinic in between — and that's where most of our patients want to be."</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ 07 NEXT ═══════════════ -->
+
+<section>
+  <div class="wrap">
+    <div class="section-num">07</div>
+    <h2 class="section-title">What I need from <em>you</em>.</h2>
+    <p class="section-lead">Three open questions before we move this from proposal to live pricing on the website.</p>
+
+    <p style="margin-top: 16px;"><strong>1. Visit time math.</strong> Does the cadence (Foundations 15-min quarterly · Vitality 30-min quarterly · Concierge 60-min monthly) match what you can sustainably deliver as patient volume grows? If we hit 50 Vitality members, that's ~50 30-min visits per quarter — call it 25 hours of MD time. Workable, or do we need to plan for an NP earlier?</p>
+
+    <p><strong>2. Annual lab panel scope for Vitality.</strong> What gets included at the $249 tier — CBC, CMP, lipid, full thyroid, hormone panel, A1c, vitamin D? And what stays as an add-on (e.g., reverse T3, ApoB)? I'd like the included panel defined precisely so we don't have scope creep.</p>
+
+    <p><strong>3. Existing patient transition.</strong> Current $200/mo members move to Vitality at $249. I'd recommend grandfathering them at $200 for 6 months while we communicate the expanded scope (annual labs, Oura clinical integration, cleaner messaging response SLA), then move them to the new rate at renewal. Open to your preferred handling.</p>
+
+    <p><strong>4. Lab panel scope, locked.</strong> The Vitality panel as written includes CBC, CMP, lipid, A1c, full thyroid (TSH, free T3, free T4), hormone panel (estradiol, FSH, LH, progesterone, total + free testosterone, SHBG, DHEA-S), and vitamin D. Cost-of-goods at our negotiated Labcorp rate is approximately $150–$200 per member per year. Confirm this is the right scope, and flag anything you'd add (reverse T3, ApoB, ferritin) or move to add-on pricing.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="mark">Womenkind<em>.</em></div>
+  <p>Membership proposal · Draft for review · May 2026</p>
+</footer>
+
+</body>
+</html>
