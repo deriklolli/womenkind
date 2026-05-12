@@ -429,6 +429,7 @@ export default function PatientDashboardPage() {
   const [cancelConfirmIdTab, setCancelConfirmIdTab] = useState<string | null>(null)
   const [cancelingIdTab, setCancelingIdTab] = useState<string | null>(null)
   const [checkedInAppointmentIds, setCheckedInAppointmentIds] = useState<Set<string> | null>(null)
+  const [snapshotNow, setSnapshotNow] = useState<Date>(() => new Date())
 
   const handleCancelBannerAppointment = async () => {
     if (!appointments[0]) return
@@ -509,6 +510,7 @@ export default function PatientDashboardPage() {
           .filter((a: any) => a.status === 'confirmed' && new Date(a.starts_at) > twoHoursAgo)
           .slice(0, 3)
       )
+      setSnapshotNow(new Date())
       const isInitial = (a: any) =>
         (a.appointment_types?.name || '').toLowerCase().includes('initial')
       setHasInitialConsultation(all.some((a: any) => isInitial(a) && a.status !== 'canceled'))
@@ -596,6 +598,7 @@ export default function PatientDashboardPage() {
             .filter((a: any) => a.status === 'confirmed' && new Date(a.starts_at) > twoHoursAgo)
             .slice(0, 3)
         )
+        setSnapshotNow(new Date())
         const isInitial = (a: any) =>
           (a.appointment_types?.name || '').toLowerCase().includes('initial')
         // Any non-canceled initial means the step is scheduled/done
@@ -666,10 +669,10 @@ export default function PatientDashboardPage() {
       .filter((v: any) => v.source === 'daily' && v.visit_date)
       .sort((a: any, b: any) => b.visit_date.localeCompare(a.visit_date))[0]?.visit_date ?? null,
     recommendedFollowUpAt: null,
-    now: new Date(),
+    now: snapshotNow,
     checkedInAppointmentIds,
     hasInitialConsultation,
-  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds, hasInitialConsultation, overviewVisits])
+  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds, hasInitialConsultation, overviewVisits, snapshotNow])
 
   const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
 
