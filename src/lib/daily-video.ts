@@ -60,7 +60,7 @@ export async function createVideoRoom({
           max_participants: 4,
           start_video_off: false,
           start_audio_off: false,
-          enable_recording: 's3',
+          enable_recording: 'cloud',
         },
       }),
     })
