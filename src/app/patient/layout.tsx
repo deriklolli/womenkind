@@ -40,8 +40,11 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
         setChecking(false)
         return
       }
-      // Network/server error — don't log the user out, just leave them where they are
-      if (error) return
+      // Network/server error — can't verify session, send to login
+      if (error) {
+        router.replace('/patient/login')
+        return
+      }
 
       // No real session — fall back to demo mode
       const demo = localStorage.getItem('womenkind_demo_patient')
