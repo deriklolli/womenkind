@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       apptRecords = await db.query.appointments.findMany({
         where: eq(appointments.patient_id, rdsPatient.id),
         with: { appointment_types: { columns: { name: true } } },
-        columns: { id: true, status: true, starts_at: true, is_paid: true },
+        columns: { id: true, status: true, starts_at: true, ends_at: true, is_paid: true, video_room_url: true },
         orderBy: [desc(appointments.starts_at)],
       })
     }
