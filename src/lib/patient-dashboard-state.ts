@@ -47,6 +47,7 @@ export interface DashboardSnapshot {
   recommendedFollowUpAt: Date | string | null
   now: Date
   checkedInAppointmentIds?: Set<string> | null
+  hasInitialConsultation?: boolean
 }
 
 const toDate = (v: Date | string | null | undefined): Date | null => {
@@ -79,6 +80,7 @@ export function detectDashboardState(s: DashboardSnapshot): { state: DashboardSt
   const isLapsed = daysSinceCheckin >= 21
 
   const hasFinalizedVisit = s.appointments.some(a => a.encounterNoteFinalized && toDate(a.ends_at)!.getTime() <= now.getTime())
+  const hasConsultation = hasFinalizedVisit || !!s.hasInitialConsultation
   const briefReady = !!s.intake?.ai_brief
 
   // State precedence: S3 > S6 > S4 > S2 > S5
@@ -100,7 +102,7 @@ export function detectDashboardState(s: DashboardSnapshot): { state: DashboardSt
     return { state: 'S4', heroAction: { kind: 'awaiting_plan' } }
   }
 
-  if (briefReady && !hasFinalizedVisit) {
+  if (briefReady && !hasConsultation) {
     return { state: 'S2', heroAction: { kind: 'book_consult' } }
   }
 

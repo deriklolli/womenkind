@@ -664,7 +664,8 @@ export default function PatientDashboardPage() {
     recommendedFollowUpAt: null,
     now: new Date(),
     checkedInAppointmentIds,
-  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds])
+    hasInitialConsultation,
+  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds, hasInitialConsultation])
 
   const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
 
