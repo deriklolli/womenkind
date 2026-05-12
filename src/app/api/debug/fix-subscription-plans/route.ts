@@ -70,32 +70,24 @@ export async function POST(req: NextRequest) {
       columns: { id: true, plan_type: true },
     })
 
-    // Already has a valid member subscription — skip
-    if (existing && MEMBER_PLAN_TYPES.includes(existing.plan_type as any)) continue
-
-    // Has a bad row that was already fixed above — skip
-    if (existing && existing.plan_type !== 'intake') continue
-
-    // No row at all (or only just-fixed intake rows handled above)
-    if (!existing) {
-      const plan = patient.membership_plan || defaultPlan
-      if (!plan || !MEMBER_PLAN_TYPES.includes(plan as any)) {
-        results.skipped_no_plan.push(patient.id)
-        continue
-      }
-
-      await db.update(patients)
-        .set({ membership_plan: plan })
-        .where(eq(patients.id, patient.id))
-
-      await db.insert(subscriptions).values({
-        patient_id: patient.id,
-        plan_type: plan,
-        status: 'active',
-      })
-
-      results.created_missing_rows.push(`${patient.id} → ${plan}`)
+    const plan = patient.membership_plan || defaultPlan
+    if (!plan || !MEMBER_PLAN_TYPES.includes(plan as any)) {
+      results.skipped_no_plan.push(patient.id)
+      continue
     }
+
+    if (!existing) {
+      // No subscription row — create one
+      await db.update(patients).set({ membership_plan: plan }).where(eq(patients.id, patient.id))
+      await db.insert(subscriptions).values({ patient_id: patient.id, plan_type: plan, status: 'active' })
+      results.created_missing_rows.push(`${patient.id} → ${plan}`)
+    } else if (existing.plan_type === 'membership' || existing.plan_type === 'intake') {
+      // Generic/bad plan_type — upgrade to specific tier
+      await db.update(patients).set({ membership_plan: plan }).where(eq(patients.id, patient.id))
+      await db.update(subscriptions).set({ plan_type: plan }).where(eq(subscriptions.id, existing.id))
+      results.fixed_intake_rows.push(`${patient.id} ${existing.plan_type} → ${plan}`)
+    }
+    // else: already has a specific tier (vitality/foundations/concierge) — leave it
   }
 
   return NextResponse.json({ ok: true, results })
