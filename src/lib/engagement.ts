@@ -83,12 +83,23 @@ export function buildEngagementEmail(params: {
   ctaUrl: string
   secondaryCtaText?: string
   secondaryCtaUrl?: string
-  patientId: string
+  patientId: string  // pass '' for transactional/provider emails — hides unsubscribe footer
 }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.womenkindhealth.com'
-  const token = generateUnsubscribeToken(params.patientId)
-  const unsubUrl = `${appUrl}/api/engagement/unsubscribe?patientId=${encodeURIComponent(params.patientId)}&token=${token}`
   const prefsUrl = `${appUrl}/patient/settings`
+
+  const footer = params.patientId
+    ? (() => {
+        const token = generateUnsubscribeToken(params.patientId)
+        const unsubUrl = `${appUrl}/api/engagement/unsubscribe?patientId=${encodeURIComponent(params.patientId)}&token=${token}`
+        return `<p style="font-size:12px;color:rgba(66,42,31,0.45);margin:0 0 8px;">Womenkind Health · Concierge menopause care</p>
+    <p style="font-size:11px;color:rgba(66,42,31,0.35);margin:0;">
+      <a href="${prefsUrl}" style="color:rgba(66,42,31,0.45);text-decoration:underline;">Manage email preferences</a>
+      &nbsp;·&nbsp;
+      <a href="${unsubUrl}" style="color:rgba(66,42,31,0.45);text-decoration:underline;">Unsubscribe from all</a>
+    </p>`
+      })()
+    : `<p style="font-size:12px;color:rgba(66,42,31,0.45);margin:0;">Womenkind Health · Concierge menopause care</p>`
 
   return `<!DOCTYPE html>
 <html>
@@ -109,12 +120,7 @@ export function buildEngagementEmail(params: {
     ${params.secondaryCtaText ? `<p style="margin:16px 0 0;"><a href="${params.secondaryCtaUrl}" style="color:#944fed;text-decoration:none;font-size:14px;">${params.secondaryCtaText}</a></p>` : ''}
   </td></tr>
   <tr><td style="padding:24px 48px;text-align:center;">
-    <p style="font-size:12px;color:rgba(66,42,31,0.45);margin:0 0 8px;">Womenkind Health · Concierge menopause care</p>
-    <p style="font-size:11px;color:rgba(66,42,31,0.35);margin:0;">
-      <a href="${prefsUrl}" style="color:rgba(66,42,31,0.45);text-decoration:underline;">Manage email preferences</a>
-      &nbsp;·&nbsp;
-      <a href="${unsubUrl}" style="color:rgba(66,42,31,0.45);text-decoration:underline;">Unsubscribe from all</a>
-    </p>
+    ${footer}
   </td></tr>
 </table>
 </td></tr>
