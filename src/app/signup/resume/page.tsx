@@ -68,9 +68,9 @@ export default async function ResumePage({ searchParams }: Props) {
           padding: '24px',
         }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '48px', maxWidth: '480px', width: '100%' }}>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
-              Womenkind Health
-            </p>
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '48px' }} />
+            </div>
             <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
               Complete your membership
             </h1>
@@ -123,9 +123,9 @@ export default async function ResumePage({ searchParams }: Props) {
         maxWidth: '480px',
         width: '100%',
       }}>
-        <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(66,42,31,0.45)' }}>
-          Womenkind Health
-        </p>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '48px' }} />
+        </div>
 
         {status === 'unverified' && (
           <>

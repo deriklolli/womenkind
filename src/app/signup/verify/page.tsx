@@ -54,7 +54,9 @@ export default function VerifyEmailPage() {
         width: '100%',
         textAlign: 'center',
       }}>
-        <div style={{ fontSize: '40px', marginBottom: '16px' }}>📬</div>
+        <div style={{ marginBottom: '28px' }}>
+          <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '48px' }} />
+        </div>
         <h1 style={{ margin: '0 0 12px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
           Check your inbox
         </h1>
