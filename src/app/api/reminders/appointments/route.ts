@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { appointments } from '@/lib/db/schema'
 import { eq, isNull, gte, lte, and } from 'drizzle-orm'
 import { Resend } from 'resend'
+import { buildEngagementEmail } from '@/lib/engagement'
 
 /**
  * POST /api/reminders/appointments
@@ -80,90 +81,26 @@ export async function POST(req: NextRequest) {
         from,
         to: patientEmail,
         subject: `Your appointment is tomorrow`,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body bgcolor="#f7f3ee" style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee;">
-    <tr>
-      <td align="center" style="padding: 48px 24px 40px 24px;">
-        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <table role="presentation" width="610" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 610px; width: 100%; background-color: #ffffff; border-radius: 20px; overflow: hidden;">
-          <tr>
-            <td style="padding: 40px 36px 32px 36px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: normal; font-family: Georgia, 'Playfair Display', serif; color: #280f49;">
-                See you tomorrow, ${firstName}
-              </h1>
-              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
-                Just a reminder that your appointment is coming up.
-              </p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee; border-radius: 12px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">
-                      ${typeName}
-                    </p>
-                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">
-                      ${durationMinutes} min
-                    </p>
-                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
-                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
-                    ${videoRoomUrl ? `<p style="margin: 0; font-size: 14px; color: #280f49;">Virtual visit via video call</p>` : ''}
-                  </td>
-                </tr>
-              </table>
-              ${videoRoomUrl ? `
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
-                <tr>
-                  <td align="center">
-                    <a href="${videoRoomUrl}" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
-                      Join Video Call
-                    </a>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="padding-top: 12px;">
-                    <a href="${appUrl}/patient/dashboard" style="font-size: 13px; color: #944fed; text-decoration: none;">
-                      or view your dashboard
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              ` : `
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
-                <tr>
-                  <td align="center">
-                    <a href="${appUrl}/patient/dashboard" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
-                      View Your Dashboard
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              `}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding: 32px 24px 48px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #bdb4b1;">
-          Womenkind &mdash; Personalized menopause &amp; midlife care
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-        `,
+        html: buildEngagementEmail({
+          heading: `See you tomorrow, ${firstName}`,
+          bodyHtml: `
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
+              Just a reminder that your appointment is coming up.
+            </p>
+            <div style="background-color: #f7f3ee; border-radius: 12px; padding: 24px;">
+              <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #280f49;">${typeName}</p>
+              <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">${durationMinutes} min</p>
+              <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${dateStr}</p>
+              <p style="margin: 0 0 6px 0; font-size: 14px; color: #280f49;">${startTime} – ${endTime} MT</p>
+              ${videoRoomUrl ? `<p style="margin: 0; font-size: 14px; color: #280f49;">Virtual visit via video call</p>` : ''}
+            </div>
+          `,
+          ctaText: videoRoomUrl ? 'Join Video Call' : 'View Your Dashboard',
+          ctaUrl: videoRoomUrl || `${appUrl}/patient/dashboard`,
+          secondaryCtaText: videoRoomUrl ? 'or view your dashboard' : undefined,
+          secondaryCtaUrl: videoRoomUrl ? `${appUrl}/patient/dashboard` : undefined,
+          patientId: appointment.patient_id,
+        }),
       })
 
       // Mark reminder sent so we don't send it again

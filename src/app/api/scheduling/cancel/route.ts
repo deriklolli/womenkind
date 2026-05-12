@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { cancelCalendarEvent } from '@/lib/google-calendar'
 import { Resend } from 'resend'
 import { getServerSession } from '@/lib/getServerSession'
+import { buildEngagementEmail } from '@/lib/engagement'
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY!)
@@ -18,6 +19,7 @@ async function sendCancellationEmail({
   durationMinutes,
   startsAt,
   endsAt,
+  patientId,
 }: {
   toEmail: string
   toName: string
@@ -26,6 +28,7 @@ async function sendCancellationEmail({
   durationMinutes: number
   startsAt: string
   endsAt: string
+  patientId?: string
 }) {
   if (!process.env.RESEND_API_KEY || !toEmail) return
 
@@ -60,74 +63,23 @@ async function sendCancellationEmail({
       from: process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>',
       to: toEmail,
       subject: `Appointment Canceled — ${appointmentName}`,
-      html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body bgcolor="#f7f3ee" style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee;">
-    <tr>
-      <td align="center" style="padding: 48px 24px 40px 24px;">
-        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 560px; width: 100%; background-color: #ffffff; border-radius: 20px; overflow: hidden;">
-          <tr>
-            <td style="padding: 40px 36px 32px 36px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #280f49;">
-                Appointment Canceled
-              </h1>
-              <p style="margin: 0 0 28px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
-                Hi ${firstName}, your appointment has been canceled by ${canceledByName}.
-              </p>
-
-              <!-- Appointment card -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee; border-radius: 12px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #9487a4; text-decoration: line-through;">
-                      ${appointmentName}
-                    </p>
-                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">
-                      ${durationMinutes} min
-                    </p>
-                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #9487a4;">${dateStr}</p>
-                    <p style="margin: 0; font-size: 14px; color: #9487a4;">${startTime} – ${endTime} MT</p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px;">
-                <tr>
-                  <td align="center">
-                    <a href="${appUrl}/patient/schedule" style="display: inline-block; padding: 14px 32px; background-color: #944fed; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 9999px;">
-                      Book a New Appointment
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding: 32px 24px 48px 24px;">
-        <p style="margin: 0; font-size: 12px; color: #bdb4b1;">
-          Womenkind &mdash; Personalized menopause &amp; midlife care
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `,
+      html: buildEngagementEmail({
+        heading: 'Appointment Canceled',
+        bodyHtml: `
+          <p style="margin: 0 0 16px 0; font-size: 14px; color: #8e7f79; line-height: 1.5;">
+            Hi ${firstName}, your appointment has been canceled by ${canceledByName}.
+          </p>
+          <div style="background-color: #f7f3ee; border-radius: 12px; padding: 24px;">
+            <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #9487a4; text-decoration: line-through;">${appointmentName}</p>
+            <p style="margin: 0 0 16px 0; font-size: 13px; color: #a1958f;">${durationMinutes} min</p>
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #9487a4;">${dateStr}</p>
+            <p style="margin: 0; font-size: 14px; color: #9487a4;">${startTime} – ${endTime} MT</p>
+          </div>
+        `,
+        ctaText: 'Book a New Appointment',
+        ctaUrl: `${appUrl}/patient/schedule`,
+        patientId: patientId ?? '',
+      }),
     })
     console.log(`[RESEND] Cancellation email sent to ${toEmail}`)
   } catch (emailErr) {
@@ -243,6 +195,7 @@ export async function POST(req: NextRequest) {
           durationMinutes,
           startsAt: appointment.starts_at.toISOString(),
           endsAt: appointment.ends_at.toISOString(),
+          patientId: appointment.patient_id,
         })
       }
     } else {
@@ -257,6 +210,7 @@ export async function POST(req: NextRequest) {
           durationMinutes,
           startsAt: appointment.starts_at.toISOString(),
           endsAt: appointment.ends_at.toISOString(),
+          patientId: '',
         })
       }
     }

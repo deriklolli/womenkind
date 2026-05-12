@@ -4,6 +4,7 @@ import { intakes, patients, care_presentations, encounter_notes } from '@/lib/db
 import { and, eq, inArray } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 import { Resend } from 'resend'
+import { buildEngagementEmail } from '@/lib/engagement'
 import { populateDeepDives } from '@/lib/populate-deep-dives'
 
 export const maxDuration = 300
@@ -105,68 +106,23 @@ export async function POST(req: Request) {
           from: process.env.RESEND_FROM_EMAIL || 'Womenkind <care@womenkind.com>',
           to: patientEmail,
           subject: 'Your Personalized Care Summary is Ready',
-          html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body bgcolor="#f7f3ee" style="margin: 0; padding: 0; background-color: #f7f3ee; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee" style="background-color: #f7f3ee;">
-    <tr>
-      <td align="center" style="padding: 48px 24px 40px 24px;">
-        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height: 96px;" />
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding: 0 24px 48px 24px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width: 560px; background-color: #ffffff; border-radius: 20px; border: 1px solid #f2f1f4;">
-          <tr>
-            <td style="padding: 48px 44px;">
-              <h1 style="font-family: Georgia, 'Playfair Display', serif; font-size: 22px; color: #280f49; margin: 0 0 8px 0; font-weight: normal;">
-                Hi ${patientFirstName},
-              </h1>
+          html: buildEngagementEmail({
+            heading: `Hi ${patientFirstName},`,
+            bodyHtml: `
               <p style="font-size: 15px; color: #7b6a62; line-height: 1.7; margin: 0 0 8px 0;">
                 Your provider has prepared a personalized care summary just for you.
               </p>
-              <p style="font-size: 15px; color: #7b6a62; line-height: 1.7; margin: 0 0 32px 0;">
+              <p style="font-size: 15px; color: #7b6a62; line-height: 1.7; margin: 0 0 8px 0;">
                 It covers what's happening in your body and the recommended plan to help you feel your best.
               </p>
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background-color: #944fed; border-radius: 9999px;">
-                          <a href="${presentationUrl}" style="display: inline-block; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 15px; font-weight: 500; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;">
-                            View Your Care Summary&nbsp;&nbsp;&#8594;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              <p style="font-size: 13px; color: #b3aaa5; line-height: 1.5; margin: 28px 0 0 0; text-align: center;">
+              <p style="font-size: 13px; color: #b3aaa5; line-height: 1.5; margin: 0; text-align: center;">
                 You can also access this anytime from your patient portal.
               </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding: 0 24px 48px 24px;">
-        <p style="font-size: 12px; color: #d0cac7; margin: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;">
-          Womenkind — Personalized menopause &amp; midlife care
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-          `,
+            `,
+            ctaText: 'View Your Care Summary',
+            ctaUrl: presentationUrl,
+            patientId,
+          }),
         })
         emailSent = true
         console.log(`[RESEND] Care presentation email sent to ${patientEmail}`)

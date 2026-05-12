@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"SessionStart\", \"additionalContext\": \"MANDATORY SESSION START: Read /Users/deriklolli/Projects/WOMENKIND/brain/CONTEXT.md immediately before responding to anything. This is the Obsidian vault entry point for the WomenKind project — it orients you on the current state of the product, decisions, bugs, and roadmap.\"}}'",
+            "statusMessage": "Loading WomenKind context..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { clinic_appointment_requests, patients, profiles, clinics } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { Resend } from 'resend'
+import { buildEngagementEmail } from '@/lib/engagement'
 import { getServerSession } from '@/lib/getServerSession'
 
 /**
@@ -142,107 +143,42 @@ async function sendProviderEmail(opts: {
     from,
     to: providerEmail,
     subject: `In-person visit request from ${patientName}`,
-    html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body bgcolor="#f7f3ee" style="margin:0;padding:0;background-color:#f7f3ee;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee">
-    <tr>
-      <td align="center" style="padding:48px 24px 40px 24px;">
-        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height:96px;" />
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding:0 24px 48px 24px;">
-        <table role="presentation" width="610" cellpadding="0" cellspacing="0" bgcolor="#ffffff"
-          style="max-width:610px;width:100%;background-color:#ffffff;border-radius:20px;border:1px solid #f2f1f4;">
-          <tr>
-            <td style="padding:48px 44px;">
-              <h1 style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#280f49;margin:0 0 8px 0;font-weight:normal;">
-                New in-person visit request
-              </h1>
-              <p style="font-size:14px;color:#7b6a62;line-height:1.7;margin:0 0 32px 0;">
-                ${patientName} has requested an in-person appointment. Submitted ${submittedAt}.
-              </p>
-
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                bgcolor="#f7f3ee" style="background-color:#f7f3ee;border-radius:12px;margin-bottom:28px;">
-                <tr>
-                  <td style="padding:24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td style="padding-bottom:12px;">
-                          <p style="margin:0;font-size:11px;font-weight:600;color:#a1958f;text-transform:uppercase;letter-spacing:0.06em;">Patient</p>
-                          <p style="margin:4px 0 0 0;font-size:15px;font-weight:600;color:#280f49;">${patientName}</p>
-                          ${patientEmail ? `<p style="margin:2px 0 0 0;font-size:13px;color:#a1958f;">${patientEmail}</p>` : ''}
-                          ${opts.contactPhone ? `<p style="margin:2px 0 0 0;font-size:13px;color:#a1958f;">${opts.contactPhone}</p>` : ''}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding-bottom:12px;border-top:1px solid #ede8e3;padding-top:12px;">
-                          <p style="margin:0;font-size:11px;font-weight:600;color:#a1958f;text-transform:uppercase;letter-spacing:0.06em;">Clinic</p>
-                          <p style="margin:4px 0 0 0;font-size:14px;color:#280f49;">${clinicLabel}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding-bottom:12px;border-top:1px solid #ede8e3;padding-top:12px;">
-                          <p style="margin:0;font-size:11px;font-weight:600;color:#a1958f;text-transform:uppercase;letter-spacing:0.06em;">Preferred dates</p>
-                          <p style="margin:4px 0 0 0;font-size:14px;color:#280f49;">${opts.preferredDates}</p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="${opts.notes ? 'padding-bottom:12px;' : ''}border-top:1px solid #ede8e3;padding-top:12px;">
-                          <p style="margin:0;font-size:11px;font-weight:600;color:#a1958f;text-transform:uppercase;letter-spacing:0.06em;">Preferred time of day</p>
-                          <p style="margin:4px 0 0 0;font-size:14px;color:#280f49;">${timeLabel}</p>
-                        </td>
-                      </tr>
-                      ${opts.notes ? `
-                      <tr>
-                        <td style="border-top:1px solid #ede8e3;padding-top:12px;">
-                          <p style="margin:0;font-size:11px;font-weight:600;color:#a1958f;text-transform:uppercase;letter-spacing:0.06em;">Additional notes</p>
-                          <p style="margin:4px 0 0 0;font-size:14px;color:#280f49;line-height:1.6;">${opts.notes}</p>
-                        </td>
-                      </tr>` : ''}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background-color:#944fed;border-radius:9999px;">
-                          <a href="${appUrl}/provider/patients/${opts.patientId}"
-                            style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:500;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;">
-                            View Patient Profile&nbsp;&nbsp;&#8594;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding:0 24px 48px 24px;">
-        <p style="font-size:12px;color:#d0cac7;margin:0;">
-          Womenkind &mdash; Personalized menopause &amp; midlife care
+    html: buildEngagementEmail({
+      heading: 'New in-person visit request',
+      bodyHtml: `
+        <p style="font-size: 14px; color: #7b6a62; line-height: 1.7; margin: 0 0 20px 0;">
+          ${patientName} has requested an in-person appointment. Submitted ${submittedAt}.
         </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`,
+        <div style="background-color: #f7f3ee; border-radius: 12px; padding: 24px; margin-bottom: 8px;">
+          <div style="padding-bottom: 12px;">
+            <p style="margin: 0; font-size: 11px; font-weight: 600; color: #a1958f; text-transform: uppercase; letter-spacing: 0.06em;">Patient</p>
+            <p style="margin: 4px 0 0 0; font-size: 15px; font-weight: 600; color: #280f49;">${patientName}</p>
+            ${patientEmail ? `<p style="margin: 2px 0 0 0; font-size: 13px; color: #a1958f;">${patientEmail}</p>` : ''}
+            ${opts.contactPhone ? `<p style="margin: 2px 0 0 0; font-size: 13px; color: #a1958f;">${opts.contactPhone}</p>` : ''}
+          </div>
+          <div style="padding: 12px 0; border-top: 1px solid #ede8e3;">
+            <p style="margin: 0; font-size: 11px; font-weight: 600; color: #a1958f; text-transform: uppercase; letter-spacing: 0.06em;">Clinic</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #280f49;">${clinicLabel}</p>
+          </div>
+          <div style="padding: 12px 0; border-top: 1px solid #ede8e3;">
+            <p style="margin: 0; font-size: 11px; font-weight: 600; color: #a1958f; text-transform: uppercase; letter-spacing: 0.06em;">Preferred dates</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #280f49;">${opts.preferredDates}</p>
+          </div>
+          <div style="padding-top: 12px; border-top: 1px solid #ede8e3; ${opts.notes ? 'padding-bottom: 12px;' : ''}">
+            <p style="margin: 0; font-size: 11px; font-weight: 600; color: #a1958f; text-transform: uppercase; letter-spacing: 0.06em;">Preferred time of day</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #280f49;">${timeLabel}</p>
+          </div>
+          ${opts.notes ? `
+          <div style="padding-top: 12px; border-top: 1px solid #ede8e3;">
+            <p style="margin: 0; font-size: 11px; font-weight: 600; color: #a1958f; text-transform: uppercase; letter-spacing: 0.06em;">Additional notes</p>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #280f49; line-height: 1.6;">${opts.notes}</p>
+          </div>` : ''}
+        </div>
+      `,
+      ctaText: 'View Patient Profile',
+      ctaUrl: `${appUrl}/provider/patients/${opts.patientId}`,
+      patientId: '',
+    }),
   })
 
   console.log(`[clinic/request] In-person request email sent to ${providerEmail}`)

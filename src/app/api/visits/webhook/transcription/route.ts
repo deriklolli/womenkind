@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto'
 export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { buildEngagementEmail } from '@/lib/engagement'
 import { logPhiAccess } from '@/lib/phi-audit'
 import { invokeModel } from '@/lib/bedrock'
 import { db } from '@/lib/db'
@@ -233,58 +234,17 @@ async function notifyProvider(
     from,
     to: providerEmail,
     subject: `Visit note ready to review — ${patientName}`,
-    html: `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-<body bgcolor="#f7f3ee" style="margin:0;padding:0;background-color:#f7f3ee;font-family:'Plus Jakarta Sans',-apple-system,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f7f3ee">
-    <tr>
-      <td align="center" style="padding:48px 24px 40px 24px;">
-        <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height:96px;" />
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding:0 24px 48px 24px;">
-        <table role="presentation" width="610" cellpadding="0" cellspacing="0" bgcolor="#ffffff"
-          style="max-width:610px;width:100%;background-color:#ffffff;border-radius:20px;border:1px solid #f2f1f4;">
-          <tr>
-            <td style="padding:48px 44px;">
-              <h1 style="font-family:Georgia,serif;font-size:24px;color:#280f49;margin:0 0 8px 0;font-weight:normal;">
-                Visit note ready to review
-              </h1>
-              <p style="font-size:14px;color:#7b6a62;line-height:1.7;margin:0 0 32px 0;">
-                An AI-generated SOAP note from your visit with ${patientName} is ready. Review and sign it from the patient chart.
-              </p>
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background-color:#944fed;border-radius:9999px;">
-                          <a href="${appUrl}/provider/patient/${patientId}?tab=notes"
-                            style="display:inline-block;color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:500;">
-                            Review &amp; Sign Note &nbsp;&#8594;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding:0 24px 48px 24px;">
-        <p style="font-size:12px;color:#d0cac7;margin:0;">Womenkind &mdash; Personalized menopause &amp; midlife care</p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`,
+    html: buildEngagementEmail({
+      heading: 'Visit note ready to review',
+      bodyHtml: `
+        <p style="font-size: 14px; color: #7b6a62; line-height: 1.7; margin: 0;">
+          An AI-generated SOAP note from your visit with ${patientName} is ready. Review and sign it from the patient chart.
+        </p>
+      `,
+      ctaText: 'Review & Sign Note',
+      ctaUrl: `${appUrl}/provider/patient/${patientId}?tab=notes`,
+      patientId: '',
+    }),
   })
 
   console.log(`[transcription-webhook] Provider notified at ${providerEmail}`)
