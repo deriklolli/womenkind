@@ -69,7 +69,7 @@ export default async function ResumePage({ searchParams }: Props) {
         }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '48px', maxWidth: '480px', width: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '48px' }} />
+              <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '64px' }} />
             </div>
             <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
               Complete your membership
@@ -124,7 +124,7 @@ export default async function ResumePage({ searchParams }: Props) {
         width: '100%',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '48px' }} />
+          <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '64px' }} />
         </div>
 
         {status === 'unverified' && (
