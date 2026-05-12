@@ -98,7 +98,7 @@ export function buildEngagementEmail(params: {
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
   <tr><td style="padding:48px 48px 32px;text-align:center;">
-    <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height:64px;" />
+    <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height:96px;" />
   </td></tr>
   <tr><td style="background-color:#ffffff;border-radius:20px;padding:40px 48px;">
     <h1 style="margin:0 0 20px;font-size:26px;font-weight:400;color:#280f49;line-height:1.3;">${params.heading}</h1>

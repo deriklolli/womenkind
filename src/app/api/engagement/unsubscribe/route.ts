@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Unsubscribed</title></head>
 <body style="margin:0;padding:40px 20px;background-color:#f7f3ee;font-family:'Plus Jakarta Sans',Arial,sans-serif;text-align:center;">
-  <img src="${appUrl}/womenkind-logo.png" alt="Womenkind" style="height:32px;margin-bottom:32px;" /><br/>
+  <img src="${appUrl}/womenkind-logo-dark.png" alt="Womenkind" style="height:96px;margin-bottom:32px;" /><br/>
   <h1 style="font-size:24px;font-weight:400;color:#280f49;">You've been unsubscribed.</h1>
   <p style="color:rgba(66,42,31,0.6);max-width:400px;margin:16px auto;">You won't receive engagement emails from Womenkind. Prescription refill and lab result notifications will still be sent as part of your care.</p>
   <p style="margin-top:24px;"><a href="${appUrl}/patient/settings" style="color:#944fed;text-decoration:none;font-size:14px;">Manage preferences in Settings</a></p>

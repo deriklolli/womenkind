@@ -32,7 +32,7 @@ const CARD: React.CSSProperties = {
   width: '100%',
 }
 
-const LOGO = <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '32px' }} />
+const LOGO = <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '56px', marginBottom: '32px' }} />
 
 export default async function ResumePage({ searchParams }: Props) {
   const session = await getServerSession()
@@ -104,7 +104,7 @@ export default async function ResumePage({ searchParams }: Props) {
       }}>
         <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '24px' }} />
+            <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '56px', marginBottom: '24px' }} />
             <h1 style={{ margin: '0 0 12px', fontSize: '36px', fontWeight: 400, color: '#280f49' }}>
               Choose your membership
             </h1>

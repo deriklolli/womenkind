@@ -47,7 +47,7 @@ export default function VerifyEmailPage() {
       fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
       padding: '40px 24px',
     }}>
-      <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '32px' }} />
+      <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '56px', marginBottom: '32px' }} />
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '20px',
