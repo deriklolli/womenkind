@@ -20,6 +20,7 @@ import PatientOverview from '@/components/provider/PatientOverview'
 import DashboardHero from '@/components/patient/DashboardHero'
 import DailyCheckinModal from '@/components/patient/DailyCheckinModal'
 import PillarTrendChart from '@/components/patient/PillarTrendChart'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 import TimelineStrip, { type TimelineMarker } from '@/components/patient/TimelineStrip'
 import { detectDashboardState } from '@/lib/patient-dashboard-state'
 import { devFixtures } from '@/lib/dev-fixtures'
@@ -986,12 +987,13 @@ export default function PatientDashboardPage() {
           {activeView === 'scorecard' && (() => {
             const wmiScores = overviewIntake?.wmi_scores
             const score = overviewLiveWmi ?? wmiScores?.wmi ?? null
-            const sortedOverall = [...overviewVisits]
-              .filter(v => v.symptom_scores?.overall !== undefined)
-              .sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())
-            const cur = sortedOverall[sortedOverall.length - 1]?.symptom_scores?.overall
-            const prev = sortedOverall[sortedOverall.length - 2]?.symptom_scores?.overall
-            const delta = cur !== undefined && prev !== undefined ? cur - prev : null
+            const daily = [...overviewVisits]
+              .filter(v => v.source === 'daily' && v.symptom_scores)
+              .sort((a: any, b: any) => b.visit_date.localeCompare(a.visit_date))
+            const prevWmi = overviewLiveWmi != null
+              ? computeLiveWMI(daily.slice(1).map((v: any) => ({ ...v, symptom_scores: v.symptom_scores ?? null })))
+              : null
+            const delta = score != null && prevWmi != null ? Math.round(score - prevWmi) : null
             const deltaStatus = delta === null ? null : delta > 0 ? 'improving' : delta < 0 ? 'watch' : 'steady'
             return (
               <WomenkindScoreBadge

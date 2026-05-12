@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { Flame, Moon, Zap, SmilePlus, Droplets, Brain, Shield, Scale, Heart, Activity } from 'lucide-react'
 import DailyCheckinModal from '@/components/patient/DailyCheckinModal'
 import WmiExplainerModal from '@/components/patient/WmiExplainerModal'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 interface Visit {
   id: string
@@ -200,8 +201,21 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   const wmiScores    = latestIntake?.wmi_scores
   const isLiveScore  = liveWmi != null
   const overallNow   = liveWmi ?? wmiScores?.wmi ?? latest?.symptom_scores?.overall
-  const overallPrev  = prev?.symptom_scores?.overall
-  const overallDelta = overallNow !== undefined && overallPrev !== undefined ? overallNow - overallPrev : null
+
+  // Delta must compare same-scale values. When liveWmi is active (0–100 WMI scale),
+  // compute the previous WMI from all daily check-ins except the most recent so we
+  // get a WMI-to-WMI diff. Raw symptom_scores.overall is 1–5 burden scale and must
+  // never be subtracted from a WMI value.
+  const prevLiveWmi = useMemo(() => {
+    if (!isLiveScore) return null
+    const daily = [...visits]
+      .filter(v => v.source === 'daily' && v.symptom_scores)
+      .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    return computeLiveWMI(daily.slice(1).map(v => ({ ...v, symptom_scores: v.symptom_scores ?? null })))
+  }, [isLiveScore, visits])
+
+  const overallPrev  = isLiveScore ? prevLiveWmi : null
+  const overallDelta = overallNow != null && overallPrev != null ? Math.round(overallNow - overallPrev) : null
 
   const lastCheckinDate = useMemo(() => {
     const weekly = visits
