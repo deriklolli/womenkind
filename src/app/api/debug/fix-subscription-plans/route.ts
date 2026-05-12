@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const body = await req.json().catch(() => ({}))
+  const defaultPlan: string | null = body.defaultPlan || null
+
   const results: {
     fixed_intake_rows: string[]
     created_missing_rows: string[]
@@ -41,7 +44,7 @@ export async function POST(req: NextRequest) {
       columns: { id: true, membership_plan: true },
     })
 
-    const plan = patient?.membership_plan
+    const plan = patient?.membership_plan || defaultPlan
     if (!plan || !MEMBER_PLAN_TYPES.includes(plan as any)) {
       results.skipped_no_plan.push(row.patient_id)
       continue
@@ -75,11 +78,15 @@ export async function POST(req: NextRequest) {
 
     // No row at all (or only just-fixed intake rows handled above)
     if (!existing) {
-      const plan = patient.membership_plan
+      const plan = patient.membership_plan || defaultPlan
       if (!plan || !MEMBER_PLAN_TYPES.includes(plan as any)) {
         results.skipped_no_plan.push(patient.id)
         continue
       }
+
+      await db.update(patients)
+        .set({ membership_plan: plan })
+        .where(eq(patients.id, patient.id))
 
       await db.insert(subscriptions).values({
         patient_id: patient.id,
