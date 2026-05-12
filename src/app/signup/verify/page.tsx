@@ -41,11 +41,13 @@ export default function VerifyEmailPage() {
       minHeight: '100vh',
       backgroundColor: '#f7f3ee',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
-      padding: '24px',
+      padding: '40px 24px',
     }}>
+      <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '32px' }} />
       <div style={{
         backgroundColor: '#ffffff',
         borderRadius: '20px',
@@ -54,7 +56,6 @@ export default function VerifyEmailPage() {
         width: '100%',
         textAlign: 'center',
       }}>
-        <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '64px', display: 'block', margin: '0 auto 28px' }} />
         <h1 style={{ margin: '0 0 12px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
           Check your inbox
         </h1>

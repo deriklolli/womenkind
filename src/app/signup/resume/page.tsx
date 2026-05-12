@@ -13,6 +13,27 @@ interface Props {
   searchParams: { session_id?: string }
 }
 
+const PAGE_SHELL: React.CSSProperties = {
+  minHeight: '100vh',
+  backgroundColor: '#f7f3ee',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
+  padding: '40px 24px',
+}
+
+const CARD: React.CSSProperties = {
+  backgroundColor: '#ffffff',
+  borderRadius: '20px',
+  padding: '48px',
+  maxWidth: '480px',
+  width: '100%',
+}
+
+const LOGO = <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '32px' }} />
+
 export default async function ResumePage({ searchParams }: Props) {
   const session = await getServerSession()
 
@@ -58,17 +79,9 @@ export default async function ResumePage({ searchParams }: Props) {
   if (status === 'verified') {
     if (selectedPlan) {
       return (
-        <div style={{
-          minHeight: '100vh',
-          backgroundColor: '#f7f3ee',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
-          padding: '24px',
-        }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', padding: '48px', maxWidth: '480px', width: '100%' }}>
-            <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '64px', display: 'block', margin: '0 auto 28px' }} />
+        <div style={PAGE_SHELL}>
+          {LOGO}
+          <div style={CARD}>
             <h1 style={{ margin: '0 0 8px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
               Complete your membership
             </h1>
@@ -91,6 +104,7 @@ export default async function ResumePage({ searchParams }: Props) {
       }}>
         <div style={{ maxWidth: '1080px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '44px', marginBottom: '24px' }} />
             <h1 style={{ margin: '0 0 12px', fontSize: '36px', fontWeight: 400, color: '#280f49' }}>
               Choose your membership
             </h1>
@@ -105,24 +119,9 @@ export default async function ResumePage({ searchParams }: Props) {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f7f3ee',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
-      padding: '24px',
-    }}>
-      <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '20px',
-        padding: '48px',
-        maxWidth: '480px',
-        width: '100%',
-      }}>
-        <img src="/womenkind-logo-dark.png" alt="Womenkind" style={{ height: '64px', display: 'block', margin: '0 auto 28px' }} />
-
+    <div style={PAGE_SHELL}>
+      {LOGO}
+      <div style={CARD}>
         {status === 'unverified' && (
           <>
             <h1 style={{ margin: '0 0 16px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
@@ -153,7 +152,7 @@ export default async function ResumePage({ searchParams }: Props) {
         {status === 'paid' && (
           <>
             <h1 style={{ margin: '0 0 16px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
-              You're ready to begin
+              You&apos;re ready to begin
             </h1>
             <p style={{ margin: '0 0 32px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
               Your membership is active. Complete your intake form so Dr. Urban can prepare for your first visit.
