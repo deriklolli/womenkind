@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       html: buildEngagementEmail({
         patientId,
         heading: 'Verify your email address',
-        bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:#422a1f;line-height:1.6;">Hi ${firstName}, click below to verify your email and continue setting up your Womenkind account.</p><p style="margin:0;font-size:14px;color:rgba(66,42,31,0.6);">This link expires in 24 hours.</p>`,
+        bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:#422a1f;line-height:1.6;">Hi ${firstName}, click below to verify your email and continue setting up your Womenkind account.</p><p style="margin:0 0 8px;font-size:14px;color:rgba(66,42,31,0.6);">This link expires in 24 hours.</p><p style="margin:0;font-size:14px;color:rgba(66,42,31,0.45);">Don't see this email? Check your spam or junk folder.</p>`,
         ctaText: 'Verify my email',
         ctaUrl: verifyUrl,
       }),

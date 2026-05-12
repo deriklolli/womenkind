@@ -48,8 +48,11 @@ export default function VerifyEmailPage() {
         <h1 style={{ margin: '0 0 12px', fontSize: '26px', fontWeight: 400, color: '#280f49' }}>
           Check your inbox
         </h1>
-        <p style={{ margin: '0 0 32px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 8px', fontSize: '16px', color: 'rgba(66,42,31,0.7)', lineHeight: 1.6 }}>
           We sent a verification link to your email address. Click it to continue setting up your account.
+        </p>
+        <p style={{ margin: '0 0 32px', fontSize: '14px', color: 'rgba(66,42,31,0.45)', lineHeight: 1.6 }}>
+          Don't see it? Check your spam or junk folder.
         </p>
         {error && (
           <p style={{ fontSize: '14px', color: '#c0392b', marginBottom: '12px' }}>{error}</p>
