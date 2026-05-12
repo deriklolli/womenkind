@@ -12,7 +12,17 @@ export default function VerifyEmailPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/auth/resend-verification', { method: 'POST' })
+      // Read the email cookie set during signup (fallback for when session wasn't established)
+      const emailCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('wk_signup_email='))
+        ?.split('=')[1]
+      const body = emailCookie ? { email: decodeURIComponent(emailCookie) } : {}
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
       if (res.ok) {
         setResent(true)
       } else {

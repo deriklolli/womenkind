@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
 
   // Step 3: Sign in to establish session cookies on the response
   const response = NextResponse.json({ ok: true })
+  // Store email in cookie so /signup/verify can resend without a session
+  response.cookies.set('wk_signup_email', email, { httpOnly: false, maxAge: 60 * 60 * 24, path: '/' })
   const cookieStore = await cookies()
   const sessionClient = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
