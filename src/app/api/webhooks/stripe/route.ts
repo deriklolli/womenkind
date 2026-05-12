@@ -229,18 +229,23 @@ async function handleIntakePayment(data: {
     }
   }
 
-  // Create a subscription record for the intake payment
+  // Create a subscription record using the patient's actual membership plan
   if (data.patientId) {
     try {
+      const patient = await db.query.patients.findFirst({
+        where: eq(patients.id, data.patientId),
+        columns: { membership_plan: true },
+      })
+      const planType = patient?.membership_plan || 'vitality'
       await db.insert(subscriptions).values({
         patient_id: data.patientId,
         stripe_customer_id: data.stripeCustomerId,
-        plan_type: 'intake',
+        plan_type: planType,
         status: 'active',
         intake_id: data.intakeId || null,
       })
     } catch (err: any) {
-      console.error('[STRIPE] Failed to create intake subscription record:', err.message)
+      console.error('[STRIPE] Failed to create subscription record:', err.message)
     }
   }
 }
@@ -417,7 +422,7 @@ async function handleOnboardingMembership(data: {
     patient_id: data.patientId,
     stripe_customer_id: data.stripeCustomerId,
     stripe_subscription_id: data.stripeSubscriptionId,
-    plan_type: 'membership',
+    plan_type: data.plan || 'vitality',
     status: 'active',
   }).catch((err: any) => {
     console.error('[STRIPE] Failed to create onboarding subscription record:', err.message)
@@ -444,11 +449,15 @@ async function handleMembershipStart(data: {
   }
 
   if (patientId) {
+    const patient = await db.query.patients.findFirst({
+      where: eq(patients.id, patientId),
+      columns: { membership_plan: true },
+    })
     await db.insert(subscriptions).values({
       patient_id: patientId,
       stripe_customer_id: data.stripeCustomerId,
       stripe_subscription_id: data.stripeSubscriptionId,
-      plan_type: 'membership',
+      plan_type: patient?.membership_plan || 'vitality',
       status: 'active',
     })
   }
