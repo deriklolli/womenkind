@@ -660,12 +660,14 @@ export default function PatientDashboardPage() {
     blueprintVersionUpdatedAt: null,
     lastBlueprintViewedAt: null,
     lastLabsViewedAt: null,
-    lastCheckinAt: null,
+    lastCheckinAt: overviewVisits
+      .filter((v: any) => v.source === 'daily' && v.visit_date)
+      .sort((a: any, b: any) => b.visit_date.localeCompare(a.visit_date))[0]?.visit_date ?? null,
     recommendedFollowUpAt: null,
     now: new Date(),
     checkedInAppointmentIds,
     hasInitialConsultation,
-  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds, hasInitialConsultation])
+  }), [patient, overviewIntake, appointments, overviewPrescriptions, checkedInAppointmentIds, hasInitialConsultation, overviewVisits])
 
   const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
 
