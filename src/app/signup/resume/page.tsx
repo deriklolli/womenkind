@@ -50,9 +50,13 @@ export default async function ResumePage({ searchParams }: Props) {
         stripeSession.payment_status === 'paid' ||
         stripeSession.status === 'complete'
       ) {
+        const plan = stripeSession.metadata?.plan || null
         await db
           .update(patients)
-          .set({ onboarding_status: 'paid' })
+          .set({
+            onboarding_status: 'paid',
+            ...(plan ? { membership_plan: plan } : {}),
+          })
           .where(eq(patients.id, session.patientId))
       }
     } catch (err) {

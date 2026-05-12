@@ -30,6 +30,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Verify intake has been paid before allowing submission.
+    // Providers bypass this check (submitting on behalf of patient).
+    // Dev mode also bypasses so local testing doesn't require Stripe.
+    if (session.role === 'patient' && process.env.NODE_ENV !== 'development') {
+      const intake = await db.query.intakes.findFirst({
+        where: eq(intakes.id, intakeId),
+        columns: { paid: true },
+      })
+      if (!intake?.paid) {
+        return NextResponse.json({ error: 'Payment required' }, { status: 402 })
+      }
+    }
+
     // 1. Resolve provider — look up the first active provider as the intake recipient
     //    (single-provider MVP; extend this to match by location/specialty in multi-provider phase)
     const providerRow = await db.query.providers.findFirst({
