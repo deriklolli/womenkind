@@ -213,9 +213,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
     return computeLiveWMI(daily.slice(1).map(v => ({ ...v, symptom_scores: v.symptom_scores ?? null })))
   }, [isLiveScore, visits])
 
-  // Fall back to intake WMI as baseline when there aren't enough check-ins for a prev live score
-  const overallPrev  = isLiveScore ? (prevLiveWmi ?? wmiScores?.wmi ?? null) : null
-  const deltaIsVsBaseline = isLiveScore && prevLiveWmi == null && wmiScores?.wmi != null
+  const overallPrev  = isLiveScore ? prevLiveWmi : null
   const overallDelta = overallNow != null && overallPrev != null ? Math.round(overallNow - overallPrev) : null
 
   const lastCheckinDate = useMemo(() => {
@@ -382,7 +380,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                                                'bg-aubergine/5 text-aubergine/50'
               }`}>
                 {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} {deltaIsVsBaseline ? 'since treatment started' : 'since last check-in'}
+                {Math.abs(overallDelta)} since last score
               </span>
             ) : wmiScores ? (
               <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
@@ -441,7 +439,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                                                'bg-aubergine/5 text-aubergine/50'
               }`}>
                 {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} {deltaIsVsBaseline ? 'since treatment started' : 'since last check-in'}
+                {Math.abs(overallDelta)} since last score
               </span>
             ) : <div className="mb-4" />}
             {isInitialState && wmiScores ? (
@@ -573,7 +571,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                           </span>
                           {avgValue !== null && data.length >= 2 && (
                             <span
-                              className="inline-flex items-center mt-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-sans font-medium"
+                              className="inline-flex items-center mt-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-sans font-medium ml-2"
                               style={{ backgroundColor: `${domain.color}18`, color: domain.color }}
                             >
                               Avg {avgValue}
