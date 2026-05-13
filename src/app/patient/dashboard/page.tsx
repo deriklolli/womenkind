@@ -697,6 +697,7 @@ export default function PatientDashboardPage() {
         }
         break
       case 'log_checkin':
+        setCheckinModalOpen(true); break
       case 'reengagement':
         setActiveView('scorecard'); break
       case 'refill_due':
