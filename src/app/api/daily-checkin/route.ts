@@ -19,7 +19,7 @@ const DOMAIN_RANGES: Record<string, { min: number; max: number }> = {
   sleep:     { min: 0, max: 12 },  // hours slept
   cardio:    { min: 0, max: 99 },  // episode count (0 = none)
 }
-const DEFAULT_RANGE = { min: 1, max: 5 }
+const DEFAULT_RANGE = { min: 1, max: 10 }
 
 async function checkHasWearable(patientId: string): Promise<boolean> {
   const twoDaysAgo = new Date()

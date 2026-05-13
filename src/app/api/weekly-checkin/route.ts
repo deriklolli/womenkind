@@ -17,7 +17,7 @@ const DOMAIN_RANGES: Record<string, { min: number; max: number }> = {
   sleep:     { min: 0, max: 12 },  // average hours per night
   cardio:    { min: 0, max: 99 },  // episode count (0 = none)
 }
-const DEFAULT_RANGE = { min: 1, max: 5 }
+const DEFAULT_RANGE = { min: 1, max: 10 }
 
 /** Returns Monday of the ISO week containing the given date, as YYYY-MM-DD */
 function getWeekStart(d: Date): string {
