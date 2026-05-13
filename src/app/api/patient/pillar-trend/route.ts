@@ -71,48 +71,47 @@ function normalizeToDisplay(domain: string, raw: number): number {
 // DEV FIXTURE ─────────────────────────────────────────────────────────────────
 const DEV_START_ISO = (() => { const d = new Date(); d.setDate(d.getDate() - 23 * 7); return d.toISOString().slice(0, 10) })()
 
+// DEV: 5 check-ins at weeks 3, 8, 13, 18, 23 — nulls between show real sparse-data rendering
+// series = carry-forward fill (what the line follows); seriesRaw = only real check-in points (hollow dots)
 const DEV_RESPONSE: TrendData = {
   weeks: 24,
   startIso: DEV_START_ISO,
-  wearableSeries: {
-    sleep:  [null, null, null, null, 6.2, 6.8, 6.5, 7.1, 7.3, 7.2, 7.5, 7.4, 7.6, 7.8, 7.7, 7.9, 7.8, 8.0, 8.1, 8.0, 8.2, 8.3, 8.1, 8.4],
-    energy: [null, null, null, null, 2.6, 2.4, 2.3, 2.1, 2.0, 1.9, 2.0, 1.8, 1.7, 1.6, 1.5, 1.4, 1.5, 1.3, 1.2, 1.3, 1.2, 1.2, 1.1, 1.1],
-  },
+  wearableSeries: {},
   domains: [
     { key: 'vasomotor', name: 'Vasomotor',     accent: '#c97c5d', baseline: 12,  current: 3,   rawScale: 20, lowerIsBetter: true },
     { key: 'sleep',     name: 'Sleep',          accent: '#5d9ed5', baseline: 5.5, current: 8.1, rawScale: 12 },
-    { key: 'energy',    name: 'Energy',         accent: '#e8a838', baseline: 3.8, current: 2.0, rawScale: 5 },
-    { key: 'mood',      name: 'Mood',           accent: '#7c6bc4', baseline: 3.5, current: 1.9, rawScale: 5 },
-    { key: 'cognition', name: 'Cognition',      accent: '#6366f1', baseline: 4.0, current: 2.1, rawScale: 5 },
-    { key: 'gsm',       name: 'Hormonal',       accent: '#c47884', baseline: 3.5, current: 1.8, rawScale: 5 },
-    { key: 'bone',      name: 'Bone Health',    accent: '#78716c', baseline: 3.0, current: 2.2, rawScale: 5 },
-    { key: 'weight',    name: 'Metabolism',     accent: '#0891b2', baseline: 3.2, current: 2.2, rawScale: 5 },
-    { key: 'libido',    name: 'Libido',         accent: '#e879f9', baseline: 4.0, current: 2.3, rawScale: 5 },
+    { key: 'energy',    name: 'Energy',         accent: '#e8a838', baseline: 3, current: 7,  rawScale: 10 },
+    { key: 'mood',      name: 'Mood',           accent: '#7c6bc4', baseline: 4, current: 8,  rawScale: 10 },
+    { key: 'cognition', name: 'Cognition',      accent: '#6366f1', baseline: 3, current: 7,  rawScale: 10 },
+    { key: 'gsm',       name: 'Hormonal',       accent: '#c47884', baseline: 4, current: 7,  rawScale: 10 },
+    { key: 'bone',      name: 'Bone Health',    accent: '#78716c', baseline: 5, current: 7,  rawScale: 10 },
+    { key: 'weight',    name: 'Metabolism',     accent: '#0891b2', baseline: 4, current: 7,  rawScale: 10 },
+    { key: 'libido',    name: 'Libido',         accent: '#e879f9', baseline: 3, current: 7,  rawScale: 10 },
     { key: 'cardio',    name: 'Cardiovascular', accent: '#ef4444', baseline: 2,   current: 0,   rawScale: 20, lowerIsBetter: true },
   ],
   series: {
-    vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
-    sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
-    energy:    [3.8, 3.6, 3.8, 3.7, 3.6, 3.4, 3.3, 3.1, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 2.0],
-    mood:      [3.5, 3.3, 3.8, 3.4, 3.5, 3.2, 3.0, 3.1, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.4, 2.3, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.9],
-    cognition: [4.0, 3.8, 3.9, 3.7, 3.6, 3.5, 3.4, 3.2, 3.2, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.5, 2.4, 2.3, 2.3, 2.2, 2.2, 2.1, 2.1],
-    gsm:       [3.5, 3.6, 3.4, 3.6, 3.3, 3.2, 3.1, 2.9, 2.8, 2.8, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.8],
-    bone:      [3.0, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2, 2.2],
-    weight:    [3.2, 3.3, 3.1, 3.2, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2],
-    libido:    [4.0, 3.9, 3.8, 3.7, 3.7, 3.5, 3.4, 3.3, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.8, 2.7, 2.7, 2.6, 2.5, 2.5, 2.5, 2.4, 2.3, 2.3],
-    cardio:    [2, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    vasomotor: [0,0,0, 12,12,12,12,12, 9,9,9,9,9, 7,7,7,7,7, 5,5,5,5,5, 3],
+    sleep:     [0,0,0, 5.5,5.5,5.5,5.5,5.5, 6.5,6.5,6.5,6.5,6.5, 7.0,7.0,7.0,7.0,7.0, 7.5,7.5,7.5,7.5,7.5, 8.1],
+    energy:    [0,0,0, 3,3,3,3,3, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 7],
+    mood:      [0,0,0, 4,4,4,4,4, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 8],
+    cognition: [0,0,0, 3,3,3,3,3, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 7],
+    gsm:       [0,0,0, 4,4,4,4,4, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 7],
+    bone:      [0,0,0, 5,5,5,5,5, 6,6,6,6,6, 6,6,6,6,6, 7,7,7,7,7, 7],
+    weight:    [0,0,0, 4,4,4,4,4, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 7],
+    libido:    [0,0,0, 3,3,3,3,3, 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, 7],
+    cardio:    [0,0,0, 2,2,2,2,2, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0, 0],
   },
   seriesRaw: {
-    vasomotor: [12, 11, 13, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3],
-    sleep:     [5.5, 5.5, 6.0, 5.8, 6.2, 6.5, 6.3, 6.7, 6.8, 7.0, 7.0, 7.2, 7.1, 7.3, 7.5, 7.4, 7.6, 7.5, 7.8, 7.7, 7.9, 8.0, 7.8, 8.1],
-    energy:    [3.8, 3.6, 3.8, 3.7, 3.6, 3.4, 3.3, 3.1, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 2.0],
-    mood:      [3.5, 3.3, 3.8, 3.4, 3.5, 3.2, 3.0, 3.1, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.4, 2.3, 2.3, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.9],
-    cognition: [4.0, 3.8, 3.9, 3.7, 3.6, 3.5, 3.4, 3.2, 3.2, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.5, 2.4, 2.3, 2.3, 2.2, 2.2, 2.1, 2.1],
-    gsm:       [3.5, 3.6, 3.4, 3.6, 3.3, 3.2, 3.1, 2.9, 2.8, 2.8, 2.6, 2.5, 2.4, 2.4, 2.3, 2.2, 2.2, 2.1, 2.1, 2.0, 2.0, 1.9, 1.8, 1.8],
-    bone:      [3.0, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.7, 2.6, 2.6, 2.5, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2, 2.2],
-    weight:    [3.2, 3.3, 3.1, 3.2, 3.1, 3.0, 2.9, 2.9, 2.8, 2.8, 2.7, 2.6, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.3, 2.3, 2.2, 2.2, 2.2, 2.2],
-    libido:    [4.0, 3.9, 3.8, 3.7, 3.7, 3.5, 3.4, 3.3, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.8, 2.7, 2.7, 2.6, 2.5, 2.5, 2.5, 2.4, 2.3, 2.3],
-    cardio:    [2, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    vasomotor: [null,null,null, 12, null,null,null,null, 9, null,null,null,null, 7, null,null,null,null, 5, null,null,null,null, 3],
+    sleep:     [null,null,null, 5.5, null,null,null,null, 6.5, null,null,null,null, 7.0, null,null,null,null, 7.5, null,null,null,null, 8.1],
+    energy:    [null,null,null, 3, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    mood:      [null,null,null, 4, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 8],
+    cognition: [null,null,null, 3, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    gsm:       [null,null,null, 4, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    bone:      [null,null,null, 5, null,null,null,null, 6, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    weight:    [null,null,null, 4, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    libido:    [null,null,null, 3, null,null,null,null, 5, null,null,null,null, 6, null,null,null,null, 7, null,null,null,null, 7],
+    cardio:    [null,null,null, 2, null,null,null,null, 1, null,null,null,null, 1, null,null,null,null, 0, null,null,null,null, 0],
   },
   milestones: [
     {
@@ -242,8 +241,8 @@ export async function GET(req: NextRequest) {
   // ── Build per-domain check-in series ────────────────────────────────────────
   // rawScale for each domain — controls y-axis range and what gets plotted
   const DOMAIN_RAW_SCALES: Record<string, number> = {
-    vasomotor: 20, sleep: 12, energy: 5, mood: 5, cognition: 5,
-    gsm: 5, bone: 5, weight: 5, libido: 5, cardio: 20, overall: 5,
+    vasomotor: 20, sleep: 12, energy: 10, mood: 10, cognition: 10,
+    gsm: 10, bone: 10, weight: 10, libido: 10, cardio: 20, overall: 10,
   }
   const LOWER_IS_BETTER = new Set(['vasomotor', 'cardio'])
   // Sensible fallback when no data exists yet
