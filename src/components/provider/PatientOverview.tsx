@@ -213,7 +213,9 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
     return computeLiveWMI(daily.slice(1).map(v => ({ ...v, symptom_scores: v.symptom_scores ?? null })))
   }, [isLiveScore, visits])
 
-  const overallPrev  = isLiveScore ? prevLiveWmi : null
+  // Fall back to intake WMI as baseline when there aren't enough check-ins for a prev live score
+  const overallPrev  = isLiveScore ? (prevLiveWmi ?? wmiScores?.wmi ?? null) : null
+  const deltaIsVsBaseline = isLiveScore && prevLiveWmi == null && wmiScores?.wmi != null
   const overallDelta = overallNow != null && overallPrev != null ? Math.round(overallNow - overallPrev) : null
 
   const lastCheckinDate = useMemo(() => {
@@ -380,7 +382,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                                                'bg-aubergine/5 text-aubergine/50'
               }`}>
                 {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} since last visit
+                {Math.abs(overallDelta)} {deltaIsVsBaseline ? 'since treatment started' : 'since last check-in'}
               </span>
             ) : wmiScores ? (
               <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
@@ -439,7 +441,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                                                'bg-aubergine/5 text-aubergine/50'
               }`}>
                 {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
-                {Math.abs(overallDelta)} since last visit
+                {Math.abs(overallDelta)} {deltaIsVsBaseline ? 'since treatment started' : 'since last check-in'}
               </span>
             ) : <div className="mb-4" />}
             {isInitialState && wmiScores ? (
