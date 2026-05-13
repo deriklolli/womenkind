@@ -165,11 +165,9 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
   }, [view])
 
   const toggleKey = (key: string) => {
-    setSelectedKeys(prev => {
-      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-      onDomainsChange?.(next)
-      return next
-    })
+    const next = selectedKeys.includes(key) ? selectedKeys.filter(k => k !== key) : [...selectedKeys, key]
+    setSelectedKeys(next)
+    onDomainsChange?.(next)
   }
 
   const activeDomains = ALL_DOMAINS.filter(d => selectedKeys.includes(d.key))
@@ -594,11 +592,12 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                             {unit && <span className="font-serif text-xl italic ml-1.5" style={{ color: '#C4A87A' }}>{unit}</span>}
                           </span>
                           {avgValue !== null && data.length >= 2 && (
-                            <p className="text-xs font-sans text-aubergine/50 mt-1">
-                              avg {avgValue}
-                              {status === 'improving' && <span className="ml-1 text-emerald-600 font-medium">↑</span>}
-                              {status === 'watch'     && <span className="ml-1 text-amber-600 font-medium">↓</span>}
-                            </p>
+                            <span
+                              className="inline-flex items-center mt-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-sans font-medium"
+                              style={{ backgroundColor: `${domain.color}18`, color: domain.color }}
+                            >
+                              Avg {avgValue}
+                            </span>
                           )}
                         </div>
                       )
