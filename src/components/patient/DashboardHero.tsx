@@ -5,10 +5,11 @@ import type { HeroAction } from '@/lib/patient-dashboard-state'
 interface Props {
   action: HeroAction
   onPrimaryClick?: () => void
+  onDismiss?: () => void
   patientFirstName?: string
 }
 
-export default function DashboardHero({ action, onPrimaryClick, patientFirstName }: Props) {
+export default function DashboardHero({ action, onPrimaryClick, onDismiss, patientFirstName }: Props) {
   switch (action.kind) {
     case 'book_consult':
       return (
@@ -49,6 +50,7 @@ export default function DashboardHero({ action, onPrimaryClick, patientFirstName
           eyebrow="After your visit"
           headline="Dr. Urban is finalizing your care plan"
           body="You'll be notified when it's ready — typically within 48 hours. No action needed right now."
+          onDismiss={onDismiss}
         />
       )
     case 'log_checkin':
@@ -165,9 +167,20 @@ function HeroLight(props: { eyebrow: string; headline: string; body: string; cta
   )
 }
 
-function HeroCream(props: { eyebrow: string; headline: string; body: string }) {
+function HeroCream(props: { eyebrow: string; headline: string; body: string; onDismiss?: () => void }) {
   return (
-    <section className="bg-cream rounded-card p-7">
+    <section className="bg-white rounded-card shadow-sm border border-aubergine/5 p-7 relative">
+      {props.onDismiss && (
+        <button
+          onClick={props.onDismiss}
+          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full text-aubergine/30 hover:text-aubergine/60 hover:bg-aubergine/5 transition-colors"
+          aria-label="Dismiss"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
       <div className="text-[10px] font-semibold tracking-widest uppercase text-aubergine/50 mb-2">{props.eyebrow}</div>
       <h2 className="font-serif text-2xl text-aubergine mb-2">{props.headline}</h2>
       <p className="font-sans text-sm text-aubergine/60 max-w-2xl">{props.body}</p>

@@ -429,6 +429,7 @@ export default function PatientDashboardPage() {
   const [cancelConfirmIdTab, setCancelConfirmIdTab] = useState<string | null>(null)
   const [cancelingIdTab, setCancelingIdTab] = useState<string | null>(null)
   const [checkedInAppointmentIds, setCheckedInAppointmentIds] = useState<Set<string> | null>(null)
+  const [awaitingPlanDismissed, setAwaitingPlanDismissed] = useState(false)
   const [snapshotNow, setSnapshotNow] = useState<Date>(() => new Date())
 
   const handleCancelBannerAppointment = async () => {
@@ -1058,11 +1059,14 @@ export default function PatientDashboardPage() {
             {activeView === 'dashboard' && (
               <>
                 {!appointmentsLoading && (
-                  <DashboardHero
-                    action={heroAction}
-                    onPrimaryClick={handleHero}
-                    patientFirstName={patient.name?.split(' ')[0]}
-                  />
+                  {!(heroAction.kind === 'awaiting_plan' && awaitingPlanDismissed) && (
+                    <DashboardHero
+                      action={heroAction}
+                      onPrimaryClick={handleHero}
+                      onDismiss={heroAction.kind === 'awaiting_plan' ? () => setAwaitingPlanDismissed(true) : undefined}
+                      patientFirstName={patient.name?.split(' ')[0]}
+                    />
+                  )}
                 )}
 
                 {!appointmentsLoading && appointments.length > 0 && (
