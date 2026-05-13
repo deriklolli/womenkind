@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { appointments, providers, patients, profiles } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { startCloudRecording } from '@/lib/daily-video'
 
 /**
  * POST /api/debug/create-test-video-appointment
@@ -69,9 +68,6 @@ export async function POST(req: NextRequest) {
       video_room_url: room.url,
       video_room_name: room.roomName,
     }).where(eq(appointments.id, appt.id))
-
-    // Start cloud recording
-    await startCloudRecording(room.roomName)
 
     return NextResponse.json({
       appointmentId: appt.id,
