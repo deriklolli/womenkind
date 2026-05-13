@@ -558,8 +558,13 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
               if (key === 'vasomotor') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'sleep') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'cardio') return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
-              return { value: String(Math.round(val)), unit: val > 5 ? '/ 10' : '/ 10' }
+              return { value: String(Math.round(val)), unit: '/ 10' }
             }
+
+            const avg4 = data.length > 0
+              ? data.slice(-4).reduce((sum, v) => sum + v, 0) / Math.min(data.length, 4)
+              : null
+            const avgValue = avg4 !== null ? domainDisplay(domain.key, parseFloat(avg4.toFixed(1))).value : null
 
             return (
               <div
@@ -577,15 +582,24 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                     <p className="text-xs font-sans font-semibold text-aubergine">{domain.label}</p>
                   </div>
 
-                  {/* Score + subtitle */}
+                  {/* Score + avg + subtitle */}
                   <div className="mb-2">
                     {current !== undefined ? (() => {
                       const { value, unit } = domainDisplay(domain.key, current)
                       return (
-                        <span className="font-serif text-5xl text-aubergine leading-none">
-                          {value}
-                          {unit && <span className="font-serif text-xl italic ml-1.5" style={{ color: '#C4A87A' }}>{unit}</span>}
-                        </span>
+                        <div>
+                          <span className="font-serif text-5xl text-aubergine leading-none">
+                            {value}
+                            {unit && <span className="font-serif text-xl italic ml-1.5" style={{ color: '#C4A87A' }}>{unit}</span>}
+                          </span>
+                          {avgValue !== null && data.length >= 2 && (
+                            <p className="text-xs font-sans text-aubergine/50 mt-1">
+                              avg {avgValue}
+                              {status === 'improving' && <span className="ml-1 text-emerald-600 font-medium">↑</span>}
+                              {status === 'watch'     && <span className="ml-1 text-amber-600 font-medium">↓</span>}
+                            </p>
+                          )}
+                        </div>
                       )
                     })() : (
                       <span className="font-serif text-4xl text-aubergine/20 leading-none">—</span>
