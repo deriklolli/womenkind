@@ -316,7 +316,9 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
   const wearableLinePath = buildPath(wearableBezierPts)
 
   const areaPath = bezierPts.length > 0
-    ? `${linePath} L${lastPt[0].toFixed(1)},${bottomY.toFixed(1)} L${bezierPts[0][0].toFixed(1)},${bottomY.toFixed(1)} Z`
+    ? firstRealWk > 0
+      ? `M${PAD.l.toFixed(1)},${bottomY.toFixed(1)} L${bezierPts[0][0].toFixed(1)},${bezierPts[0][1].toFixed(1)} ${linePath.slice(linePath.indexOf(' ') + 1)} L${lastPt[0].toFixed(1)},${bottomY.toFixed(1)} Z`
+      : `${linePath} L${lastPt[0].toFixed(1)},${bottomY.toFixed(1)} L${bezierPts[0][0].toFixed(1)},${bottomY.toFixed(1)} Z`
     : ''
 
   // Annotation rail: first 3 + most recent
@@ -378,14 +380,9 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {/* Area fill */}
           {areaPath && <path d={areaPath} fill={`url(#grad-${gradId}-${domainKey})`} />}
 
-          {/* Floor line — flat baseline before first real check-in */}
-          {firstRealWk > 0 && (
-            <>
-              <line x1={PAD.l} y1={bottomY} x2={floorEndX} y2={bottomY} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
-              {bezierPts.length > 0 && bezierPts[0][1] < bottomY && (
-                <line x1={floorEndX} y1={bottomY} x2={floorEndX} y2={bezierPts[0][1]} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
-              )}
-            </>
+          {/* Diagonal intro line — from chart origin to first real check-in */}
+          {firstRealWk > 0 && bezierPts.length > 0 && (
+            <line x1={PAD.l} y1={bottomY} x2={bezierPts[0][0]} y2={bezierPts[0][1]} stroke={accent} strokeWidth={2.5} strokeLinecap="round" />
           )}
 
           {/* Series line — bezier only from first real check-in onward */}
@@ -413,13 +410,8 @@ export default function PillarTrendChart({ patientId, activeDomains, initialDoma
           {/* Wearable (Oura) overlay — dashed, dimmer */}
           {(wearableLinePath || firstRealWearableWk > 0) && (
             <>
-              {firstRealWearableWk > 0 && (
-                <>
-                  <line x1={PAD.l} y1={bottomY} x2={wearableFloorEndX} y2={bottomY} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
-                  {wearableBezierPts.length > 0 && wearableBezierPts[0][1] < bottomY && (
-                    <line x1={wearableFloorEndX} y1={bottomY} x2={wearableFloorEndX} y2={wearableBezierPts[0][1]} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
-                  )}
-                </>
+              {firstRealWearableWk > 0 && wearableBezierPts.length > 0 && (
+                <line x1={PAD.l} y1={bottomY} x2={wearableBezierPts[0][0]} y2={wearableBezierPts[0][1]} stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeDasharray="5 4" />
               )}
               {wearableLinePath && <path d={wearableLinePath} fill="none" stroke={OURA_COLOR} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="5 4" />}
               {wearablePts.length > 0 && (
