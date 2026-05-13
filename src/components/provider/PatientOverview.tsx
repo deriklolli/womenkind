@@ -432,13 +432,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                 <span className="font-serif text-6xl leading-none text-aubergine/20">—</span>
               )}
             </div>
-            {isInitialState && wmiScores ? (
-              <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  Based on WMI
-                </span>
-              </div>
-            ) : overallDelta !== null ? (
+            {overallDelta !== null ? (
               <span className={`inline-flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-pill mb-4 ${
                 overallStatus === 'improving' ? 'bg-emerald-50 text-emerald-700' :
                 overallStatus === 'watch'     ? 'bg-amber-50 text-amber-700' :
@@ -447,23 +441,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                 {overallStatus === 'improving' ? '↑' : overallStatus === 'watch' ? '↓' : '→'}
                 {Math.abs(overallDelta)} since last visit
               </span>
-            ) : wmiScores ? (
-              <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
-                <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-violet/8 text-violet">
-                  {wmiScores.wmi_label}
-                </span>
-                {wmiScores.phenotype && (
-                  <span className="inline-flex items-center text-xs font-sans px-3 py-1 rounded-pill bg-aubergine/5 text-aubergine/55">
-                    {wmiScores.phenotype}
-                  </span>
-                )}
-              </div>
-            ) : null}
-            {isLiveScore && lastCheckinDate && (
-              <p className="text-[10px] font-sans text-aubergine/40 -mt-2 mb-3 tracking-wide">
-                Live score · Last check-in: {lastCheckinDate}
-              </p>
-            )}
+            ) : <div className="mb-4" />}
             {isInitialState && wmiScores ? (
               <>
                 <p className="font-serif text-2xl text-aubergine mb-2">
