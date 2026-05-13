@@ -67,7 +67,7 @@ const ALL_DOMAINS = [
   { key: 'cognition', label: 'Cognition',      Icon: Brain,     color: '#6366f1', subtitle: 'Brain fog & clarity',    improvesDown: false, tags: { improving: 'Clearer focus',   watch: 'More fog',        steady: 'Consistent'     } },
   { key: 'bone',      label: 'Bone Health',    Icon: Shield,    color: '#78716c', subtitle: 'Density indicators',     improvesDown: false, tags: { improving: 'Strengthening',   watch: 'Monitor closely', steady: 'Stable'         } },
   { key: 'weight',    label: 'Metabolism',     Icon: Scale,     color: '#0891b2', subtitle: 'Weight & metabolic',     improvesDown: false, tags: { improving: 'Trending well',   watch: 'Needs attention', steady: 'Holding steady' } },
-  { key: 'libido',    label: 'Libido',         Icon: Heart,     color: '#e879f9', subtitle: 'Self-rated intimacy',    improvesDown: false, tags: { improving: 'Improving',       watch: 'Watch closely',   steady: 'Consistent'     } },
+  { key: 'libido',    label: 'Libido',         Icon: Heart,     color: '#e879f9', subtitle: 'Intimacy & desire',    improvesDown: false, tags: { improving: 'Improving',       watch: 'Watch closely',   steady: 'Consistent'     } },
   { key: 'cardio',    label: 'Cardiovascular', Icon: Activity,  color: '#ef4444', subtitle: 'Heart & circulation',    improvesDown: false, tags: { improving: 'Improving',       watch: 'Monitor closely', steady: 'Stable'         } },
 ]
 
