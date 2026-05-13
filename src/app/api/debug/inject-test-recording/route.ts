@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
   // Submit test audio to AssemblyAI
   const aaiBody: Record<string, unknown> = {
     audio_url: TEST_AUDIO_URL,
+    speech_models: ['universal-2'],
     speaker_labels: true,
     speakers_expected: 2,
     webhook_url: `${appUrl}/api/visits/webhook/transcription`,
