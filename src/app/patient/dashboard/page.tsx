@@ -677,6 +677,12 @@ export default function PatientDashboardPage() {
 
   const { heroAction } = useMemo(() => detectDashboardState(dashboardSnapshot), [dashboardSnapshot])
 
+  const lastCheckinScores = useMemo(() => {
+    return overviewVisits
+      .filter((v: any) => v.source === 'daily' && v.symptom_scores)
+      .sort((a: any, b: any) => b.visit_date.localeCompare(a.visit_date))[0]?.symptom_scores ?? undefined
+  }, [overviewVisits])
+
   const handleHero = useCallback(() => {
     switch (heroAction.kind) {
       case 'book_consult':
@@ -1058,15 +1064,13 @@ export default function PatientDashboardPage() {
             {/* Dashboard view — action-first hero + health story stack */}
             {activeView === 'dashboard' && (
               <>
-                {!appointmentsLoading && (
-                  {!(heroAction.kind === 'awaiting_plan' && awaitingPlanDismissed) && (
-                    <DashboardHero
-                      action={heroAction}
-                      onPrimaryClick={handleHero}
-                      onDismiss={heroAction.kind === 'awaiting_plan' ? () => setAwaitingPlanDismissed(true) : undefined}
-                      patientFirstName={patient.name?.split(' ')[0]}
-                    />
-                  )}
+                {!appointmentsLoading && !(heroAction.kind === 'awaiting_plan' && awaitingPlanDismissed) && (
+                  <DashboardHero
+                    action={heroAction}
+                    onPrimaryClick={handleHero}
+                    onDismiss={heroAction.kind === 'awaiting_plan' ? () => setAwaitingPlanDismissed(true) : undefined}
+                    patientFirstName={patient.name?.split(' ')[0]}
+                  />
                 )}
 
                 {!appointmentsLoading && appointments.length > 0 && (
@@ -1534,6 +1538,7 @@ export default function PatientDashboardPage() {
         <DailyCheckinModal
           onClose={() => setCheckinModalOpen(false)}
           appointmentId={heroAction.kind === 'prep_visit' ? heroAction.appointment.id : undefined}
+          defaultScores={lastCheckinScores}
           onSuccess={(liveWmi, visit) => {
             setCheckinModalOpen(false)
             // If this check-in was for the prep_visit appointment, collapse the banner immediately

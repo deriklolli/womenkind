@@ -7,6 +7,7 @@ interface Props {
   onSuccess: (liveWmi?: number | null, visit?: Record<string, any>) => void
   onClose: () => void
   appointmentId?: string
+  defaultScores?: Record<string, number>
 }
 
 const STANDARD_QUESTIONS = [
@@ -71,33 +72,34 @@ const SLEEP_ENERGY_QUESTIONS = [
 ]
 
 const SCORE_LABELS: Record<number, string> = {
-  1: 'Not at all',
-  2: 'Mild',
-  3: 'Moderate',
-  4: 'Significant',
-  5: 'Severe',
+  1: 'Terrible', 2: 'Very poor', 3: 'Poor', 4: 'Below average',
+  5: 'Average', 6: 'Above average', 7: 'Good', 8: 'Very good',
+  9: 'Excellent', 10: 'Perfect',
 }
 
 function scoreColor(val: number): string {
-  if (val <= 1) return 'text-emerald-600'
-  if (val === 2) return 'text-amber-500'
-  if (val === 3) return 'text-amber-600'
-  if (val === 4) return 'text-orange-600'
+  if (val >= 8) return 'text-emerald-600'
+  if (val >= 6) return 'text-amber-500'
+  if (val >= 4) return 'text-amber-600'
+  if (val >= 2) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function buildInitialScores(): Record<string, number> {
   return {
     vasomotor: 0,
-    sleep: 7, energy: 3,
-    mood: 3, cognition: 3, gsm: 3, bone: 3, weight: 3, libido: 3,
+    sleep: 7, energy: 5,
+    mood: 5, cognition: 5, gsm: 5, bone: 5, weight: 5, libido: 5,
     cardio: 0,
-    overall: 3,
+    overall: 5,
   }
 }
 
-export default function DailyCheckinModal({ onSuccess, onClose, appointmentId }: Props) {
-  const [scores, setScores] = useState<Record<string, number>>(buildInitialScores)
+export default function DailyCheckinModal({ onSuccess, onClose, appointmentId, defaultScores }: Props) {
+  const [scores, setScores] = useState<Record<string, number>>(() => ({
+    ...buildInitialScores(),
+    ...(defaultScores ?? {}),
+  }))
   const [cardioYes, setCardioYes] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -222,6 +224,7 @@ export default function DailyCheckinModal({ onSuccess, onClose, appointmentId }:
                         <SliderInput
                           value={scores[q.domain]}
                           onChange={(v) => set(q.domain, v)}
+                          lastWeek={defaultScores?.[q.domain]}
                         />
                       )}
                     </div>
@@ -277,27 +280,32 @@ export default function DailyCheckinModal({ onSuccess, onClose, appointmentId }:
 
 // ── Sub-components ──────────────────────────────────────────────────────────────
 
-function SliderInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const pct = ((value - 1) / 4) * 100
+function SliderInput({ value, onChange, lastWeek }: { value: number; onChange: (v: number) => void; lastWeek?: number }) {
+  const pct = ((value - 1) / 9) * 100
   return (
     <>
       <div className="flex items-center justify-between mb-2">
         <span className={`font-sans text-sm font-semibold ${scoreColor(value)}`}>
           {SCORE_LABELS[value]}
         </span>
-        <span className="font-sans text-xs text-aubergine/30 tabular-nums">{value} / 5</span>
+        <div className="flex items-center gap-2">
+          {lastWeek !== undefined && (
+            <span className="font-sans text-xs text-aubergine/30">Last week: {lastWeek}</span>
+          )}
+          <span className="font-sans text-xs text-aubergine/30 tabular-nums">{value} / 10</span>
+        </div>
       </div>
       <input
         type="range"
-        min={1} max={5} step={1}
+        min={1} max={10} step={1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="daily-checkin-slider w-full h-1.5 appearance-none rounded-full cursor-pointer"
         style={{ background: `linear-gradient(to right, #944fed ${pct}%, #e5e7eb ${pct}%)` }}
       />
       <div className="flex justify-between mt-1.5">
-        <span className="font-sans text-xs text-aubergine/30">Not at all</span>
-        <span className="font-sans text-xs text-aubergine/30">Severe</span>
+        <span className="font-sans text-xs text-aubergine/30">1 · Worst</span>
+        <span className="font-sans text-xs text-aubergine/30">10 · Best</span>
       </div>
     </>
   )

@@ -359,13 +359,17 @@ export function computeLiveWMI(
     }
   }
 
-  // ── Energy: from wearable if available, else check-in 1–5 ──
+  // ── Energy: from wearable if available, else 1-10 wellness or legacy 1–5 burden ──
   let energyNorm: number
   if (wearableActivity !== null) {
     // activity_score: 70+ = good energy, below = burden
     energyNorm = Math.max(0, Math.min(1, (70 - wearableActivity) / 70))
   } else {
-    energyNorm = (avg('energy') - 1) / 4
+    const energyVals = recent.map((v) => v.symptom_scores?.energy).filter((n): n is number => n !== undefined)
+    const aEnergy = avg('energy')
+    energyNorm = energyVals.some(v => v > 5)
+      ? (10 - aEnergy) / 9   // 1-10 wellness: 10=best, invert to burden
+      : (aEnergy - 1) / 4    // legacy 1-5 burden
   }
 
   // ── Cardio: detect format ──
@@ -377,22 +381,27 @@ export function computeLiveWMI(
     ? Math.min(aCardio, 5) / 5           // count: 0=none, 5+=max burden
     : (aCardio - 1) / 4                  // legacy: 1–5 burden
 
-  // ── Remaining 1–5 domains (unchanged format) ──
-  const aMood   = avg('mood')
-  const aCog    = avg('cognition')
-  const aGsm    = avg('gsm')
-  const aLibido = avg('libido')
-  const aBone   = avg('bone')
+  // ── Remaining domains: detect 1-10 wellness or legacy 1-5 burden ──
+  const norm15or110 = (key: string): number => {
+    const vals = recent.map(v => v.symptom_scores?.[key]).filter((n): n is number => n !== undefined)
+    const a = avg(key)
+    return vals.some(v => v > 5) ? (10 - a) / 9 : (a - 1) / 4
+  }
+
+  const moodNorm  = norm15or110('mood')
+  const cogNorm   = norm15or110('cognition')
+  const gsmNorm   = norm15or110('gsm')
+  const libidoNorm = norm15or110('libido')
+  const boneNorm  = norm15or110('bone')
 
   // ── WMI equivalents ──
   const vms_eq    = vmsNorm * 20
-  const mams_eq   = ((aMood - 1) / 4) * 12
-  const cogNorm   = (aCog - 1) / 4
+  const mams_eq   = moodNorm * 12
   const cog_eq    = ((cogNorm + energyNorm) / 2) * 8
-  const gsm_eq    = ((aGsm - 1) / 4) * 12
-  const hsdd_eq   = ((aLibido - 1) / 4) * 4
+  const gsm_eq    = gsmNorm * 12
+  const hsdd_eq   = libidoNorm * 4
   const cardio_eq = cardioNorm * 4
-  const msk_eq    = ((aBone - 1) / 4) * 4
+  const msk_eq    = boneNorm * 4
 
   // ── Penalties (base 90, weights sum 60) ──
   let vmsP      = 12 * (vms_eq / 20)

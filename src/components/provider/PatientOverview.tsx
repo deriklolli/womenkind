@@ -558,7 +558,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
               if (key === 'vasomotor') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'sleep') return { value: String(val % 1 === 0 ? val : val.toFixed(1)), unit: '' }
               if (key === 'cardio') return { value: val === 0 ? 'None' : String(val), unit: val === 0 ? '' : val === 1 ? 'episode' : 'episodes' }
-              return { value: String(val), unit: '/ 5' }
+              return { value: String(Math.round(val)), unit: val > 5 ? '/ 10' : '/ 10' }
             }
 
             return (
