@@ -1165,6 +1165,7 @@ export default function PatientDashboardPage() {
                   view="patient"
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
+                  initialSelectedKeys={chartDomains}
                 />
 
               </>
@@ -1457,6 +1458,7 @@ export default function PatientDashboardPage() {
                   hideScoreHeader
                   onCheckinComplete={handleCheckinComplete}
                   onDomainsChange={setChartDomains}
+                  initialSelectedKeys={chartDomains}
                 />
                 <PillarTrendChart patientId={patient.patientId} activeDomains={chartDomains} refreshKey={checkinRefreshKey} />
               </>

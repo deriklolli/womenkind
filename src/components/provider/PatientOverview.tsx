@@ -53,6 +53,7 @@ interface PatientOverviewProps {
   liveWmi?: number | null
   onCheckinComplete?: (liveWmi?: number | null, visit?: Record<string, any>) => void
   onDomainsChange?: (keys: string[]) => void
+  initialSelectedKeys?: string[]
   showCheckin?: boolean
   compact?: boolean
   hideScoreHeader?: boolean
@@ -124,8 +125,8 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, showCheckin = false, compact = false, hideScoreHeader = false }: PatientOverviewProps) {
-  const [selectedKeys, setSelectedKeys] = useState<string[]>(DEFAULT_DOMAIN_KEYS)
+export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, initialSelectedKeys, showCheckin = false, compact = false, hideScoreHeader = false }: PatientOverviewProps) {
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(initialSelectedKeys ?? DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [checkinModal, setCheckinModal] = useState(false)
