@@ -36,8 +36,8 @@ const primaryActions: ActionItem[] = [
   },
   {
     key: 'refill',
-    label: 'Request Rx Refill',
-    subtitle: 'Submit a refill request',
+    label: 'Your Prescriptions',
+    subtitle: 'Medications & notes',
     icon: 'pill',
     color: '#944fed',
     bg: 'rgba(148, 79, 237, 0.08)',

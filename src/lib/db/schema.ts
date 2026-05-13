@@ -169,6 +169,15 @@ export const prescriptions = pgTable('prescriptions', {
   created_at:          timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// ── Prescription Notes ────────────────────────────────────────────────────────
+export const prescriptionNotes = pgTable('prescription_notes', {
+  id:              uuid('id').primaryKey().defaultRandom(),
+  prescription_id: uuid('prescription_id').notNull().references(() => prescriptions.id),
+  patient_id:      uuid('patient_id').notNull().references(() => patients.id),
+  note:            text('note').notNull(),
+  created_at:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ── Refill Requests ───────────────────────────────────────────────────────────
 export const refill_requests = pgTable('refill_requests', {
   id:              uuid('id').primaryKey().defaultRandom(),

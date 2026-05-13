@@ -1408,7 +1408,7 @@ export default function PatientDashboardPage() {
                   Your Prescriptions
                 </h3>
                 <p className="text-sm font-sans text-aubergine/40 mb-6">
-                  Submit a refill request and Dr. Urban&apos;s team will review it within 1-2 business days.
+                  Track your medications, view start and expiry dates, and add notes for Dr. Urban about how they&apos;re working for you.
                 </p>
                 <PrescriptionList patientId={patient.patientId} providerId={patient.providerId ?? ''} />
               </div>

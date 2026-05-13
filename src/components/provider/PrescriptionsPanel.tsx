@@ -1,7 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PRESCRIPTION_TEMPLATES } from '@/lib/canvas-client'
+
+interface PrescriptionNote {
+  id: string
+  prescription_id: string
+  patient_id: string
+  note: string
+  created_at: string
+}
 
 interface Prescription {
   id: string
@@ -40,6 +48,17 @@ export default function PrescriptionsPanel({
   const [showForm, setShowForm] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [patientNotes, setPatientNotes] = useState<PrescriptionNote[]>([])
+
+  useEffect(() => {
+    if (!patientId) return
+    fetch(`/api/prescription-notes?patientId=${patientId}`)
+      .then(r => r.json())
+      .then(data => setPatientNotes(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [patientId])
+
+  const notesForRx = (rxId: string) => patientNotes.filter(n => n.prescription_id === rxId)
 
   // Form state
   const [medicationName, setMedicationName] = useState('')
@@ -309,6 +328,23 @@ export default function PrescriptionsPanel({
                     </div>
                   </div>
                 </div>
+                {notesForRx(rx.id).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-aubergine/8">
+                    <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-2">
+                      Patient notes
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {notesForRx(rx.id).map(n => (
+                        <div key={n.id} className="bg-aubergine/[0.03] rounded-lg px-3 py-2">
+                          <p className="text-xs font-sans text-aubergine/40 mb-0.5">
+                            {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                          <p className="text-sm font-sans text-aubergine/75 whitespace-pre-wrap">{n.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
               })}
