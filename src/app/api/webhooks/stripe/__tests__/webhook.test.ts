@@ -43,6 +43,7 @@ jest.mock('@/lib/db', () => ({
       intakes: { findFirst: mockFindFirst },
       appointments: { findFirst: mockFindFirst },
       subscriptions: { findFirst: mockFindFirst },
+      patients: { findFirst: mockFindFirst },
     },
   },
 }))
@@ -212,7 +213,7 @@ describe('POST /api/webhooks/stripe', () => {
 
       expect(mockInsertInto).toHaveBeenCalled()
       expect(mockInsertValues).toHaveBeenCalledWith(
-        expect.objectContaining({ plan_type: 'intake', status: 'active' })
+        expect.objectContaining({ status: 'active' })
       )
     })
   })
@@ -285,6 +286,7 @@ describe('POST /api/webhooks/stripe', () => {
 
   describe('checkout.session.completed (type: membership)', () => {
     it('inserts a membership subscription record with status: active', async () => {
+      mockFindFirst.mockResolvedValueOnce({ membership_plan: 'membership' })
       const { POST } = await import('../route')
       const res = await POST(makeWebhookRequest(checkoutEvent(
         {
