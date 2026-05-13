@@ -43,6 +43,9 @@
 - Daily webhook registered at: `https://api.daily.co/v1/webhooks` (no `event_types` filter — Daily API doesn't support it; all events go to one endpoint); URL must be `https://www.womenkindhealth.com/api/visits/webhook/recording`
 - Debug endpoints: `/api/debug/reprocess-transcripts` (re-fires stuck AssemblyAI jobs), `/api/debug/create-test-video-appointment` (creates Daily room + appointment for testing)
 - Cloud recording starts automatically via Daily's `enable_recording: 'cloud'` room property when participants join — do NOT call `startCloudRecording()` at booking time (nobody is in the room yet, it conflicts)
+- **HIPAA mode active**: Daily domain has `hipaa: true`. Video recordings route to `womenkind-recordings` S3 bucket (not Daily's own `daily-meeting-recordings` bucket). In HIPAA mode the webhook sends `s3_key` (not `s3_url`) — `/api/visits/webhook/recording` calls `getDownloadUrl(s3_key)` to generate the pre-signed URL for AssemblyAI.
+- **Daily IAM role for S3 access**: `arn:aws:iam::695385417786:role/daily-recording-role`. Trust principal: `arn:aws:iam::291871421005:root`. **Max session duration must be 12 hours** — Daily requests 12-hour sessions; the AWS default (1 hour) causes `unable to assume role` errors. Daily only accepts `assume_role_arn`, NOT `access_key_id`/`secret_access_key`.
+- **`enable_recording` valid values**: `'cloud'` or `false`. The string `'s3'` is NOT valid and silently breaks room creation. Always use `'cloud'`.
 
 ## Auth / test accounts
 - Provider: `josephurbanmd@gmail.com` / `password123`
@@ -68,43 +71,53 @@
 - `+` button next to "Areas of focus" opens a multi-select dropdown to customize which topics display
 - Overall score label: **"Your Womenkind Score"** (branded, no date) — `isInitialState` (no visits) shows "Based on WMI" pill + WMI-band headline; active state (visits exist) shows delta chip + treatment-progress headline
 - Domain cards are driven by visit `symptom_scores` (set via check-in), NOT WMI scores. WMI drives the top-level score number only.
-- Domain card values are domain-appropriate: vasomotor shows episode count, sleep shows hrs, cardio shows episode count or "None", others show `X / 5`
+- Domain card values are domain-appropriate: vasomotor shows episode count, sleep shows hrs, cardio shows episode count or "None", others show `X / 10` (1–10 wellness scale, 10=best)
+- Each domain card shows a color-tinted avg pill ("Avg 7") with 8px left margin (`ml-2`), only when ≥2 data points exist. No arrow — trend direction is shown separately by the trend line at the card bottom.
+- Domain card sparklines (bottom of each card) are real data from `visits.symptom_scores` — one point per check-in. Rendered by `GradientSparkline` component (bezier line + gradient fill + terminal dot).
+- Domain subtitles: Mood = "Emotional wellness", Libido = "Intimacy & desire"
+- Score card: shows numeric delta chip ("↑ 4 since last score") comparing current liveWmi to the previous liveWmi (excluding most recent check-in). **No** wmi_label pill, **no** phenotype pill, **no** "Live score · Last check-in" text — the headline already communicates trend.
+- `initialSelectedKeys?: string[]` prop seeds `useState` for domain selection. Dashboard passes `chartDomains` as `initialSelectedKeys` to both PatientOverview instances (dashboard + scorecard views) so selection survives tab navigation.
+- `toggleKey` computes next state outside the updater function — calling `onDomainsChange` inside a setState updater causes React 18 "cannot update while rendering" error.
 - Score summary copy driven by `latestIntake.ai_brief.summary` — pass a seeded intake from the patient dashboard to show copy below the trend chip
 - Body text below score capped at 2 sentences + `line-clamp-4` (patient view uses `patient_blueprint.overview`, provider view uses `symptom_summary.overview`)
-- Props: `showCheckin`, `onCheckinComplete`, `liveWmi` (overrides WMI score when present), `onDomainsChange` (fires `string[]` on domain toggle — synced to `chartDomains` state in dashboard which feeds PillarTrendChart)
-- `liveWmi` score resolution: `liveWmi → intakeWmi → visitOverall`. When live score is showing, displays "Live score · Last check-in: [date]" label.
+- Props: `showCheckin`, `onCheckinComplete`, `liveWmi` (overrides WMI score when present), `onDomainsChange` (fires `string[]` on domain toggle — synced to `chartDomains` state in dashboard which feeds PillarTrendChart), `initialSelectedKeys`
+- `liveWmi` score resolution: `liveWmi → intakeWmi → visitOverall`.
 - `hasWearable` state: fetched from GET `/api/daily-checkin` response; passed to `DailyCheckinModal` to skip sleep/energy questions when Oura data is present
 
 ## Daily Check-in
 - Route: `GET /api/daily-checkin` (has today checked in? returns `{ checkedIn, visit, hasWearable }`), `POST /api/daily-checkin` (submit scores)
 - Component: `src/components/patient/DailyCheckinModal.tsx` — domain-specific input types per question
-- **Domain input types**: vasomotor → counter 0–20 (episode count), sleep → hours stepper 0–12 (skipped if wearable), energy → 1–5 slider (skipped if wearable), cardio → binary toggle + episode counter, all others → 1–5 burden slider
-- 5 is always bad for sliders; vasomotor/cardio/sleep use raw counts/hours stored directly
+- **Domain input types**: vasomotor → counter 0–20 (episode count), sleep → hours stepper 0–12 (skipped if wearable), energy → **1–10 wellness slider** (skipped if wearable), cardio → binary toggle + episode counter, all others → **1–10 wellness slider**
+- **Scale: 1–10 wellness (10=best)** — questions are positively framed ("How energized did you feel?") so patients drag right for a good week. Vasomotor/cardio/sleep use raw counts/hours stored directly.
+- Questions pre-populate with the patient's most recent check-in scores as `defaultScores` prop — patients see "Last week: X" context on each slider
+- API validation: `DEFAULT_RANGE = { min: 1, max: 10 }` in both `/api/daily-checkin` and `/api/weekly-checkin` routes
+- "Log this week's symptoms" hero banner opens the modal directly (`setCheckinModalOpen(true)`), not the scorecard view
 - Wearable-adaptive: `hasWearable=true` skips sleep + energy questions (Oura covers them passively)
 - Stored in `visits` table with `source='daily'`, `visit_type='daily_checkin'`, `appointment_id=null`
 - One check-in per day enforced by partial unique index: `visits_patient_daily_unique ON visits(patient_id, visit_date) WHERE source = 'daily'`
 - Provider is required for the visit row — POST handler queries the first active provider as a placeholder
 - **Dev bypass**: both GET and POST return mock data immediately when `NODE_ENV === 'development'`
-- Debug: `POST /api/debug/reset-daily-checkin {"email": "..."}` — deletes today's daily check-in so the patient can re-answer
+- Debug: `POST /api/debug/reset-daily-checkin {"email": "..."}` — deletes today's check-in; add `"all": true` to wipe all daily check-ins for a patient
 
 ## Pillar Trend Chart (`src/components/patient/PillarTrendChart.tsx`)
-- Replaces `SymptomTrendChart` on both the patient dashboard and scorecard (Symptom Tracker) views
+- Patient-side only — provider portal uses PatientOverview domain cards, not this chart
 - Props: `patientId: string`, `activeDomains: string[]` (mirrors symptom tracker card selection), `initialDomain?: string`
 - `activeDomains` is lifted state (`chartDomains`) in the dashboard — PatientOverview fires `onDomainsChange`, dashboard updates `chartDomains`, chart dropdown updates. Adding/removing a domain card in the tracker immediately adds/removes it from the chart dropdown.
 - Data source: `GET /api/patient/pillar-trend?patientId=X` — returns 24 weekly series for all 10 domains + milestones
-- Score normalization: check-in burden (1–5, 5=worst) → display (0–10, 10=best). Vasomotor count (0–20) → `10 - (count/15)*10`. Sleep hours → `(hours/9)*10`. Wearable `sleep_score`/`readiness_score` (0–100) → `/10`.
+- Score normalization: check-in wellness (1–10, 10=best) → display already 1–10. Vasomotor count (0–20) plotted raw. Sleep hours (0–12) plotted raw. Wearable `sleep_score`/`readiness_score` (0–100) → `/10`.
 - **Wearable data**: production API queries `wearable_metrics` for `sleep_score` (→ sleep domain) and `readiness_score` (→ energy domain) in preference to check-in values
-- Milestones derived from: provider visits (deduplicated by date) + prescriptions (same-week rxs merged into one pin)
-- SVG chart: bezier area fill, baseline dashed marker, numbered medallion pins on dashed stems, 4-card annotation rail (first 3 milestones + most recent), bidirectional hover between pins and cards
-- X-axis: relative week labels (START / WK 6 / WK 12 / WK 18 / NOW) — always covers last 24 weeks up to today
-- Y-axis: 0–10, higher = better (scores are inverted from burden scale)
-- Dev returns fixture data with 10 domains and 5 milestones; `activeDomains[0]` guarded with optional chaining (`?.`) to handle undefined prop on first render
+- **Milestones**: `Milestone` interface has `{ wk, type, short, title, body, date }` — `date` is ISO string (YYYY-MM-DD) for display. Visit milestones show actual visit date + "15 minute consultation"; rx milestones show full medication name + "started". Same-week prescriptions grouped into one pin.
+- **Milestone annotation cards**: show formatted date (not "WK N"), title, and body text. No visit number.
+- SVG chart: diagonal intro line from chart origin to first real check-in (not flat floor + vertical jump); bezier area fill; numbered medallion pins; 4-card annotation rail; bidirectional hover between pins and cards
+- **Y-axis scales**: vasomotor → 0–20, sleep → 0–12, all 1–10 wellness domains (energy, mood, cognition, gsm, bone, weight, libido) → 0–10. `DOMAIN_RAW_SCALES` in `route.ts` uses 10 for wellness domains (not 5).
+- X-axis: START (left) and NOW (right) labels only
+- Dev fixture: 5 sparse check-ins at weeks 3/8/13/18/23, 3 milestones (initial consultation, rx, follow-up), no wearable series — reflects realistic sparse-data rendering
 - Debug: `GET /api/debug/patient-trend-data?email=...` — dumps check-ins, wearable metric types, prescriptions, visits for a patient
 
 ## WMI Scoring
 - `src/lib/wmi-scoring.ts` — `computeWMI(answers)` deterministic scoring from intake, stored in `intakes.wmi_scores`
 - `computeLiveWMI(checkins, wearableMetrics?)` — rolling 7-day score from daily check-ins; wearable-first for sleep/energy
-- Per-domain normalization: vasomotor count → `min(avg,15)/15`; sleep hours → `max(0, 7-hrs)/7`; cardio count → `min(avg,5)/5`; others → `(avg-1)/4`. Backward-compat heuristic: if value ≤ 5 and none are 0, treat as legacy 1–5 burden.
+- Per-domain normalization: vasomotor count → `min(avg,15)/15`; sleep hours → `max(0, 7-hrs)/7`; cardio count → `min(avg,5)/5`; slider domains use `norm15or110()` helper — detects scale via `vals.some(v > 5)`: if 1–10 wellness → `(10-avg)/9`; if legacy 1–5 burden → `(avg-1)/4`. Ensures old and new check-in data both score correctly.
 - `liveWmi` returned from `/api/patient/me` and `/api/provider/patients/[id]` — passed as prop to PatientOverview
 - Intakes submitted before `computeWMI()` was added will have `wmi_scores: null` — use `/api/debug/recompute-wmi-by-email` to backfill
 
