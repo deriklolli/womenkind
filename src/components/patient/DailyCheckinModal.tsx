@@ -18,32 +18,32 @@ const STANDARD_QUESTIONS = [
   },
   {
     domain: 'mood',
-    question: 'How much have mood changes, irritability, or anxiety affected you this week?',
+    question: 'How balanced and positive was your mood this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'cognition',
-    question: 'How much has brain fog, difficulty concentrating, or memory lapses affected you this week?',
+    question: 'How sharp and focused did you feel this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'gsm',
-    question: 'Have you noticed vaginal dryness, discomfort during intimacy, or urinary changes this week?',
+    question: 'How comfortable and symptom-free were you from vaginal dryness or urinary changes this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'bone',
-    question: 'How much have joint pain, stiffness, or muscle aches affected you this week?',
+    question: 'How free from joint pain, stiffness, or muscle aches were you this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'weight',
-    question: 'How much have bloating, appetite changes, or weight-related concerns affected you this week?',
+    question: 'How comfortable were you with your appetite, bloating, and body this week?',
     inputType: 'slider' as const,
   },
   {
     domain: 'libido',
-    question: 'How much have changes in sexual desire or intimacy affected your quality of life this week?',
+    question: 'How satisfied were you with your level of desire and intimacy this week?',
     inputType: 'slider' as const,
   },
   {
@@ -53,7 +53,7 @@ const STANDARD_QUESTIONS = [
   },
   {
     domain: 'overall',
-    question: 'Overall, how much are your symptoms affecting your quality of life this week?',
+    question: 'Overall, how good did you feel this week?',
     inputType: 'slider' as const,
   },
 ]
@@ -66,7 +66,7 @@ const SLEEP_ENERGY_QUESTIONS = [
   },
   {
     domain: 'energy',
-    question: 'How much has fatigue or low energy affected you this week?',
+    question: 'How energized and vital did you feel this week?',
     inputType: 'slider' as const,
   },
 ]
