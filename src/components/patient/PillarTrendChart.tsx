@@ -20,6 +20,7 @@ interface Milestone {
   short: string
   title: string
   body: string
+  date: string
 }
 
 interface TrendData {
@@ -56,6 +57,11 @@ const DOMAIN_SUBTITLES: Record<string, string> = {
   weight:    'Weight & metabolic',
   libido:    'Self-rated intimacy',
   cardio:    'Heart & circulation',
+}
+
+function formatMilestoneDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
 const VB_W = 1100
@@ -192,7 +198,7 @@ function AnnotationCard({
           className="font-sans font-bold tracking-[0.18em] uppercase transition-colors duration-[250ms]"
           style={{ fontSize: 9.5, color: highlighted ? 'rgba(255,255,255,0.65)' : 'rgba(66,42,31,0.45)' }}
         >
-          WK {milestone.wk} · {milestone.short}
+          {formatMilestoneDate(milestone.date)}
         </span>
       </div>
       <p
@@ -201,6 +207,14 @@ function AnnotationCard({
       >
         {milestone.title}
       </p>
+      {milestone.body && (
+        <p
+          className="font-sans leading-snug mt-1 transition-colors duration-[250ms]"
+          style={{ fontSize: 12, color: highlighted ? 'rgba(255,255,255,0.75)' : 'rgba(66,42,31,0.55)' }}
+        >
+          {milestone.body}
+        </p>
+      )}
     </div>
   )
 }

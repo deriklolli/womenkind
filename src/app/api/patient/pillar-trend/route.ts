@@ -20,6 +20,7 @@ interface Milestone {
   short: string
   title: string
   body: string
+  date: string   // ISO date string YYYY-MM-DD for display
 }
 
 interface TrendData {
@@ -113,7 +114,32 @@ const DEV_RESPONSE: TrendData = {
     libido:    [4.0, 3.9, 3.8, 3.7, 3.7, 3.5, 3.4, 3.3, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.8, 2.7, 2.7, 2.6, 2.5, 2.5, 2.5, 2.4, 2.3, 2.3],
     cardio:    [2, 2, 1, 2, 2, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
   },
-  milestones: [],
+  milestones: [
+    {
+      wk: 0,
+      type: 'visit' as const,
+      short: 'Initial',
+      title: 'Initial Consultation',
+      body: '15 minute consultation',
+      date: DEV_START_ISO,
+    },
+    {
+      wk: 2,
+      type: 'rx' as const,
+      short: 'Rx',
+      title: 'Estradiol patch started',
+      body: '',
+      date: (() => { const d = new Date(DEV_START_ISO); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10) })(),
+    },
+    {
+      wk: 12,
+      type: 'visit' as const,
+      short: 'Follow-up',
+      title: 'Follow-Up Consultation',
+      body: '15 minute consultation',
+      date: (() => { const d = new Date(DEV_START_ISO); d.setDate(d.getDate() + 84); return d.toISOString().slice(0, 10) })(),
+    },
+  ],
 }
 
 export async function GET(req: NextRequest) {
@@ -289,14 +315,20 @@ export async function GET(req: NextRequest) {
 
   // Provider visits — deduplicate same visit_date (appointment + note create duplicate rows)
   const seenVisitDates = new Set<string>()
-  let visitCount = 0
   for (const v of providerVisits.sort((a, b) => a.visit_date.localeCompare(b.visit_date))) {
     if (seenVisitDates.has(v.visit_date)) continue
     seenVisitDates.add(v.visit_date)
-    visitCount++
     const d = new Date(v.visit_date + 'T00:00:00')
     const wk = Math.max(0, Math.min(actualWeeks - 1, Math.floor((d.getTime() - startDate.getTime()) / MS_PER_WEEK)))
-    milestones.push({ wk, type: 'visit', short: `Visit ${visitCount}`, title: `${v.visit_type === 'initial_consultation' ? 'Initial' : 'Follow-Up'} Consultation`, body: 'Care team visit with Dr. Urban.' })
+    const isInitial = v.visit_type === 'initial_consultation'
+    milestones.push({
+      wk,
+      type: 'visit',
+      short: isInitial ? 'Initial' : 'Follow-up',
+      title: isInitial ? 'Initial Consultation' : 'Follow-Up Consultation',
+      body: '15 minute consultation',
+      date: v.visit_date,
+    })
   }
 
   // Prescriptions — group same-week rxs into one milestone
@@ -307,12 +339,17 @@ export async function GET(req: NextRequest) {
     if (!rxByWeek[wk]) rxByWeek[wk] = { names: [], prescribed_at: rx.prescribed_at }
     rxByWeek[wk].names.push(rx.medication_name)
   }
-  for (const [wkStr, { names }] of Object.entries(rxByWeek)) {
+  for (const [wkStr, { names, prescribed_at }] of Object.entries(rxByWeek)) {
     const wk = Number(wkStr)
-    const label = names.length === 1 ? names[0].split(' ')[0] : 'Rx started'
-    const title = names.length === 1 ? `${names[0]} Started` : 'Medications Started'
-    const body = names.join(', ')
-    milestones.push({ wk, type: 'rx', short: label.slice(0, 10), title, body })
+    const isSingle = names.length === 1
+    milestones.push({
+      wk,
+      type: 'rx',
+      short: 'Rx',
+      title: isSingle ? `${names[0]} started` : `${names.length} medications started`,
+      body: isSingle ? '' : names.join(', '),
+      date: prescribed_at.toISOString().slice(0, 10),
+    })
   }
 
   milestones.sort((a, b) => a.wk - b.wk)
