@@ -257,6 +257,11 @@ export default function IntakePage() {
       })
       const data = await res.json()
 
+      if (res.status === 402) {
+        router.push(`/intake/payment?intake_id=${intakeId}`)
+        return
+      }
+
       if (!res.ok) throw new Error(data.error || 'Submission failed')
 
       router.push('/intake/complete')
@@ -266,7 +271,7 @@ export default function IntakePage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [answers, intakeId, autoSave])
+  }, [answers, intakeId, patientId, autoSave, router])
 
   return (
     <div className="min-h-screen bg-[#f7f3ee] flex flex-col relative overflow-hidden">
