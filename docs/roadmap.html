@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WomenKind — Platform Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5EDE0;
+    --bg2: #EDE3D2;
+    --rail: #C4A882;
+    --gold: #8B6A3A;
+    --gold-light: #6B4F2A;
+    --gold-dim: #A07840;
+    --plum: #4A1E35;
+    --plum-mid: #5E2745;
+    --plum-bright: #7A3460;
+    --cream: #2A1A22;
+    --muted: #6B5040;
+    --future-border: #D4C4B0;
+    --future-bg: #EEE4D4;
+    --now-glow: #8B6A3A;
+    --text-primary: #1E1410;
+    --text-secondary: #5A3E30;
+    --text-dim: #8B7060;
+    --phase1: #8B4513;
+    --phase2: #2D5A4A;
+    --phase3: #1A3A5A;
+    --phase4: #5A2D6A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Jost', sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 80px 40px 120px;
+    position: relative;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 90px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .wordmark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+    display: block;
+  }
+
+  .header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(42px, 6vw, 68px);
+    font-weight: 300;
+    line-height: 1;
+    color: var(--plum);
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+
+  .header h1 em {
+    font-style: italic;
+    color: var(--plum-bright);
+  }
+
+  .header-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .header-rule {
+    width: 60px;
+    height: 1px;
+    background: var(--rail);
+    margin: 24px auto 20px;
+  }
+
+  /* TIMELINE LAYOUT */
+  .timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Vertical rail */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 120px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--rail) 5%, var(--rail) 95%, transparent);
+    opacity: 0.6;
+  }
+
+  /* PHASE LABEL */
+  .phase-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-bottom: 4px;
+    margin-top: 36px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .phase-label:first-child { margin-top: 0; }
+
+  .phase-tag {
+    width: 120px;
+    padding-right: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .phase-tag span {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .phase-line {
+    flex: 1;
+    padding-left: 28px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .phase-line h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--plum);
+    letter-spacing: 0.01em;
+    opacity: 0.7;
+  }
+
+  .phase-divider {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--rail), transparent);
+    opacity: 0.5;
+  }
+
+  /* BUILD ROW */
+  .build-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 6px 0;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  /* Build number column */
+  .build-num {
+    width: 120px;
+    padding-right: 28px;
+    text-align: right;
+    flex-shrink: 0;
+    padding-top: 14px;
+  }
+
+  .build-num span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* Rail dot */
+  .rail-dot {
+    position: relative;
+    flex-shrink: 0;
+    width: 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid var(--plum-mid);
+    background: var(--bg);
+    margin-left: -4px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+  }
+
+  .build-row:hover .dot {
+    border-color: var(--gold);
+    background: var(--gold-dim);
+    box-shadow: 0 0 8px rgba(139, 106, 58, 0.3);
+  }
+
+  .dot.completed {
+    background: var(--rail);
+    border-color: var(--muted);
+  }
+
+  .dot.future {
+    border-color: var(--rail);
+    background: var(--bg2);
+  }
+
+  /* Build card */
+  .build-card {
+    flex: 1;
+    margin-left: 28px;
+    padding: 14px 20px;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+
+  .build-card.completed {
+    background: var(--future-bg);
+    border: 1px solid var(--future-border);
+  }
+
+  .build-card.completed:hover {
+    border-color: var(--rail);
+    transform: translateX(3px);
+  }
+
+  .build-card.future {
+    background: var(--future-bg);
+    border: 1px solid var(--future-border);
+  }
+
+  .build-card.future:hover {
+    border-color: var(--rail);
+    transform: translateX(3px);
+  }
+
+  .build-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .build-name {
+    font-family: 'Jost', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .build-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .build-desc {
+    margin-top: 10px;
+    font-family: 'Jost', sans-serif;
+    font-size: 14.5px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+
+  /* Completed check */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-left: 8px;
+  }
+
+  .status-badge.done {
+    color: var(--muted);
+  }
+
+  .status-badge.planned {
+    color: var(--muted);
+  }
+
+  /* NOW MARKER */
+  .now-marker {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 12px 0;
+    animation: fadeUp 0.6s ease both, pulse-glow 3s ease-in-out infinite;
+    position: relative;
+    z-index: 10;
+  }
+
+  .now-label-col {
+    width: 120px;
+    padding-right: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .now-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--plum);
+    display: inline-block;
+  }
+
+  .now-rail {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding-left: 0;
+    margin-left: -4px;
+  }
+
+  .now-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--plum-bright);
+    box-shadow: 0 0 16px rgba(122, 52, 96, 0.4), 0 0 40px rgba(122, 52, 96, 0.15);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .now-dot::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 1px solid rgba(122, 52, 96, 0.35);
+    animation: ring-pulse 2s ease-in-out infinite;
+  }
+
+  .now-line {
+    flex: 1;
+    height: 1px;
+    margin-left: 16px;
+    background: linear-gradient(to right, var(--plum-mid), transparent);
+    opacity: 0.4;
+  }
+
+  .now-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    font-style: italic;
+    color: var(--plum-bright);
+    margin-left: 16px;
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+
+  /* Phase color coding */
+  .p1 { background: rgba(139, 69, 19, 0.12); color: #7A3A10; border: 1px solid rgba(139,69,19,0.2); }
+  .p2 { background: rgba(45, 90, 74, 0.12); color: #1A5A3A; border: 1px solid rgba(45,90,74,0.2); }
+  .p3 { background: rgba(26, 58, 90, 0.12); color: #1A3A6A; border: 1px solid rgba(26,58,90,0.2); }
+  .p4 { background: rgba(90, 45, 106, 0.12); color: #5A1A6A; border: 1px solid rgba(90,45,106,0.2); }
+  .p5 { background: rgba(100, 80, 30, 0.12); color: #6A5010; border: 1px solid rgba(100,80,30,0.2); }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 1px solid rgba(196, 168, 130, 0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    animation: fadeUp 0.6s ease both;
+    animation-delay: 0.4s;
+  }
+
+  .footer-left {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    line-height: 1.8;
+  }
+
+  .footer-right {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    font-style: italic;
+    color: var(--plum);
+    text-align: right;
+    opacity: 0.6;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 64px;
+    padding-left: 148px;
+    animation: fadeUp 0.6s ease both;
+    animation-delay: 0.2s;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+  .legend-dot.c { background: var(--rail); border: 1.5px solid var(--muted); }
+  .legend-dot.n { background: var(--plum-bright); }
+  .legend-dot.f { background: var(--bg2); border: 1.5px solid var(--rail); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  @keyframes ring-pulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  /* Staggered animation delays */
+  .build-row:nth-child(1) { animation-delay: 0.05s; }
+  .build-row:nth-child(2) { animation-delay: 0.10s; }
+  .build-row:nth-child(3) { animation-delay: 0.15s; }
+  .build-row:nth-child(4) { animation-delay: 0.20s; }
+  .build-row:nth-child(5) { animation-delay: 0.25s; }
+  .build-row:nth-child(6) { animation-delay: 0.30s; }
+  .build-row:nth-child(7) { animation-delay: 0.35s; }
+  .build-row:nth-child(8) { animation-delay: 0.40s; }
+  .build-row:nth-child(9) { animation-delay: 0.45s; }
+  .build-row:nth-child(10) { animation-delay: 0.50s; }
+  .build-row:nth-child(11) { animation-delay: 0.55s; }
+  .build-row:nth-child(12) { animation-delay: 0.60s; }
+  .build-row:nth-child(13) { animation-delay: 0.65s; }
+  .build-row:nth-child(14) { animation-delay: 0.70s; }
+  .build-row:nth-child(15) { animation-delay: 0.75s; }
+  .build-row:nth-child(16) { animation-delay: 0.80s; }
+  .build-row:nth-child(17) { animation-delay: 0.85s; }
+  .build-row:nth-child(18) { animation-delay: 0.90s; }
+  .build-row:nth-child(19) { animation-delay: 0.95s; }
+  .build-row:nth-child(20) { animation-delay: 1.00s; }
+
+  @media print {
+    body { background: white; color: #1a1a1a; }
+    .page { padding: 40px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="wordmark">WomenKind Health</span>
+    <h1>Platform <em>Roadmap</em></h1>
+    <div class="header-rule"></div>
+    <p class="header-sub">May 2026 &nbsp;·&nbsp; All Builds &nbsp;·&nbsp; Confidential</p>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot c"></div> Completed</div>
+    <div class="legend-item"><div class="legend-dot n"></div> You are here</div>
+    <div class="legend-item"><div class="legend-dot f"></div> Planned</div>
+  </div>
+
+  <div class="timeline">
+
+    <!-- ── PHASE 1 ── -->
+    <div class="phase-label">
+      <div class="phase-tag"><span class="p1">Phase 1</span></div>
+      <div class="phase-line">
+        <h2>Foundation</h2>
+        <div class="phase-divider"></div>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–01</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Patient Intake <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We built a 54-question clinical intake spanning 10 health domains, with adaptive branching that shows or hides questions based on prior answers. Patients move through sections covering symptoms, history, medications, and lifestyle before signing a consent gate that unlocks the rest of the platform.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–02</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">AI Clinical Brief <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">The moment a patient submits their intake, Claude synthesizes their answers into a structured clinical brief that is waiting for Dr. Urban before the visit begins. The brief is organized into four tabs covering symptom summary, health history, treatment considerations, and recommended talking points, all grounded in IMS 2024 menopause guidelines.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–03</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Provider Queue & Auth <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We stood up the full authentication system, connecting Supabase identity to a separate clinical database so patient records never touch the auth layer. Dr. Urban logs in and sees a queue of patients sorted by intake submission date, with each row gated until the AI brief has finished generating.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–04</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Stripe Billing <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">Full payment infrastructure went live with six products covering the $650 intake visit and three tiers of the $200 per month membership. We activated a FOUNDING member promo code and wired Stripe checkout directly into the onboarding flow so payment happens before the first appointment is booked.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–05</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Onboarding Funnel <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">A patient arriving for the first time moves through a linear funnel: welcome screen, plan selection, account creation, email verification, intake, and payment. Verification links use cryptographic tokens so a patient who clicks the link on a different device than they signed up on still lands in the right place without errors.</p>
+      </div>
+    </div>
+
+    <!-- ── PHASE 2 ── -->
+    <div class="phase-label">
+      <div class="phase-tag"><span class="p2">Phase 2</span></div>
+      <div class="phase-line">
+        <h2>Patient Experience</h2>
+        <div class="phase-divider"></div>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–06</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Patient Dashboard <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">The patient-facing dashboard went live with a full suite of health tracking cards, one for each of the ten clinical domains. The experience unlocks immediately after a patient submits their intake, and each domain card shows a live sparkline drawn from their real check-in history so progress is visible from the first visit.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–07</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">WMI Scoring Engine <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We built the WomenKind Menopause Index, a proprietary scoring algorithm that converts a patient's intake answers into a single numeric score across ten health domains. The score updates dynamically as patients log weekly check-ins, and when an Oura ring is connected, sleep and energy readings flow in automatically without requiring manual input.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–08</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Daily Check-in & Wearables <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">Patients can log how they are feeling each day with a short check-in that adapts to their health profile. Questions are tailored per domain, so vasomotor symptoms are tracked by episode count, sleep by hours, and mood on a wellness scale. When a patient wears an Oura ring, sleep and energy questions are skipped entirely since the wearable is already capturing that data.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–09</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Pillar Trend Chart <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">A custom 24-week trend chart shows each patient how their health has changed over time across all ten domains. The chart overlays milestone pins on the timeline marking key moments like the initial consultation and any prescription changes, so patients can visually connect their treatment decisions to shifts in how they feel.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–10</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Patient Engagement System <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We built a proactive outreach system to keep patients engaged between visits. It sends a weekly nudge if no check-in has been logged, a monthly progress recap, and an alert to the care team if a patient's score drops sharply. Every email includes a one-click unsubscribe and all outreach is subject to frequency caps so patients never feel overwhelmed.</p>
+      </div>
+    </div>
+
+    <!-- ── PHASE 3 ── -->
+    <div class="phase-label">
+      <div class="phase-tag"><span class="p3">Phase 3</span></div>
+      <div class="phase-line">
+        <h2>Clinical Operations</h2>
+        <div class="phase-divider"></div>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–11</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Video Visits <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">Patients can book appointments directly from their dashboard and join video visits through a HIPAA-compliant video platform. Calls are recorded automatically in the cloud with encryption and access controls required by healthcare law, and recordings are stored in a dedicated secure bucket tied to the patient record.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–12</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Recording & Transcription Pipeline <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">After every visit, the recording is automatically transcribed and passed to Claude, which generates a structured clinical SOAP note and saves it to the patient record. Providers can also capture ambient audio during in-person encounters, which goes through the same transcription pipeline and produces a note without any manual documentation.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–13</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Prescriptions & Lab Orders <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">Dr. Urban can write prescriptions and order labs directly from a patient's profile. When lab results come in, they are automatically surfaced on the patient record and the patient receives a notification. Both prescription history and lab orders are preserved in the clinical record for reference at every future visit.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–14</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Dashboard Polish & Notification Prefs <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We refined the patient dashboard with richer visual feedback, including color-tinted average pills on each domain card, trend sparklines drawn from real check-in data, and a score card showing the numeric change since the last measurement. Patients also gained control over which notifications they receive, with granular preferences across three categories.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–15</span></div>
+      <div class="rail-dot"><div class="dot completed"></div></div>
+      <div class="build-card completed">
+        <div class="build-header">
+          <span class="build-name">Signup & Membership Fixes <span class="status-badge done">✓ shipped</span></span>
+        </div>
+        <p class="build-desc">We resolved a series of reliability issues that were affecting new patient signups, including email verification links failing to deliver and membership status not being recognized consistently across the app. The billing system moved fully into live mode with real payment processing, and the checkout experience was redesigned to make plan selection clearer before a patient creates an account.</p>
+      </div>
+    </div>
+
+    <!-- ── NOW MARKER ── -->
+    <div class="now-marker">
+      <div class="now-label-col"><span class="now-label">Now</span></div>
+      <div class="now-rail">
+        <div class="now-dot"></div>
+        <div class="now-line"></div>
+        <span class="now-text">Practice OS begins here</span>
+      </div>
+    </div>
+
+    <!-- ── PHASE 4 ── -->
+    <div class="phase-label">
+      <div class="phase-tag"><span class="p4">Phase 4</span></div>
+      <div class="phase-line">
+        <h2>Practice OS</h2>
+        <div class="phase-divider"></div>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–16</span></div>
+      <div class="rail-dot"><div class="dot future"></div></div>
+      <div class="build-card future">
+        <div class="build-header">
+          <span class="build-name">Multi-Staff Clinical Command Center</span>
+          <span class="build-time">3–4 weeks</span>
+        </div>
+        <p class="build-desc">The platform evolves from a single-physician tool into a full clinical operating system supporting six staff roles: MD, NP, RN, MA, admin, and concierge. Every patient action that requires follow-up generates a task routed to the right person, with a strict status workflow that ensures nothing falls through the cracks. Separate queue views for RN and admin staff mean each role sees only what is relevant to them.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–17</span></div>
+      <div class="rail-dot"><div class="dot future"></div></div>
+      <div class="build-card future">
+        <div class="build-header">
+          <span class="build-name">Patient Cockpit</span>
+          <span class="build-time">2–3 weeks</span>
+        </div>
+        <p class="build-desc">Dr. Urban gets a single-screen view of everything relevant about a patient before touching their chart: current treatment, recent symptom changes, open tasks, and what has shifted since the last review. Any time a medication is changed, the system automatically schedules a five-point follow-up cadence at day four, week four, week eight, week twelve, and annually, so no patient on a new protocol goes unmonitored.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–18</span></div>
+      <div class="rail-dot"><div class="dot future"></div></div>
+      <div class="build-card future">
+        <div class="build-header">
+          <span class="build-name">AI Clinical Intelligence</span>
+          <span class="build-time">3–4 weeks</span>
+        </div>
+        <p class="build-desc">Claude is brought deeper into the clinical workflow as an assistant, not a decision-maker. It generates a one-line patient summary, highlights what has changed since the last MD review, and drafts message responses for staff to edit and send. All AI suggestions are explicitly labeled and require human approval before any action is taken. Clinical recommendations come from physician-authored protocol checklists, never from AI-generated reasoning.</p>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–19</span></div>
+      <div class="rail-dot"><div class="dot future"></div></div>
+      <div class="build-card future">
+        <div class="build-header">
+          <span class="build-name">Service Recovery Dashboard</span>
+          <span class="build-time">~2 weeks</span>
+        </div>
+        <p class="build-desc">A dedicated dashboard gives the admin team visibility into any patient who has raised a concern, expressed dissatisfaction, or has an open billing dispute. Each issue is tracked through to resolution with a full log of actions taken, ensuring that no complaint sits unaddressed and the practice can identify patterns over time.</p>
+      </div>
+    </div>
+
+    <!-- ── PHASE 5 ── -->
+    <div class="phase-label">
+      <div class="phase-tag"><span class="p5">Phase 5</span></div>
+      <div class="phase-line">
+        <h2>Patient Experience Layer</h2>
+        <div class="phase-divider"></div>
+      </div>
+    </div>
+
+    <div class="build-row">
+      <div class="build-num"><span>B–20</span></div>
+      <div class="rail-dot"><div class="dot future"></div></div>
+      <div class="build-card future">
+        <div class="build-header">
+          <span class="build-name">Patient Experience Layer</span>
+          <span class="build-time">TBD</span>
+        </div>
+        <p class="build-desc">The final phase shifts focus back to the patient, wrapping every clinical touchpoint in a consumer-grade experience. Prescriptions appear as visual medication cards with imagery and plain-language explanations. After each visit, patients receive a structured summary of what was discussed and what comes next. Side effect reporting, structured bleeding logs, and instructional content are built directly into the platform so patients always know what to expect and where to turn.</p>
+      </div>
+    </div>
+
+  </div><!-- /timeline -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-left">
+      WOMENKIND HEALTH &nbsp;·&nbsp; INTERNAL USE ONLY<br>
+      Iron Gate Management Services LLC &nbsp;·&nbsp; Dr. Joseph Urban, MD<br>
+      Generated May 2026
+    </div>
+    <div class="footer-right">
+      Telehealth-first.<br>Physician-led.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
