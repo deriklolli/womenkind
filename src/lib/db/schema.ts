@@ -18,15 +18,19 @@ export const profiles = pgTable('profiles', {
 
 // ── Patients ─────────────────────────────────────────────────────────────────
 export const patients = pgTable('patients', {
-  id:                uuid('id').primaryKey().defaultRandom(),
-  profile_id:        uuid('profile_id').notNull().references(() => profiles.id),
-  date_of_birth:     text('date_of_birth'),
-  state:             text('state'),
-  phone:             text('phone'),
-  is_active:         boolean('is_active').notNull().default(true),
-  onboarding_status: text('onboarding_status').notNull().default('active'),
-  membership_plan:   text('membership_plan'),
-  created_at:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  id:                       uuid('id').primaryKey().defaultRandom(),
+  profile_id:               uuid('profile_id').notNull().references(() => profiles.id),
+  date_of_birth:            text('date_of_birth'),
+  state:                    text('state'),
+  phone:                    text('phone'),
+  is_active:                boolean('is_active').notNull().default(true),
+  onboarding_status:        text('onboarding_status').notNull().default('active'),
+  membership_plan:          text('membership_plan'),
+  last_md_review_at:        timestamp('last_md_review_at', { withTimezone: true }),
+  last_meaningful_touch_at: timestamp('last_meaningful_touch_at', { withTimezone: true }),
+  current_plan:             text('current_plan'),
+  next_step:                text('next_step'),
+  created_at:               timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -179,6 +183,21 @@ export const prescriptionNotes = pgTable('prescription_notes', {
   patient_id:      uuid('patient_id').notNull().references(() => patients.id),
   note:            text('note').notNull(),
   created_at:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ── Prescription Changes ──────────────────────────────────────────────────────
+export const prescription_changes = pgTable('prescription_changes', {
+  id:               uuid('id').primaryKey().defaultRandom(),
+  prescription_id:  uuid('prescription_id').notNull().references(() => prescriptions.id),
+  patient_id:       uuid('patient_id').notNull().references(() => patients.id),
+  provider_id:      uuid('provider_id').notNull().references(() => providers.id),
+  change_type:      text('change_type').notNull(),
+  previous_dosage:  text('previous_dosage'),
+  new_dosage:       text('new_dosage'),
+  previous_status:  text('previous_status'),
+  new_status:       text('new_status'),
+  reason:           text('reason'),
+  created_at:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── Refill Requests ───────────────────────────────────────────────────────────
