@@ -17,7 +17,7 @@ export async function POST(
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, params.id) })
   if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
-  const { contact_method, notes } = await req.json()
+  const { contact_method, notes } = await req.json().catch(() => ({}))
 
   const newAttempts = (task.contact_attempts ?? 0) + 1
 
