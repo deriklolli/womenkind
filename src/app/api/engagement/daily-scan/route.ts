@@ -93,13 +93,13 @@ export async function GET(req: NextRequest) {
         await logEngagement(patient.id, 'no_login', 'email')
 
         const noLoginRef = `no_login:${patient.id}:${monthKey}`
-        if (!(await deduplicateTaskCheck(patient.id, 'missed_checkin', noLoginRef))) {
+        if (!(await deduplicateTaskCheck(patient.id, 'no_login', noLoginRef))) {
           await createTask({
             patient_id: patient.id,
             title: 'Patient has not logged in for 30+ days',
             category: 'admin',
             priority: 'yellow',
-            source: 'missed_checkin',
+            source: 'no_login',
             source_ref: noLoginRef,
           })
         }
