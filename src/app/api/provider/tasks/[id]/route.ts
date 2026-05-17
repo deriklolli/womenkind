@@ -3,7 +3,7 @@ import { getServerSession } from '@/lib/getServerSession'
 import { requireStaffRole, ALL_STAFF, MD_NP } from '@/lib/requireStaffRole'
 import { writeAuditEvent } from '@/lib/taskEngine'
 import { db } from '@/lib/db'
-import { tasks, providers } from '@/lib/db/schema'
+import { tasks, providers, patients } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 const TRANSITIONS: Record<string, string[]> = {
@@ -100,6 +100,17 @@ export async function PATCH(
           { error: 'Either follow_up_task_id or closeout_no_followup_reason is required to close' },
           { status: 400 },
         )
+      }
+
+      // Record MD review date and meaningful touch on patient
+      if (task.requires_md_signoff) {
+        await db.update(patients)
+          .set({ last_md_review_at: new Date(), last_meaningful_touch_at: new Date() })
+          .where(eq(patients.id, task.patient_id))
+      } else {
+        await db.update(patients)
+          .set({ last_meaningful_touch_at: new Date() })
+          .where(eq(patients.id, task.patient_id))
       }
 
       updates.closed_at = new Date()
