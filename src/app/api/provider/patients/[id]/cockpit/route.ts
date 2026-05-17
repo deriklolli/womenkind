@@ -4,6 +4,7 @@ import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { patients, tasks, prescription_changes, visits } from '@/lib/db/schema'
 import { and, eq, notInArray, sql, asc, desc } from 'drizzle-orm'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 export const maxDuration = 60
 
@@ -27,7 +28,7 @@ export async function GET(
   })
   if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
-  const [activeTasks, rxHistory, recentVisits] = await Promise.all([
+  const [activeTasks, rxHistory] = await Promise.all([
     db.query.tasks.findMany({
       where: and(
         eq(tasks.patient_id, params.id),
@@ -43,19 +44,32 @@ export async function GET(
       orderBy: (r, { desc }) => [desc(r.created_at)],
       limit: 20,
     }),
+  ])
+
+  // Compute live WMI from the most recent daily check-ins
+  const [dailyCheckIns] = await Promise.all([
     db.query.visits.findMany({
-      where: eq(visits.patient_id, params.id),
+      where: and(
+        eq(visits.patient_id, params.id),
+        eq(visits.source, 'daily' as any),
+      ),
       orderBy: (v, { desc }) => [desc(v.visit_date)],
-      limit: 10,
-      columns: { visit_date: true, source: true, visit_type: true },
+      limit: 7,
+      columns: { symptom_scores: true, visit_date: true, source: true },
     }),
   ])
 
+  const checkInsForWmi = dailyCheckIns.map(v => ({
+    symptom_scores: v.symptom_scores as Record<string, number> | null,
+    visit_date: v.visit_date,
+    source: v.source,
+  }))
+  const liveWmi = dailyCheckIns.length > 0 ? computeLiveWMI(checkInsForWmi) : null
+
   return NextResponse.json({
     patient,
-    liveWmi: null,
+    liveWmi,
     activeTasks,
     rxHistory,
-    recentVisits,
   })
 }
