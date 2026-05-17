@@ -39,6 +39,7 @@ interface WMIScores {
 interface PatientOverviewProps {
   visits: Visit[]
   prescriptions: Prescription[]
+  patientId?: string | null
   view?: 'patient' | 'provider'
   latestIntake?: {
     ai_brief?: {
@@ -125,7 +126,7 @@ function GradientSparkline({ data, color, domainKey }: { data: number[]; color: 
   )
 }
 
-export default function PatientOverview({ visits, prescriptions, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, initialSelectedKeys, showCheckin = false, compact = false, hideScoreHeader = false }: PatientOverviewProps) {
+export default function PatientOverview({ visits, prescriptions, patientId, latestIntake, liveWmi, view = 'patient', onCheckinComplete, onDomainsChange, initialSelectedKeys, showCheckin = false, compact = false, hideScoreHeader = false }: PatientOverviewProps) {
   const [selectedKeys, setSelectedKeys] = useState<string[]>(initialSelectedKeys ?? DEFAULT_DOMAIN_KEYS)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -467,6 +468,15 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
           <p className="font-serif text-xl text-aubergine">
             Symptom <span className="italic text-violet">Tracker</span>
           </p>
+          <div className="flex items-center gap-3">
+            {patientId && (
+              <a
+                href={`/provider/patients/${patientId}/cockpit`}
+                className="text-xs font-sans font-semibold text-violet hover:text-aubergine/60 transition-colors flex items-center gap-1"
+              >
+                Open Cockpit →
+              </a>
+            )}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(o => !o)}
@@ -511,6 +521,7 @@ export default function PatientOverview({ visits, prescriptions, latestIntake, l
                 ))}
               </div>
             )}
+          </div>
           </div>
         </div>
 
