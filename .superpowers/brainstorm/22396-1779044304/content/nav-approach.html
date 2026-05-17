@@ -1,0 +1,40 @@
+<h2>How should the multi-role portal navigate?</h2>
+<p class="subtitle">Three approaches for how MD, RN, admin, and concierge land in the app</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Role-Aware Single Portal</h3>
+      <p>One URL (<code>/provider/dashboard</code>). Nav links change based on your staff role. MD sees "Today" + patients + schedule. RN sees "RN Queue" + patients. Concierge sees "Admin Queue" + messages. Same shell, different links and default landing page per role.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Familiar — same login, same shell</li><li>Less routing complexity</li><li>Easier to build "patient profile" as shared surface</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Nav logic has role conditionals everywhere</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Separate Staff Sub-Portal</h3>
+      <p>MD stays at <code>/provider/*</code>. RN, admin, concierge get a new <code>/staff/*</code> route. Different layouts, separate nav, designed for task-queue-first workflows vs. patient-chart-first workflows.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Clean separation — staff UI is task-queue-native</li><li>Easier to design for mobile (RN on iPad)</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More routes to build and maintain</li><li>Patient profile needs to work in both shells</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Unified Portal, Role-Gated Pages</h3>
+      <p>All staff share <code>/provider/*</code> routes. Each page has a required role. MD tries to hit <code>/staff/rn-queue</code> → redirected to their Today page. RN tries to hit <code>/provider/today</code> → redirected to RN queue. Nav always shows all links, grays out inaccessible ones.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Simple routing</li><li>Staff can see what other roles do (transparency)</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Grayed links feel like a downgrade experience</li><li>Less tailored per role</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

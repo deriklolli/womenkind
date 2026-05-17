@@ -1,0 +1,126 @@
+<h2>MD Today — Command Bar layout</h2>
+<p class="subtitle">How should the 9 priority tiles be arranged on the dashboard?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>3×3 Grid</h3>
+      <p>Nine equal tiles in a 3-column grid. Each tile: colored icon + count + label. Compact, scannable at a glance.</p>
+      <div class="mockup">
+        <div class="mockup-header">MD Today</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+            <div style="background:#fee2e2;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #ef4444">
+              <div style="font-size:22px;font-weight:700;color:#ef4444">3</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">🔴 Red MD Today</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #f97316">
+              <div style="font-size:22px;font-weight:700;color:#f97316">7</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">🟠 MD Decisions</div>
+            </div>
+            <div style="background:#f5f3ff;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #8b5cf6">
+              <div style="font-size:22px;font-weight:700;color:#8b5cf6">2</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">🟣 RN Escalations</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #f97316">
+              <div style="font-size:22px;font-weight:700;color:#f97316">4</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">🧪 Labs Pending</div>
+            </div>
+            <div style="background:#eff6ff;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #3b82f6">
+              <div style="font-size:22px;font-weight:700;color:#3b82f6">12</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">💊 Med Follow-Ups</div>
+            </div>
+            <div style="background:#fef3c7;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #f59e0b">
+              <div style="font-size:22px;font-weight:700;color:#f59e0b">1</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">⏰ Overdue</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #f97316">
+              <div style="font-size:22px;font-weight:700;color:#f97316">5</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">💬 Messages &gt; SLA</div>
+            </div>
+            <div style="background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #22c55e">
+              <div style="font-size:22px;font-weight:700;color:#22c55e">2</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">📈 Outcomes Watch</div>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:12px;text-align:center;border-left:4px solid #94a3b8">
+              <div style="font-size:22px;font-weight:700;color:#94a3b8">—</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">🤍 Service Recovery</div>
+            </div>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px">PATIENT PRIORITY QUEUE</div>
+            <div style="background:white;border-radius:6px;padding:8px;margin-bottom:6px;border-left:4px solid #ef4444;font-size:12px;display:flex;gap:12px;align-items:center">
+              <span style="background:#fee2e2;color:#ef4444;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600">RED</span>
+              <span>Sarah M.</span><span style="color:#64748b">Score drop · 48h</span><span style="margin-left:auto;color:#3b82f6;font-size:11px">Acknowledge →</span>
+            </div>
+            <div style="background:white;border-radius:6px;padding:8px;border-left:4px solid #f97316;font-size:12px;display:flex;gap:12px;align-items:center">
+              <span style="background:#fff7ed;color:#f97316;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600">ORANGE</span>
+              <span>Karen L.</span><span style="color:#64748b">Lab result · needs review</span><span style="margin-left:auto;color:#3b82f6;font-size:11px">Review →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Priority Row + Detail Panel</h3>
+      <p>Top row: 3 urgent tiles (red, MD decisions, escalations) larger. Second row: 6 smaller supporting tiles. Urgent items get visual weight; routine items stay visible but subordinate.</p>
+      <div class="mockup">
+        <div class="mockup-header">MD Today</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+            <div style="background:#fee2e2;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #ef4444">
+              <div style="font-size:28px;font-weight:700;color:#ef4444">3</div>
+              <div style="font-size:12px;color:#666;margin-top:4px">🔴 Red MD Today</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #f97316">
+              <div style="font-size:28px;font-weight:700;color:#f97316">7</div>
+              <div style="font-size:12px;color:#666;margin-top:4px">🟠 MD Decisions</div>
+            </div>
+            <div style="background:#f5f3ff;border-radius:8px;padding:16px;text-align:center;border-left:4px solid #8b5cf6">
+              <div style="font-size:28px;font-weight:700;color:#8b5cf6">2</div>
+              <div style="font-size:12px;color:#666;margin-top:4px">🟣 RN Escalations</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px">
+            <div style="background:#fff7ed;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #f97316">
+              <div style="font-size:16px;font-weight:700;color:#f97316">4</div>
+              <div style="font-size:9px;color:#666">🧪 Labs</div>
+            </div>
+            <div style="background:#eff6ff;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #3b82f6">
+              <div style="font-size:16px;font-weight:700;color:#3b82f6">12</div>
+              <div style="font-size:9px;color:#666">💊 Meds</div>
+            </div>
+            <div style="background:#fef3c7;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #f59e0b">
+              <div style="font-size:16px;font-weight:700;color:#f59e0b">1</div>
+              <div style="font-size:9px;color:#666">⏰ Overdue</div>
+            </div>
+            <div style="background:#fff7ed;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #f97316">
+              <div style="font-size:16px;font-weight:700;color:#f97316">5</div>
+              <div style="font-size:9px;color:#666">💬 Messages</div>
+            </div>
+            <div style="background:#f0fdf4;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #22c55e">
+              <div style="font-size:16px;font-weight:700;color:#22c55e">2</div>
+              <div style="font-size:9px;color:#666">📈 Outcomes</div>
+            </div>
+            <div style="background:#f8fafc;border-radius:6px;padding:8px;text-align:center;border-top:3px solid #94a3b8">
+              <div style="font-size:16px;font-weight:700;color:#94a3b8">—</div>
+              <div style="font-size:9px;color:#666">🤍 Recovery</div>
+            </div>
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px">PATIENT PRIORITY QUEUE</div>
+            <div style="background:white;border-radius:6px;padding:8px;margin-bottom:6px;border-left:4px solid #ef4444;font-size:12px;display:flex;gap:12px;align-items:center">
+              <span style="background:#fee2e2;color:#ef4444;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600">RED</span>
+              <span>Sarah M.</span><span style="color:#64748b">Score drop · 48h</span><span style="margin-left:auto;color:#3b82f6;font-size:11px">Acknowledge →</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

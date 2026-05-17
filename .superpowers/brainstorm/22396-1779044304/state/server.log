@@ -1,0 +1,5 @@
+{"type":"server-started","port":53990,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:53990","screen_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/22396-1779044304/content","state_dir":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/22396-1779044304/state"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/22396-1779044304/content/nav-approach.html"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/22396-1779044304/content/md-today-layout.html"}
+{"type":"screen-added","file":"/Users/deriklolli/Projects/WOMENKIND/WomenKind/.superpowers/brainstorm/22396-1779044304/content/waiting-1.html"}
+{"type":"server-stopped","reason":"idle timeout"}
