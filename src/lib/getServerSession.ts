@@ -4,21 +4,24 @@ import { db } from '@/lib/db'
 import { patients, providers } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
+export type StaffRole = 'md' | 'np' | 'rn' | 'ma' | 'admin' | 'concierge'
+
 export interface ServerSession {
   userId: string
   patientId: string | null
   providerId: string | null
   role: 'patient' | 'provider' | 'unknown'
+  staffRole: StaffRole | null
 }
 
 export async function getServerSession(): Promise<ServerSession | null> {
-  // Dev bypass — RDS is not reachable outside Vercel's network
   if (process.env.NODE_ENV === 'development') {
     return {
       userId: 'dev-user-id',
       patientId: null,
       providerId: 'b0000000-0000-0000-0000-000000000001',
       role: 'provider',
+      staffRole: 'md',
     }
   }
 
@@ -44,11 +47,17 @@ export async function getServerSession(): Promise<ServerSession | null> {
 
   const provider = await db.query.providers.findFirst({
     where: eq(providers.profile_id, user.id),
-    columns: { id: true },
+    columns: { id: true, role: true },
   })
 
   if (provider) {
-    return { userId: user.id, patientId: null, providerId: provider.id, role: 'provider' }
+    return {
+      userId: user.id,
+      patientId: null,
+      providerId: provider.id,
+      role: 'provider',
+      staffRole: (provider.role as StaffRole) ?? 'md',
+    }
   }
 
   const patient = await db.query.patients.findFirst({
@@ -57,8 +66,8 @@ export async function getServerSession(): Promise<ServerSession | null> {
   })
 
   if (patient) {
-    return { userId: user.id, patientId: patient.id, providerId: null, role: 'patient' }
+    return { userId: user.id, patientId: patient.id, providerId: null, role: 'patient', staffRole: null }
   }
 
-  return { userId: user.id, patientId: null, providerId: null, role: 'unknown' }
+  return { userId: user.id, patientId: null, providerId: null, role: 'unknown', staffRole: null }
 }
