@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { TaskQueue, Task } from '@/components/staff/TaskQueue'
 import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
+import ProviderNav from '@/components/provider/ProviderNav'
 
 interface Section {
   key: string
@@ -88,6 +89,7 @@ export default function TasksPage() {
 
   return (
     <div className="min-h-screen bg-cream">
+      <ProviderNav />
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

@@ -7,6 +7,7 @@ import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
 import { DiffPanel } from '@/components/provider/DiffPanel'
 import { PlanEditor } from '@/components/provider/PlanEditor'
 import { MedChangeModal } from '@/components/provider/MedChangeModal'
+import ProviderNav from '@/components/provider/ProviderNav'
 
 interface CockpitData {
   patient: {
@@ -124,6 +125,7 @@ export default function CockpitPage() {
 
   return (
     <div className="min-h-screen bg-cream">
+      <ProviderNav />
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
 
         {/* Patient strip */}

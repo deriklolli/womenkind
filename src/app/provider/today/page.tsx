@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { TaskQueue, Task } from '@/components/staff/TaskQueue'
 import { TaskCloseModal, CloseoutData } from '@/components/staff/TaskCloseModal'
 import { OutcomesWatchQueue } from '@/components/staff/OutcomesWatchQueue'
+import ProviderNav from '@/components/provider/ProviderNav'
 
 interface CommandBar {
   red: number
@@ -67,52 +68,60 @@ export default function MDTodayPage() {
     setCloseTask(null)
   }
 
-  if (loading) return <div className="p-8 text-gray-400 text-sm">Loading...</div>
-
   const largeTiles = TILES.filter(t => t.large)
   const smallTiles = TILES.filter(t => !t.large)
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-      <h1 className="text-2xl font-semibold text-gray-900">MD Today</h1>
+    <div className="min-h-screen bg-cream">
+      <ProviderNav />
 
-      {/* Large tiles — row 1 */}
-      <div className="grid grid-cols-3 gap-4">
-        {largeTiles.map(tile => (
-          <div key={tile.key} className={`rounded-xl border p-5 text-center ${tile.color}`}>
-            <div className="text-3xl font-bold">{bar?.[tile.key as keyof CommandBar] ?? 0}</div>
-            <div className="text-xs mt-1">{tile.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Small tiles — row 2 (6 + 1 placeholder) */}
-      <div className="grid grid-cols-6 gap-3">
-        {smallTiles.map(tile => (
-          <div key={tile.key} className={`rounded-xl border p-3 text-center ${tile.color}`}>
-            <div className="text-xl font-bold">{bar?.[tile.key as keyof CommandBar] ?? 0}</div>
-            <div className="text-xs mt-0.5 leading-tight">{tile.label}</div>
-          </div>
-        ))}
-        <div className="rounded-xl border p-3 text-center bg-gray-50 border-gray-200 text-gray-400">
-          <div className="text-xl font-bold">—</div>
-          <div className="text-xs mt-0.5 leading-tight">Service Recovery</div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
         </div>
-      </div>
+      ) : (
+        <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+          <h1 className="text-2xl font-semibold text-gray-900">MD Today</h1>
 
-      {/* Priority queue */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
-          Patient Priority Queue
-        </h2>
-        <TaskQueue
-          tasks={queue}
-          onAcknowledge={acknowledge}
-          onClose={setCloseTask}
-        />
-      </div>
+          {/* Large tiles — row 1 */}
+          <div className="grid grid-cols-3 gap-4">
+            {largeTiles.map(tile => (
+              <div key={tile.key} className={`rounded-xl border p-5 text-center ${tile.color}`}>
+                <div className="text-3xl font-bold">{bar?.[tile.key as keyof CommandBar] ?? 0}</div>
+                <div className="text-xs mt-1">{tile.label}</div>
+              </div>
+            ))}
+          </div>
 
-      <OutcomesWatchQueue />
+          {/* Small tiles — row 2 (6 + 1 placeholder) */}
+          <div className="grid grid-cols-6 gap-3">
+            {smallTiles.map(tile => (
+              <div key={tile.key} className={`rounded-xl border p-3 text-center ${tile.color}`}>
+                <div className="text-xl font-bold">{bar?.[tile.key as keyof CommandBar] ?? 0}</div>
+                <div className="text-xs mt-0.5 leading-tight">{tile.label}</div>
+              </div>
+            ))}
+            <div className="rounded-xl border p-3 text-center bg-gray-50 border-gray-200 text-gray-400">
+              <div className="text-xl font-bold">—</div>
+              <div className="text-xs mt-0.5 leading-tight">Service Recovery</div>
+            </div>
+          </div>
+
+          {/* Priority queue */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3">
+              Patient Priority Queue
+            </h2>
+            <TaskQueue
+              tasks={queue}
+              onAcknowledge={acknowledge}
+              onClose={setCloseTask}
+            />
+          </div>
+
+          <OutcomesWatchQueue />
+        </div>
+      )}
 
       {closeTask && (
         <TaskCloseModal
