@@ -8,7 +8,7 @@ interface Props {
   onSubmit: (data: RnNoteData) => Promise<void>
 }
 
-interface RnNoteData {
+export interface RnNoteData {
   patient_id: string
   task_id?: string
   note: string

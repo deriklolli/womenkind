@@ -8,7 +8,7 @@ interface Props {
   onSubmit: (data: SbarData) => Promise<void>
 }
 
-interface SbarData {
+export interface SbarData {
   patient_id: string
   situation: string
   background: string
