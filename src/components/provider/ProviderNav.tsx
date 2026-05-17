@@ -245,7 +245,7 @@ export default function ProviderNav({
             <div className="flex gap-0">
               <button
                 onClick={() => handleTabClick('dashboard')}
-                className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
+                className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
                   ${resolvedTab === 'dashboard'
                     ? 'border-violet text-violet'
                     : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
@@ -254,27 +254,13 @@ export default function ProviderNav({
                 <span className="flex items-center gap-2">
                   <Sun className="w-4 h-4" />
                   Today
-                </span>
-              </button>
-
-              {/* MD Today — md and np only */}
-              {(staffRole === 'md' || staffRole === 'np') && (
-                <a
-                  href="/provider/today"
-                  className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
-                    pathname === '/provider/today'
-                      ? 'border-violet text-violet'
-                      : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
-                  }`}
-                >
-                  MD Today
-                  {taskCounts.md > 0 && (
+                  {taskCounts.md > 0 && (staffRole === 'md' || staffRole === 'np') && (
                     <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
                       {taskCounts.md > 9 ? '9+' : taskCounts.md}
                     </span>
                   )}
-                </a>
-              )}
+                </span>
+              </button>
 
               {/* RN Queue — rn, np, ma */}
               {(staffRole === 'rn' || staffRole === 'np' || staffRole === 'ma') && (
