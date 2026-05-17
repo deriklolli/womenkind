@@ -109,6 +109,7 @@ export default function CockpitPage() {
     fetch(`/api/provider/patients/${patientId}/cockpit`)
       .then(r => r.json())
       .then(data => setCockpit(data))
+      .catch(() => {})
   }
 
   if (loading) return (
@@ -192,12 +193,14 @@ export default function CockpitPage() {
             <TaskQueue
               tasks={tasks}
               onAcknowledge={async (taskId) => {
-                await fetch(`/api/provider/tasks/${taskId}`, {
+                const res = await fetch(`/api/provider/tasks/${taskId}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: 'acknowledged' }),
                 })
-                setTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+                if (res.ok) {
+                  setTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+                }
               }}
               onClose={setCloseTask}
             />
@@ -214,7 +217,7 @@ export default function CockpitPage() {
               >
                 <span className="text-sm font-sans font-medium text-aubergine/70">
                   {section.key === 'medications'
-                    ? `Medication Timeline (${cockpit.rxHistory.length} changes)`
+                    ? `Medication Timeline (${(cockpit.rxHistory ?? []).length} changes)`
                     : section.label}
                 </span>
                 <span className="text-xs text-aubergine/30">
