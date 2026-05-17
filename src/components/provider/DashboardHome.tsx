@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getProviderSession } from '@/lib/getProviderSession'
+import { TaskQueue } from '@/components/staff/TaskQueue'
+import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
 import { devFixtures } from '@/lib/dev-fixtures'
 import { isMemberPlan } from '@/lib/stripe'
 
@@ -96,6 +98,16 @@ export default function DashboardHome() {
   const [threads, setThreads] = useState<UnreadThread[]>([])
   const [refills, setRefills] = useState<PendingRefill[]>([])
   const [cancellations, setCancellations] = useState<Cancellation[]>([])
+  const [clinicalTasks, setClinicalTasks] = useState<any[]>([])
+  const [taskCloseTarget, setTaskCloseTarget] = useState<any | null>(null)
+  const [staffRole, setStaffRole] = useState('md')
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => { if (data?.staffRole) setStaffRole(data.staffRole) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     getProviderSession().then(session => {
@@ -125,7 +137,8 @@ export default function DashboardHome() {
       safeFetch(`/api/messages?providerId=${providerId}`),
       safeFetch(`/api/refill-requests?providerId=${providerId}&status=pending`),
       safeFetch(`/api/provider/recent-cancellations?providerId=${providerId}`),
-    ]).then(([apptData, intakeData, msgData, refillData, cancelData]) => {
+      safeFetch('/api/provider/tasks?open=true&limit=8'),
+    ]).then(([apptData, intakeData, msgData, refillData, cancelData, taskData]) => {
       const isDev = process.env.NODE_ENV === 'development'
 
       const appts = apptData
@@ -153,6 +166,7 @@ export default function DashboardHome() {
       setThreads(newThreads)
       setRefills(newRefills)
       setCancellations(newCancellations)
+      setClinicalTasks(taskData?.tasks ?? [])
       setLoading(false)
     })
   }, [providerId])
@@ -456,7 +470,7 @@ export default function DashboardHome() {
 
         {/* Recent Cancellations — only show if any */}
         {cancellations.length > 0 && (
-          <div className="bg-white rounded-card shadow-sm border border-red-100">
+          <div className="bg-white rounded-card shadow-sm border border-red-100 mb-6">
             <div className="flex items-center gap-2 px-6 pt-5 pb-4 border-b border-red-50">
               <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -481,6 +495,61 @@ export default function DashboardHome() {
               })}
             </div>
           </div>
+        )}
+
+        {/* Clinical Tasks */}
+        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
+            <div className="flex items-center gap-2">
+              <h2 className="font-sans font-semibold text-base text-aubergine">Clinical Tasks</h2>
+              {clinicalTasks.length > 0 && (
+                <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                  {clinicalTasks.length}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => router.push('/provider/tasks')}
+              className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
+            >
+              View all →
+            </button>
+          </div>
+          <div className="px-6 py-4">
+            <TaskQueue
+              tasks={clinicalTasks}
+              onAcknowledge={async (taskId) => {
+                await fetch(`/api/provider/tasks/${taskId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'acknowledged' }),
+                })
+                setClinicalTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+              }}
+              onClose={setTaskCloseTarget}
+            />
+          </div>
+        </div>
+
+        {taskCloseTarget && (
+          <TaskCloseModal
+            task={taskCloseTarget}
+            staffRole={staffRole}
+            onClose={() => setTaskCloseTarget(null)}
+            onSubmit={async (closeout) => {
+              const res = await fetch(`/api/provider/tasks/${taskCloseTarget.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'closed', ...closeout }),
+              })
+              if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error ?? 'Failed to close task')
+              }
+              setClinicalTasks(q => q.filter(t => t.id !== taskCloseTarget.id))
+              setTaskCloseTarget(null)
+            }}
+          />
         )}
 
       </div>
