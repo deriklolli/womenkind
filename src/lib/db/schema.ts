@@ -31,10 +31,13 @@ export const patients = pgTable('patients', {
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 export const providers = pgTable('providers', {
-  id:         uuid('id').primaryKey().defaultRandom(),
-  profile_id: uuid('profile_id').notNull().references(() => profiles.id),
-  is_active:  boolean('is_active').notNull().default(true),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  id:           uuid('id').primaryKey().defaultRandom(),
+  profile_id:   uuid('profile_id').notNull().references(() => profiles.id),
+  role:         text('role').notNull().default('md'),
+  display_name: text('display_name'),
+  specialty:    text('specialty'),
+  is_active:    boolean('is_active').notNull().default(true),
+  created_at:   timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── Appointment Types ─────────────────────────────────────────────────────────
@@ -283,6 +286,56 @@ export const phi_access_log = pgTable('phi_access_log', {
   ip_address:  text('ip_address'),
   user_agent:  text('user_agent'),
   created_at:  timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+export const tasks = pgTable('tasks', {
+  id:                         uuid('id').primaryKey().defaultRandom(),
+  patient_id:                 uuid('patient_id').notNull().references(() => patients.id),
+  title:                      text('title').notNull(),
+  body:                       text('body'),
+  category:                   text('category').notNull(),
+  priority:                   text('priority').notNull(),
+  status:                     text('status').notNull().default('new'),
+  owner_staff_id:             uuid('owner_staff_id').references(() => providers.id),
+  backup_owner_staff_id:      uuid('backup_owner_staff_id').references(() => providers.id),
+  source:                     text('source').notNull(),
+  source_ref:                 text('source_ref'),
+  message_category:           text('message_category'),
+  due_at:                     timestamp('due_at', { withTimezone: true }),
+  acknowledged_at:            timestamp('acknowledged_at', { withTimezone: true }),
+  acknowledged_by:            uuid('acknowledged_by').references(() => providers.id),
+  closed_at:                  timestamp('closed_at', { withTimezone: true }),
+  closed_by:                  uuid('closed_by').references(() => providers.id),
+  closeout_what_was_done:     text('closeout_what_was_done'),
+  closeout_plan:              text('closeout_plan'),
+  closeout_followup_who:      uuid('closeout_followup_who').references(() => providers.id),
+  closeout_followup_when:     timestamp('closeout_followup_when', { withTimezone: true }),
+  closeout_followup_how:      text('closeout_followup_how'),
+  closeout_safety_open:       boolean('closeout_safety_open').default(false),
+  closeout_no_followup_reason: text('closeout_no_followup_reason'),
+  follow_up_task_id:          uuid('follow_up_task_id'),
+  requires_md_signoff:        boolean('requires_md_signoff').notNull().default(false),
+  patient_notified:           boolean('patient_notified').notNull().default(false),
+  contact_attempts:           integer('contact_attempts').notNull().default(0),
+  last_contact_attempt:       timestamp('last_contact_attempt', { withTimezone: true }),
+  created_at:                 timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at:                 timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ── Audit Events ──────────────────────────────────────────────────────────────
+export const audit_events = pgTable('audit_events', {
+  id:            uuid('id').primaryKey().defaultRandom(),
+  user_id:       text('user_id').notNull(),
+  staff_id:      uuid('staff_id').references(() => providers.id),
+  patient_id:    uuid('patient_id').references(() => patients.id),
+  action:        text('action').notNull(),
+  resource_type: text('resource_type').notNull(),
+  resource_id:   text('resource_id'),
+  metadata:      json('metadata'),
+  ip:            text('ip'),
+  user_agent:    text('user_agent'),
+  created_at:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 // ── Lab Orders ────────────────────────────────────────────────────────────────
