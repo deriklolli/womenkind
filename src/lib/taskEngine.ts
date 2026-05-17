@@ -15,7 +15,7 @@ export type TaskStatus =
 
 export type TaskSource =
   | 'patient_message' | 'lab_result' | 'score_drop' | 'refill_window'
-  | 'missed_checkin' | 'post_visit' | 'ai_brief' | 'manual'
+  | 'missed_checkin' | 'no_login' | 'post_visit' | 'ai_brief' | 'manual'
   | 'med_change' | 'unable_to_reach' | 'rn_note'
 
 export interface CreateTaskInput {
