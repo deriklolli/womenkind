@@ -71,10 +71,13 @@ export async function POST(
   const scheduledTasks: Array<{ title: string; dueAt: string }> = []
   if (CADENCE_TYPES.has(change_type)) {
     const now = new Date()
-    for (const step of CADENCE) {
-      const dueAt = addDays(now, step.daysOffset)
-      const title = step.titleFn(rx.medication_name)
-      await createTask({
+    const cadenceItems = CADENCE.map(step => ({
+      dueAt: addDays(now, step.daysOffset),
+      title: step.titleFn(rx.medication_name),
+      step,
+    }))
+    await Promise.all(cadenceItems.map(({ dueAt, title, step }) =>
+      createTask({
         patient_id:          params.id,
         title,
         category:            'med',
@@ -84,8 +87,11 @@ export async function POST(
         due_at:              dueAt,
         requires_md_signoff: step.role === 'md',
       })
-      scheduledTasks.push({ title, dueAt: dueAt.toISOString() })
-    }
+    ))
+    scheduledTasks.push(...cadenceItems.map(({ title, dueAt }) => ({
+      title,
+      dueAt: dueAt.toISOString(),
+    })))
   }
 
   return NextResponse.json({
