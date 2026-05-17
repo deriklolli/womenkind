@@ -309,6 +309,23 @@ export default function ProviderNav({
                 </a>
               )}
 
+              {/* Tasks — all staff */}
+              <a
+                href="/provider/tasks"
+                className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
+                  pathname === '/provider/tasks'
+                    ? 'border-violet text-violet'
+                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                }`}
+              >
+                Tasks
+                {(taskCounts.md + taskCounts.rn) > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                    {(taskCounts.md + taskCounts.rn) > 9 ? '9+' : taskCounts.md + taskCounts.rn}
+                  </span>
+                )}
+              </a>
+
               <button
                 onClick={() => handleTabClick('patients')}
                 className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all
