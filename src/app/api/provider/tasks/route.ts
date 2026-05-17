@@ -5,7 +5,7 @@ import { createTask, writeAuditEvent } from '@/lib/taskEngine'
 import type { TaskPriority } from '@/lib/taskEngine'
 import { db } from '@/lib/db'
 import { tasks, providers } from '@/lib/db/schema'
-import { and, eq, inArray, notInArray, desc, or, SQL } from 'drizzle-orm'
+import { and, eq, inArray, notInArray, desc, or, sql, SQL } from 'drizzle-orm'
 
 const MESSAGE_CATEGORY_DEFAULTS: Record<string, { priority: TaskPriority; ownerRole: string }> = {
   red_flag:        { priority: 'red',    ownerRole: 'md' },
@@ -41,6 +41,15 @@ export async function GET(req: NextRequest) {
     conditions.push(eq(tasks.owner_staff_id, session!.providerId))
   }
 
+  // open=true → exclude resolved/closed (for DashboardHome top-8 fetch)
+  const openOnly = searchParams.get('open') === 'true'
+  if (openOnly) {
+    conditions.push(notInArray(tasks.status, ['resolved', 'closed']))
+  }
+
+  const limitParam = searchParams.get('limit')
+  const limitNum = limitParam ? Math.min(parseInt(limitParam, 10), 200) : 200
+
   if (queue === 'rn') {
     conditions.push(inArray(tasks.priority, ['orange', 'yellow']))
     conditions.push(notInArray(tasks.status, ['resolved', 'closed']))
@@ -60,8 +69,11 @@ export async function GET(req: NextRequest) {
 
   const rows = await db.query.tasks.findMany({
     where: whereClause,
-    orderBy: [desc(tasks.updated_at)],
-    limit: 200,
+    orderBy: [
+      sql`CASE priority WHEN 'red' THEN 0 WHEN 'orange' THEN 1 WHEN 'yellow' THEN 2 WHEN 'blue' THEN 3 ELSE 4 END`,
+      desc(tasks.updated_at),
+    ],
+    limit: limitNum,
   })
 
   return NextResponse.json({ tasks: rows })
