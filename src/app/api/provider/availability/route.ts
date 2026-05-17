@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { provider_availability } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
@@ -10,12 +11,9 @@ import { eq, asc } from 'drizzle-orm'
  */
 export async function GET(_req: NextRequest) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -28,7 +26,7 @@ export async function GET(_req: NextRequest) {
       is_active: provider_availability.is_active,
     })
     .from(provider_availability)
-    .where(eq(provider_availability.provider_id, session.providerId))
+    .where(eq(provider_availability.provider_id, session!.providerId!))
     .orderBy(asc(provider_availability.day_of_week))
 
   return NextResponse.json({ slots })
@@ -41,12 +39,9 @@ export async function GET(_req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError2 = requireStaffRole(session, ALL_STAFF)
+  if (roleError2) return roleError2
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -60,7 +55,7 @@ export async function POST(req: NextRequest) {
   const [slot] = await db
     .insert(provider_availability)
     .values({
-      provider_id: session.providerId,
+      provider_id: session!.providerId!,
       day_of_week,
       start_time,
       end_time,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { intakes } from '@/lib/db/schema'
 import { eq, count } from 'drizzle-orm'
@@ -13,13 +14,8 @@ import { eq, count } from 'drizzle-orm'
 export async function GET() {
   const session = await getServerSession()
 
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
 
   const result = await db
     .select({ count: count() })

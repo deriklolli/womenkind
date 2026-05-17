@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { encounter_notes } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -18,12 +19,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -33,7 +31,7 @@ export async function PATCH(
   const existing = await db.query.encounter_notes.findFirst({
     where: and(
       eq(encounter_notes.id, id),
-      eq(encounter_notes.provider_id, session.providerId)
+      eq(encounter_notes.provider_id, session!.providerId!)
     ),
     columns: { id: true, status: true },
   })
@@ -61,7 +59,7 @@ export async function PATCH(
     .where(
       and(
         eq(encounter_notes.id, id),
-        eq(encounter_notes.provider_id, session.providerId)
+        eq(encounter_notes.provider_id, session!.providerId!)
       )
     )
 
@@ -79,12 +77,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError2 = requireStaffRole(session, ALL_STAFF)
+  if (roleError2) return roleError2
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -94,7 +89,7 @@ export async function DELETE(
   const existing = await db.query.encounter_notes.findFirst({
     where: and(
       eq(encounter_notes.id, id),
-      eq(encounter_notes.provider_id, session.providerId)
+      eq(encounter_notes.provider_id, session!.providerId!)
     ),
     columns: { id: true, status: true },
   })
@@ -112,7 +107,7 @@ export async function DELETE(
     .where(
       and(
         eq(encounter_notes.id, id),
-        eq(encounter_notes.provider_id, session.providerId)
+        eq(encounter_notes.provider_id, session!.providerId!)
       )
     )
 

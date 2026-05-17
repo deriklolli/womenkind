@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import {
   patients, intakes, visits, subscriptions,
@@ -13,8 +14,8 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
 
   const patientId = params.id
 

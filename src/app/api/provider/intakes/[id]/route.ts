@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { intakes, subscriptions } from '@/lib/db/schema'
 import { eq, inArray } from 'drizzle-orm'
@@ -7,8 +8,8 @@ import { MEMBER_PLAN_TYPES } from '@/lib/stripe'
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
 
   const row = await db.query.intakes.findFirst({
     where: eq(intakes.id, params.id),
@@ -39,8 +40,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
 
   const body = await req.json()
   const updates: Record<string, unknown> = {}

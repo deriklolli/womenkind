@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { intakes } from '@/lib/db/schema'
 import { inArray, desc } from 'drizzle-orm'
 
 export async function GET() {
   const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'provider') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
 
   const rows = await db.query.intakes.findMany({
     where: inArray(intakes.status, ['submitted', 'reviewed', 'care_plan_sent']),

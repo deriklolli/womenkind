@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { appointments, patients, profiles } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -14,11 +15,9 @@ import { eq, desc } from 'drizzle-orm'
 export async function GET(_req: NextRequest) {
   const session = await getServerSession()
 
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -32,7 +31,7 @@ export async function GET(_req: NextRequest) {
     .from(appointments)
     .innerJoin(patients, eq(appointments.patient_id, patients.id))
     .innerJoin(profiles, eq(patients.profile_id, profiles.id))
-    .where(eq(appointments.provider_id, session.providerId))
+    .where(eq(appointments.provider_id, session!.providerId!))
     .orderBy(desc(appointments.starts_at))
 
   // Deduplicate by patientId, keeping the most recent appointment per patient
