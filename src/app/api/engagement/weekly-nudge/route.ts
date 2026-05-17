@@ -4,6 +4,18 @@ import { patients, profiles, visits, notifications } from '@/lib/db/schema'
 import { eq, and, gte } from 'drizzle-orm'
 import { Resend } from 'resend'
 import { alreadySentRecently, logEngagement, isEngagementEnabled, buildEngagementEmail } from '@/lib/engagement'
+import { createTask, deduplicateTaskCheck } from '@/lib/taskEngine'
+
+function getISOWeekKey(date: Date): string {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+  const week1 = new Date(d.getFullYear(), 0, 4)
+  const weekNum = 1 + Math.round(
+    ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7,
+  )
+  return `${d.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.RESEND_FROM_EMAIL ?? 'care@womenkindhealth.com'
@@ -79,6 +91,21 @@ export async function GET(req: NextRequest) {
 
     await logEngagement(patient.id, 'weekly_nudge', 'email')
     await logEngagement(patient.id, 'weekly_nudge', 'in_app')
+
+    const weekKey = getISOWeekKey(new Date())
+    const nudgeRef = `missed_checkin:${patient.id}:${weekKey}`
+    const alreadyOpen = await deduplicateTaskCheck(patient.id, 'missed_checkin', nudgeRef)
+    if (!alreadyOpen) {
+      await createTask({
+        patient_id: patient.id,
+        title: 'Patient missed weekly check-in',
+        body: `No check-in recorded for week ${weekKey}.`,
+        category: 'clinical',
+        priority: 'yellow',
+        source: 'missed_checkin',
+        source_ref: nudgeRef,
+      })
+    }
     sent++
   }
 

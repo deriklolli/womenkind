@@ -10,6 +10,7 @@ export async function GET() {
     return NextResponse.json({
       providerId: 'b0000000-0000-0000-0000-000000000001',
       providerName: 'Dr. Urban',
+      staffRole: 'md',
     })
   }
 
@@ -49,13 +50,13 @@ export async function GET() {
   // Ensure providers record exists in RDS (idempotent)
   let provider = await db.query.providers.findFirst({
     where: eq(providers.profile_id, user.id),
-    columns: { id: true },
+    columns: { id: true, role: true },
   })
   if (!provider) {
     const [created] = await db.insert(providers)
       .values({ profile_id: user.id })
       .onConflictDoNothing()
-      .returning({ id: providers.id })
+      .returning({ id: providers.id, role: providers.role })
     provider = created
   }
 
@@ -67,5 +68,5 @@ export async function GET() {
     ? `Dr. ${firstName} ${lastName}`.trim()
     : 'Dr. Urban'
 
-  return NextResponse.json({ providerId: provider.id, providerName })
+  return NextResponse.json({ providerId: provider.id, providerName, staffRole: provider.role ?? 'md' })
 }

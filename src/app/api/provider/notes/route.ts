@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { provider_notes } from '@/lib/db/schema'
 
@@ -12,11 +13,9 @@ import { provider_notes } from '@/lib/db/schema'
 export async function POST(req: NextRequest) {
   const session = await getServerSession()
 
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
     .insert(provider_notes)
     .values({
       patient_id,
-      provider_id: session.providerId,
+      provider_id: session!.providerId!,
       content: content.trim(),
       note_type: note_type || 'general',
     })

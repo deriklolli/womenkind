@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { appointments } from '@/lib/db/schema'
 import { and, eq, gte, desc } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 
 /**
  * GET /api/provider/recent-cancellations?providerId=xxx
@@ -13,9 +14,8 @@ import { getServerSession } from '@/lib/getServerSession'
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession()
-    if (!session || session.role !== 'provider') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const roleError = requireStaffRole(session, ALL_STAFF)
+    if (roleError) return roleError
 
     const providerId = req.nextUrl.searchParams.get('providerId')
     if (!providerId) {

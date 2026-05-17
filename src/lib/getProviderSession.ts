@@ -3,6 +3,7 @@ const DEMO_PROVIDER_ID = 'b0000000-0000-0000-0000-000000000001'
 export interface ProviderSession {
   providerId: string
   providerName: string
+  staffRole: string
   isDemo: boolean
 }
 
@@ -20,6 +21,7 @@ export async function getProviderSession(): Promise<ProviderSession | null> {
         return {
           providerId: DEMO_PROVIDER_ID,
           providerName: parsed.name || 'Dr. Urban',
+          staffRole: 'md',
           isDemo: true,
         }
       } catch {}
@@ -35,6 +37,7 @@ export async function getProviderSession(): Promise<ProviderSession | null> {
       return {
         providerId: DEMO_PROVIDER_ID,
         providerName: 'Dr. Urban',
+        staffRole: 'md',
         isDemo: true,
       }
     }
@@ -45,6 +48,7 @@ export async function getProviderSession(): Promise<ProviderSession | null> {
   return {
     providerId: data.providerId,
     providerName: data.providerName,
+    staffRole: data.staffRole ?? 'md',
     isDemo: false,
   }
 }

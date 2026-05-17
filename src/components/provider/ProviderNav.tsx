@@ -41,19 +41,21 @@ export default function ProviderNav({
   const [selfIntakeCount, setSelfIntakeCount] = useState(0)
   const [selfMessageCount, setSelfMessageCount] = useState(0)
   const [selfRefillCount, setSelfRefillCount] = useState(0)
+  const [staffRole, setStaffRole] = useState<string>('md')
+  const [taskCounts, setTaskCounts] = useState({ md: 0, rn: 0 })
 
   const needsSelfFetch =
     newIntakeCountProp === undefined &&
     unreadMessageCountProp === undefined &&
     pendingRefillCountProp === undefined
 
-  // Always self-fetch provider name when not passed as a prop
+  // Always self-fetch provider name + staffRole when not passed as a prop
   useEffect(() => {
-    if (providerName) return
     const loadName = async () => {
       try {
         const session = await getProviderSession()
-        if (session?.providerName) setSelfProviderName(session.providerName)
+        if (session?.providerName && !providerName) setSelfProviderName(session.providerName)
+        if (session?.staffRole) setStaffRole(session.staffRole)
       } catch {}
     }
     loadName()
@@ -84,6 +86,28 @@ export default function ProviderNav({
     }
     load()
   }, [needsSelfFetch])
+
+  // Poll task counts every 60s for badge display
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        const [mdRes, rnRes] = await Promise.all([
+          fetch('/api/provider/tasks?status=new&queue=md'),
+          fetch('/api/provider/tasks?status=new&queue=rn'),
+        ])
+        if (mdRes.ok && rnRes.ok) {
+          const [mdData, rnData] = await Promise.all([mdRes.json(), rnRes.json()])
+          setTaskCounts({
+            md: mdData.tasks?.length ?? 0,
+            rn: rnData.tasks?.length ?? 0,
+          })
+        }
+      } catch {}
+    }
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const newIntakeCount = newIntakeCountProp ?? selfIntakeCount
   const appointmentCount = appointmentCountProp ?? 0
@@ -232,6 +256,59 @@ export default function ProviderNav({
                   Today
                 </span>
               </button>
+
+              {/* MD Today — md and np only */}
+              {(staffRole === 'md' || staffRole === 'np') && (
+                <a
+                  href="/provider/today"
+                  className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
+                    pathname === '/provider/today'
+                      ? 'border-violet text-violet'
+                      : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+                >
+                  MD Today
+                  {taskCounts.md > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
+                      {taskCounts.md > 9 ? '9+' : taskCounts.md}
+                    </span>
+                  )}
+                </a>
+              )}
+
+              {/* RN Queue — rn, np, ma */}
+              {(staffRole === 'rn' || staffRole === 'np' || staffRole === 'ma') && (
+                <a
+                  href="/staff/rn-queue"
+                  className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
+                    pathname === '/staff/rn-queue'
+                      ? 'border-violet text-violet'
+                      : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+                >
+                  RN Queue
+                  {taskCounts.rn > 0 && (
+                    <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
+                      {taskCounts.rn > 9 ? '9+' : taskCounts.rn}
+                    </span>
+                  )}
+                </a>
+              )}
+
+              {/* Admin Queue — admin and concierge */}
+              {(staffRole === 'admin' || staffRole === 'concierge') && (
+                <a
+                  href="/staff/admin-queue"
+                  className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
+                    pathname === '/staff/admin-queue'
+                      ? 'border-violet text-violet'
+                      : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
+                  }`}
+                >
+                  Admin Queue
+                </a>
+              )}
+
               <button
                 onClick={() => handleTabClick('patients')}
                 className={`px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all

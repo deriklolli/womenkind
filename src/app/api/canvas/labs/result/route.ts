@@ -4,6 +4,7 @@ import { lab_orders, patients, profiles, notifications } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { Resend } from 'resend'
 import { logEngagement, buildEngagementEmail } from '@/lib/engagement'
+import { createTask, deduplicateTaskCheck } from '@/lib/taskEngine'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM   = process.env.RESEND_FROM_EMAIL ?? 'care@womenkindhealth.com'
@@ -58,6 +59,21 @@ export async function POST(req: NextRequest) {
 
   await logEngagement(patientId, 'lab_results_ready', 'email',  { lab_order_id: orderId })
   await logEngagement(patientId, 'lab_results_ready', 'in_app', { lab_order_id: orderId })
+
+  const labRef = `lab_result:${orderId}`
+  const alreadyOpen = await deduplicateTaskCheck(patientId, 'lab_result', labRef)
+  if (!alreadyOpen) {
+    await createTask({
+      patient_id: patientId,
+      title: 'Lab result received — MD review required',
+      body: `Lab order result received.`,
+      category: 'lab',
+      priority: 'orange',
+      source: 'lab_result',
+      source_ref: labRef,
+      requires_md_signoff: true,
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }

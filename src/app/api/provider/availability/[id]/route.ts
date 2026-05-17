@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, ALL_STAFF } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
 import { provider_availability } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -14,12 +15,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError = requireStaffRole(session, ALL_STAFF)
+  if (roleError) return roleError
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -37,7 +35,7 @@ export async function PATCH(
     .where(
       and(
         eq(provider_availability.id, params.id),
-        eq(provider_availability.provider_id, session.providerId)
+        eq(provider_availability.provider_id, session!.providerId!)
       )
     )
     .returning({
@@ -64,12 +62,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession()
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (session.role !== 'provider' || !session.providerId) {
+  const roleError2 = requireStaffRole(session, ALL_STAFF)
+  if (roleError2) return roleError2
+  if (!session!.providerId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -78,7 +73,7 @@ export async function DELETE(
     .where(
       and(
         eq(provider_availability.id, params.id),
-        eq(provider_availability.provider_id, session.providerId)
+        eq(provider_availability.provider_id, session!.providerId!)
       )
     )
     .returning({ id: provider_availability.id })
