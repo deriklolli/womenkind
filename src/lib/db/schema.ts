@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, text, integer, boolean, timestamp, real, json, unique
+  pgTable, uuid, text, integer, boolean, timestamp, real, json, jsonb, unique
 } from 'drizzle-orm/pg-core'
 
 // ── Profiles ────────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ export const tasks = pgTable('tasks', {
   closeout_followup_how:      text('closeout_followup_how'),
   closeout_safety_open:       boolean('closeout_safety_open').default(false),
   closeout_no_followup_reason: text('closeout_no_followup_reason'),
-  follow_up_task_id:          uuid('follow_up_task_id'),
+  follow_up_task_id:          uuid('follow_up_task_id'), // self-ref FK exists in SQL migration; Drizzle omits to avoid circular reference
   requires_md_signoff:        boolean('requires_md_signoff').notNull().default(false),
   patient_notified:           boolean('patient_notified').notNull().default(false),
   contact_attempts:           integer('contact_attempts').notNull().default(0),
@@ -332,7 +332,7 @@ export const audit_events = pgTable('audit_events', {
   action:        text('action').notNull(),
   resource_type: text('resource_type').notNull(),
   resource_id:   text('resource_id'),
-  metadata:      json('metadata'),
+  metadata:      jsonb('metadata'),
   ip:            text('ip'),
   user_agent:    text('user_agent'),
   created_at:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
