@@ -63,7 +63,6 @@ export function MedChangeModal({
       }
       const data = await res.json()
       setResult(data)
-      onSuccess()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to record change')
     } finally {
@@ -93,7 +92,7 @@ export function MedChangeModal({
             </>
           )}
           <button
-            onClick={onClose}
+            onClick={() => { onSuccess(); onClose() }}
             className="w-full py-2 text-sm bg-aubergine text-white rounded-lg hover:bg-aubergine/90"
           >
             Done
