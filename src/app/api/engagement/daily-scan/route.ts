@@ -5,6 +5,7 @@ import { patients, profiles, visits, prescriptions, notifications } from '@/lib/
 import { eq, and, gte, lte, ne } from 'drizzle-orm'
 import { Resend } from 'resend'
 import { alreadySentRecently, logEngagement, isEngagementEnabled, buildEngagementEmail } from '@/lib/engagement'
+import { createTask, deduplicateTaskCheck } from '@/lib/taskEngine'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM   = process.env.RESEND_FROM_EMAIL ?? 'care@womenkindhealth.com'
@@ -15,8 +16,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.womenkindhealth.com'
-  const now    = new Date()
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.womenkindhealth.com'
+  const now      = new Date()
+  const today    = now.toISOString().slice(0, 10)
+  const monthKey = today.slice(0, 7)  // YYYY-MM
 
   const activePatients = await db
     .selectDistinct({ id: patients.id, profile_id: patients.profile_id })
@@ -58,6 +61,18 @@ export async function GET(req: NextRequest) {
         })
         await resend.emails.send({ from: FROM, to: email, subject: "We've missed you", html })
         await logEngagement(patient.id, 'missed_checkins', 'email')
+
+        const missedRef = `missed_checkin:${patient.id}:${today}`
+        if (!(await deduplicateTaskCheck(patient.id, 'missed_checkin', missedRef))) {
+          await createTask({
+            patient_id: patient.id,
+            title: 'Patient has not checked in for 14+ days',
+            category: 'clinical',
+            priority: 'yellow',
+            source: 'missed_checkin',
+            source_ref: missedRef,
+          })
+        }
         results.missed_checkins++
       }
     }
@@ -76,6 +91,18 @@ export async function GET(req: NextRequest) {
         })
         await resend.emails.send({ from: FROM, to: email, subject: 'Your care team is still here', html })
         await logEngagement(patient.id, 'no_login', 'email')
+
+        const noLoginRef = `no_login:${patient.id}:${monthKey}`
+        if (!(await deduplicateTaskCheck(patient.id, 'missed_checkin', noLoginRef))) {
+          await createTask({
+            patient_id: patient.id,
+            title: 'Patient has not logged in for 30+ days',
+            category: 'admin',
+            priority: 'yellow',
+            source: 'missed_checkin',
+            source_ref: noLoginRef,
+          })
+        }
         results.no_login++
       }
     }
@@ -111,6 +138,18 @@ export async function GET(req: NextRequest) {
         })
         await logEngagement(patient.id, 'rx_refill', 'email',   { medication_name: rx.medication_name })
         await logEngagement(patient.id, 'rx_refill', 'in_app',  { medication_name: rx.medication_name })
+
+        const refillRef = `refill_window:${rx.id}:${today}`
+        if (!(await deduplicateTaskCheck(patient.id, 'refill_window', refillRef))) {
+          await createTask({
+            patient_id: patient.id,
+            title: `Refill window open — ${rx.medication_name}`,
+            category: 'med',
+            priority: 'yellow',
+            source: 'refill_window',
+            source_ref: refillRef,
+          })
+        }
         results.rx_refill++
       }
     }
@@ -140,6 +179,19 @@ export async function GET(req: NextRequest) {
         })
         await resend.emails.send({ from: FROM, to: email, subject: 'How are you feeling after your visit?', html })
         await logEngagement(patient.id, 'post_visit', 'email')
+
+        const pvRef = `post_visit:${patient.id}:${recentVisit[0].id}`
+        if (!(await deduplicateTaskCheck(patient.id, 'post_visit', pvRef))) {
+          await createTask({
+            patient_id: patient.id,
+            title: 'Post-visit follow-up',
+            body: `Check in after recent visit.`,
+            category: 'clinical',
+            priority: 'yellow',
+            source: 'post_visit',
+            source_ref: pvRef,
+          })
+        }
         results.post_visit++
       }
     }

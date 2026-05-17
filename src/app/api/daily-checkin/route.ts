@@ -7,6 +7,7 @@ import { eq, and, gte, lt, desc } from 'drizzle-orm'
 import { Resend } from 'resend'
 import { alreadySentRecently, logEngagement, isEngagementEnabled, buildEngagementEmail } from '@/lib/engagement'
 import { computeLiveWMI } from '@/lib/wmi-scoring'
+import { createTask, deduplicateTaskCheck } from '@/lib/taskEngine'
 
 // Domains always required regardless of wearable
 const BASE_DOMAINS = ['vasomotor', 'mood', 'cognition', 'gsm', 'bone', 'weight', 'libido', 'cardio', 'overall']
@@ -222,6 +223,21 @@ export async function POST(req: NextRequest) {
         })
         await logEngagement(session.patientId!, 'score_drop', 'email',  { score_before: prevWmi, score_after: newWmi })
         await logEngagement(session.patientId!, 'score_drop', 'in_app', { score_before: prevWmi, score_after: newWmi })
+
+        const scoreDropRef = `score_drop:${session.patientId!}:${today}`
+        const alreadyOpen = await deduplicateTaskCheck(session.patientId!, 'score_drop', scoreDropRef)
+        if (!alreadyOpen) {
+          await createTask({
+            patient_id: session.patientId!,
+            title: 'Significant score drop — clinical review needed',
+            body: `WMI dropped ≥20%. New check-in recorded on ${today}.`,
+            category: 'clinical',
+            priority: 'red',
+            source: 'score_drop',
+            source_ref: scoreDropRef,
+            requires_md_signoff: false,
+          })
+        }
       } catch (e) {
         console.error('Score drop hook error:', e)
       }
