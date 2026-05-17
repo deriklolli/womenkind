@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PRESCRIPTION_TEMPLATES } from '@/lib/canvas-client'
+import { MedChangeModal } from '@/components/provider/MedChangeModal'
 
 interface PrescriptionNote {
   id: string
@@ -46,6 +47,9 @@ export default function PrescriptionsPanel({
   onPrescriptionSent,
 }: PrescriptionsPanelProps) {
   const [showForm, setShowForm] = useState(false)
+  const [medChangeTarget, setMedChangeTarget] = useState<{
+    rxId: string; medName: string; dosage: string
+  } | null>(null)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [patientNotes, setPatientNotes] = useState<PrescriptionNote[]>([])
@@ -317,6 +321,16 @@ export default function PrescriptionsPanel({
                     <p className="text-xs font-sans text-aubergine/50">
                       {rx.dosage} — {rx.frequency}
                     </p>
+                    <button
+                      onClick={() => setMedChangeTarget({
+                        rxId: rx.id,
+                        medName: rx.medication_name,
+                        dosage: rx.dosage ?? '',
+                      })}
+                      className="text-xs text-violet hover:underline font-medium mt-1"
+                    >
+                      Record change
+                    </button>
                     <div className="flex items-center gap-4 mt-1.5 text-xs font-sans text-aubergine/30">
                       {rx.quantity_dispensed != null && <span>Qty: {rx.quantity_dispensed}</span>}
                       <span>Refills: {rx.refills}</span>
@@ -351,6 +365,20 @@ export default function PrescriptionsPanel({
             </div>
           )}
         </div>
+      )}
+
+      {medChangeTarget && (
+        <MedChangeModal
+          patientId={patientId}
+          prescriptionId={medChangeTarget.rxId}
+          medicationName={medChangeTarget.medName}
+          currentDosage={medChangeTarget.dosage}
+          onClose={() => setMedChangeTarget(null)}
+          onSuccess={() => {
+            setMedChangeTarget(null)
+            onPrescriptionSent?.()
+          }}
+        />
       )}
     </div>
   )
