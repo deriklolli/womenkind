@@ -17,6 +17,10 @@ import { devFixtures } from '@/lib/dev-fixtures'
 import ClinicalBriefView from '@/components/provider/ClinicalBriefView'
 import ChatWidget from '@/components/provider/ChatWidget'
 import { isMemberPlan } from '@/lib/stripe'
+import PlanEditor from '@/components/provider/PlanEditor'
+import DiffPanel from '@/components/provider/DiffPanel'
+import MedChangeModal from '@/components/provider/MedChangeModal'
+import { TaskQueue, Task } from '@/components/staff/TaskQueue'
 
 interface PatientProfile {
   id: string
@@ -119,6 +123,12 @@ export default function PatientProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTab>(initialTab)
   const [providerId, setProviderId] = useState<string>('')
   const [notesRefreshing, setNotesRefreshing] = useState(false)
+  const [currentPlan, setCurrentPlan]       = useState<string | null>(null)
+  const [nextStep, setNextStep]             = useState<string | null>(null)
+  const [lastMdReviewAt, setLastMdReviewAt] = useState<string | null>(null)
+  const [patientTasks, setPatientTasks]     = useState<Task[]>([])
+  const [medChangeOpen, setMedChangeOpen]   = useState(false)
+  const [accordionOpen, setAccordionOpen]   = useState({ trend: false, meds: false })
 
   const { setPageContext, pageContext } = useChatContext()
   const { state: recordingState, startRecording, stopRecording } = useRecording()
@@ -182,7 +192,19 @@ export default function PatientProfilePage() {
       setEncounterNotesCount(data.encounterNotesCount ?? 0)
       setLatestEncounterNote(data.latestEncounterNote ?? null)
       setLiveWmi(data.liveWmi ?? null)
+      setCurrentPlan(data.currentPlan ?? null)
+      setNextStep(data.nextStep ?? null)
+      setLastMdReviewAt(data.lastMdReviewAt ?? null)
       setDataVersion(v => v + 1)
+
+      // Fetch open tasks for this patient
+      try {
+        const taskRes = await fetch(`/api/provider/tasks?patientId=${patientId}`)
+        const taskData = await taskRes.json()
+        if (fetchGenRef.current !== gen) return
+        const open = (taskData.tasks ?? []).filter((t: Task) => !['resolved', 'closed'].includes(t.status))
+        setPatientTasks(open)
+      } catch {}
 
       // Fetch message thread count
       try {
@@ -338,7 +360,7 @@ export default function PatientProfilePage() {
     : null
 
   const TABS: { key: ProfileTab; label: string; count?: number }[] = [
-    { key: 'overview', label: 'Overview & Trends' },
+    { key: 'overview', label: 'Cockpit' },
     { key: 'intake', label: 'Intake' },
     { key: 'biometrics', label: 'Biometrics' },
     { key: 'prescriptions', label: 'Prescriptions', count: prescriptions.length },
@@ -440,13 +462,160 @@ export default function PatientProfilePage() {
 
         {/* Tab content */}
         {activeTab === 'overview' && (
-          <PatientOverview
-            view="provider"
-            visits={visits}
-            prescriptions={prescriptions}
-            latestIntake={latestIntake}
-            liveWmi={liveWmi}
-          />
+          <div className="space-y-4">
+
+            {/* Top strip: compact score + plan editor */}
+            <div className="bg-white rounded-card border border-aubergine/5 px-6 py-5">
+              <div className="flex gap-6 items-start">
+                {/* Compact score */}
+                <div className="text-center pr-6 border-r border-aubergine/8 flex-shrink-0 min-w-[72px]">
+                  <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">WK Score</p>
+                  <p className="font-serif font-normal text-4xl text-aubergine leading-none">
+                    {liveWmi != null ? Math.round(liveWmi) : '—'}
+                  </p>
+                </div>
+                {/* Plan + next step editors */}
+                <PlanEditor
+                  patientId={patientId}
+                  currentPlan={currentPlan}
+                  nextStep={nextStep}
+                  lastMdReviewAt={lastMdReviewAt}
+                />
+              </div>
+            </div>
+
+            {/* Since last MD review */}
+            <DiffPanel patientId={patientId} />
+
+            {/* Open tasks */}
+            <div className="bg-white rounded-card border border-aubergine/5">
+              <div className="px-6 py-4 border-b border-aubergine/5">
+                <p className="text-sm font-sans font-semibold text-aubergine">
+                  Open Tasks
+                  {patientTasks.length > 0 && (
+                    <span className="ml-1.5 text-aubergine/40 font-normal">({patientTasks.length})</span>
+                  )}
+                </p>
+              </div>
+              <TaskQueue
+                tasks={patientTasks}
+                onAcknowledge={async (taskId) => {
+                  await fetch(`/api/provider/tasks/${taskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'acknowledged' }),
+                  })
+                  setPatientTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+                }}
+              />
+            </div>
+
+            {/* Compact domain cards — last check-in scores */}
+            {(() => {
+              const latest = visits.find(v => v.symptom_scores && Object.keys(v.symptom_scores as object).length > 0)
+              if (!latest) return null
+              const scores = latest.symptom_scores as Record<string, number>
+              const domains = [
+                { key: 'vasomotor', label: 'Vasomotor', unit: 'episodes' },
+                { key: 'sleep',     label: 'Sleep',     unit: 'hrs' },
+                { key: 'energy',    label: 'Energy',    unit: '/10' },
+                { key: 'mood',      label: 'Mood',      unit: '/10' },
+              ]
+              return (
+                <div className="grid grid-cols-4 gap-3">
+                  {domains.map(d => (
+                    <div key={d.key} className="bg-white rounded-card border border-aubergine/5 px-4 py-3 text-center">
+                      <p className="text-xs font-sans text-aubergine/40 mb-1">{d.label}</p>
+                      <p className="font-serif font-normal text-2xl text-aubergine leading-none">
+                        {scores[d.key] != null ? scores[d.key] : '—'}
+                      </p>
+                      <p className="text-xs font-sans text-aubergine/30 mt-0.5">{d.unit}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Trend chart accordion */}
+            <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+              <button
+                onClick={() => setAccordionOpen(s => ({ ...s, trend: !s.trend }))}
+                className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
+              >
+                <span>Symptom Trend</span>
+                <span className="text-aubergine/30 text-xs">{accordionOpen.trend ? '▾' : '▸'}</span>
+              </button>
+              {accordionOpen.trend && (
+                <div className="px-6 pb-6">
+                  <PatientOverview
+                    view="provider"
+                    visits={visits}
+                    prescriptions={prescriptions}
+                    latestIntake={latestIntake}
+                    liveWmi={liveWmi}
+                    hideScoreHeader
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Medication timeline accordion */}
+            <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+              <button
+                onClick={() => setAccordionOpen(s => ({ ...s, meds: !s.meds }))}
+                className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
+              >
+                <span>Medication Timeline</span>
+                <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                  {accordionOpen.meds && (
+                    <button
+                      onClick={() => setMedChangeOpen(true)}
+                      className="text-xs font-sans font-semibold text-violet hover:text-aubergine transition-colors bg-violet/5 px-3 py-1 rounded-pill"
+                    >
+                      + Record Change
+                    </button>
+                  )}
+                  <span className="text-aubergine/30 text-xs pointer-events-none">{accordionOpen.meds ? '▾' : '▸'}</span>
+                </div>
+              </button>
+              {accordionOpen.meds && (
+                <div className="px-6 pb-4">
+                  {prescriptions.length === 0 ? (
+                    <p className="text-sm font-sans text-aubergine/30 py-2">No prescriptions on file.</p>
+                  ) : (
+                    <div className="divide-y divide-aubergine/5">
+                      {prescriptions.map((rx: any) => (
+                        <div key={rx.id} className="flex items-center gap-3 py-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-sans font-semibold text-aubergine truncate">{rx.medication_name}</p>
+                            <p className="text-xs font-sans text-aubergine/40">{rx.dosage} · {rx.frequency}</p>
+                          </div>
+                          <span className={`shrink-0 text-xs font-sans px-2.5 py-0.5 rounded-pill border ${
+                            rx.status === 'active'
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                              : 'bg-aubergine/5 text-aubergine/40 border-aubergine/10'
+                          }`}>
+                            {rx.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Med change modal */}
+            {medChangeOpen && (
+              <MedChangeModal
+                patientId={patientId}
+                prescriptions={prescriptions}
+                onClose={() => setMedChangeOpen(false)}
+                onSuccess={() => setMedChangeOpen(false)}
+              />
+            )}
+
+          </div>
         )}
 
         {activeTab === 'biometrics' && (
