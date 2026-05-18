@@ -52,6 +52,10 @@ export default defineConfig({
 
     // Reasonable timeout for network-dependent actions (Supabase auth, staging latency)
     actionTimeout: 15_000,
+
+    // Per-test timeout — patient-journey tests include Stripe checkout + full intake (~3 min)
+    // Override per-test with test.setTimeout() for longer flows
+    navigationTimeout: 30_000,
   },
 
   projects: [
