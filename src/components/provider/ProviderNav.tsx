@@ -133,13 +133,15 @@ export default function ProviderNav({
   // Determine which tab is active
   const isDashboard = pathname === '/provider/dashboard'
   const isSchedule = pathname === '/provider/schedule'
-  const resolvedTab: ProviderTab = controlledTab
+  const resolvedTab: ProviderTab | null = controlledTab
     ? controlledTab
     : isSchedule
       ? 'schedule'
       : pathname.startsWith('/provider/patient')
         ? 'patients'
-        : 'dashboard'
+        : pathname === '/provider/dashboard'
+          ? 'dashboard'
+          : null
 
   const handleTabClick = (tab: ProviderTab) => {
     if (tab === 'dashboard') {
