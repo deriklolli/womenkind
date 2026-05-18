@@ -33,9 +33,16 @@ export async function GET() {
     orderBy: [desc(intakes.created_at)],
   })
 
+  // Fetch onboarding_status so the intake page can redirect active patients
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    columns: { onboarding_status: true },
+  })
+
   return NextResponse.json({
     patientId,
     draftIntakeId: draft?.id ?? null,
     draftAnswers: draft?.answers ?? null,
+    onboardingStatus: patient?.onboarding_status ?? null,
   })
 }

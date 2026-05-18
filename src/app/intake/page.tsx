@@ -60,6 +60,12 @@ export default function IntakePage() {
         if (fullName) prePopulated.full_name = fullName
         if (email) prePopulated.email = email
 
+        // Active patients (completed intake) go straight to dashboard
+        if (data.onboardingStatus === 'active') {
+          router.replace('/patient/dashboard')
+          return
+        }
+
         if (data.patientId) {
           setPatientId(data.patientId)
         }
