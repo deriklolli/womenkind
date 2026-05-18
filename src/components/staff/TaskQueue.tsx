@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from 'react'
-
 export interface Task {
   id: string
   patient_id: string
@@ -19,12 +17,12 @@ export interface Task {
   closeout_safety_open?: boolean | null
 }
 
-const PRIORITY_STYLES: Record<string, { border: string; badge: string; label: string }> = {
-  red:    { border: 'border-l-red-500',    badge: 'bg-red-100 text-red-700',    label: 'RED' },
-  orange: { border: 'border-l-orange-500', badge: 'bg-orange-100 text-orange-700', label: 'ORANGE' },
-  yellow: { border: 'border-l-yellow-400', badge: 'bg-yellow-100 text-yellow-700', label: 'YELLOW' },
-  blue:   { border: 'border-l-blue-400',   badge: 'bg-blue-100 text-blue-700',   label: 'BLUE' },
-  gray:   { border: 'border-l-gray-300',   badge: 'bg-gray-100 text-gray-600',   label: 'GRAY' },
+const PRIORITY_DOT: Record<string, string> = {
+  red:    'bg-red-500',
+  orange: 'bg-orange-400',
+  yellow: 'bg-amber-400',
+  blue:   'bg-blue-400',
+  gray:   'bg-aubergine/20',
 }
 
 interface Props {
@@ -35,52 +33,60 @@ interface Props {
   patientNames?: Record<string, string>
 }
 
-export function TaskQueue({ tasks, onAcknowledge, onClose, onStatusChange, patientNames = {} }: Props) {
+export function TaskQueue({ tasks, onAcknowledge, onClose, patientNames = {} }: Props) {
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400 text-sm">
-        No open tasks — queue is clear.
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-sm font-sans text-aubergine/30">No open tasks — queue is clear.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-2">
+    <div className="divide-y divide-aubergine/5">
       {tasks.map((task) => {
-        const style = PRIORITY_STYLES[task.priority] ?? PRIORITY_STYLES.gray
+        const dot = PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.gray
         const isOverdue = task.due_at && new Date(task.due_at) < new Date()
 
         return (
           <div
             key={task.id}
-            className={`bg-white rounded-lg border-l-4 ${style.border} shadow-sm px-4 py-3 flex items-center gap-4`}
+            className="px-6 py-4 flex items-center gap-4 hover:bg-aubergine/[0.02] transition-colors"
           >
-            <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded ${style.badge}`}>
-              {style.label}
-            </span>
+            {/* Priority circle */}
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`} />
 
+            {/* Patient + title */}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-sans font-semibold text-aubergine truncate">
                 {patientNames[task.patient_id] ?? task.patient_id.slice(0, 8)}
-              </div>
-              <div className="text-xs text-gray-500 truncate">{task.title}</div>
+              </p>
+              <p className="text-xs font-sans text-aubergine/50 truncate mt-0.5">{task.title}</p>
             </div>
 
+            {/* Category */}
+            <span className="shrink-0 text-xs font-sans text-aubergine/40 capitalize hidden sm:block">
+              {task.category.replace(/_/g, ' ')}
+            </span>
+
+            {/* Due date */}
             {task.due_at && (
-              <div className={`shrink-0 text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                {isOverdue ? 'Overdue' : new Date(task.due_at).toLocaleDateString()}
-              </div>
+              <span className={`shrink-0 text-xs font-sans ${isOverdue ? 'text-red-500 font-semibold' : 'text-aubergine/40'}`}>
+                {isOverdue ? 'Overdue' : new Date(task.due_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
             )}
 
-            <span className="shrink-0 text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+            {/* Status pill */}
+            <span className="shrink-0 text-xs font-sans text-aubergine/50 bg-aubergine/5 border border-aubergine/10 px-2.5 py-0.5 rounded-pill capitalize">
               {task.status.replace(/_/g, ' ')}
             </span>
 
-            <div className="shrink-0 flex gap-2">
+            {/* Actions */}
+            <div className="shrink-0 flex gap-3">
               {task.status === 'new' && onAcknowledge && (
                 <button
                   onClick={() => onAcknowledge(task.id)}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  className="text-xs font-sans font-semibold text-violet hover:text-aubergine transition-colors"
                 >
                   Acknowledge
                 </button>
@@ -88,7 +94,7 @@ export function TaskQueue({ tasks, onAcknowledge, onClose, onStatusChange, patie
               {['acknowledged', 'in_progress', 'resolved'].includes(task.status) && onClose && (
                 <button
                   onClick={() => onClose(task)}
-                  className="text-xs text-green-600 hover:text-green-800 font-medium"
+                  className="text-xs font-sans font-semibold text-violet hover:text-aubergine transition-colors"
                 >
                   Close
                 </button>
