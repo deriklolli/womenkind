@@ -326,7 +326,7 @@ for (let i = 1; i <= 5; i++) {
 
     // ── 11. Assert dashboard rendered ─────────────────────────────────────
     // Dashboard should show the patient's first name somewhere in the nav / header
-    await expect(page.getByText(firstName, { exact: false })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(firstName, { exact: false }).first()).toBeVisible({ timeout: 15_000 })
   })
 
   test.afterEach(async ({ page }) => {
