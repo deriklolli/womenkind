@@ -39,7 +39,7 @@ export default function PlanEditor({ patientId, currentPlan: initialPlan, nextSt
     : null
 
   return (
-    <div className="col-span-2 grid grid-cols-2 gap-4">
+    <div className="flex-1 grid grid-cols-2 gap-4">
       <div>
         <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Current Plan</p>
         <textarea

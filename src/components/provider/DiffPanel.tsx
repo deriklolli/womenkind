@@ -17,20 +17,37 @@ interface Props {
   patientId: string
 }
 
+const DEV_DIFF: DiffData = {
+  since: new Date(Date.now() - 21 * 86400000).toISOString(), // 3 weeks ago
+  wmiDelta: -4,
+  wmiNow: 64,
+  wmiBefore: 68,
+  newLabs: 1,
+  latestLabName: 'TSH',
+  rnNotes: 2,
+  newMessages: 3,
+}
+
 export default function DiffPanel({ patientId }: Props) {
   const [diff, setDiff]       = useState<DiffData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      setDiff(DEV_DIFF)
+      setLoading(false)
+      return
+    }
     fetch(`/api/provider/patients/${patientId}/diff`)
       .then(r => r.json())
       .then(setDiff)
+      .catch(() => setDiff({ since: null, wmiDelta: null, wmiNow: null, wmiBefore: null, newLabs: 0, latestLabName: null, rnNotes: 0, newMessages: 0 }))
       .finally(() => setLoading(false))
   }, [patientId])
 
   if (loading) {
     return (
-      <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+      <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-5 py-4">
         <div className="h-3 bg-aubergine/5 rounded animate-pulse w-40" />
       </div>
     )
@@ -49,7 +66,7 @@ export default function DiffPanel({ patientId }: Props) {
   const hasAny = diff.wmiDelta != null || diff.newLabs > 0 || diff.rnNotes > 0 || diff.newMessages > 0
 
   return (
-    <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+    <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-5 py-4">
       <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-3">
         {sinceLabel ? `Since Last MD Review (${sinceLabel})` : 'No MD Review Recorded Yet'}
       </p>

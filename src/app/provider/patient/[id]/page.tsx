@@ -465,7 +465,7 @@ export default function PatientProfilePage() {
           <div className="space-y-4">
 
             {/* Top strip: compact score + plan editor */}
-            <div className="bg-white rounded-card border border-aubergine/5 px-6 py-5">
+            <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-6 py-5">
               <div className="flex gap-6 items-start">
                 {/* Compact score */}
                 <div className="text-center pr-6 border-r border-aubergine/8 flex-shrink-0 min-w-[72px]">
@@ -488,7 +488,7 @@ export default function PatientProfilePage() {
             <DiffPanel patientId={patientId} />
 
             {/* Open tasks */}
-            <div className="bg-white rounded-card border border-aubergine/5">
+            <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
               <div className="px-6 py-4 border-b border-aubergine/5">
                 <p className="text-sm font-sans font-semibold text-aubergine">
                   Open Tasks
@@ -524,7 +524,7 @@ export default function PatientProfilePage() {
               return (
                 <div className="grid grid-cols-4 gap-3">
                   {domains.map(d => (
-                    <div key={d.key} className="bg-white rounded-card border border-aubergine/5 px-4 py-3 text-center">
+                    <div key={d.key} className="bg-white rounded-card shadow-sm border border-aubergine/5 px-4 py-3 text-center">
                       <p className="text-xs font-sans text-aubergine/40 mb-1">{d.label}</p>
                       <p className="font-serif font-normal text-2xl text-aubergine leading-none">
                         {scores[d.key] != null ? scores[d.key] : '—'}
@@ -537,7 +537,7 @@ export default function PatientProfilePage() {
             })()}
 
             {/* Trend chart accordion */}
-            <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+            <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
               <button
                 onClick={() => setAccordionOpen(s => ({ ...s, trend: !s.trend }))}
                 className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
@@ -560,7 +560,7 @@ export default function PatientProfilePage() {
             </div>
 
             {/* Medication timeline accordion */}
-            <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+            <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
               <button
                 onClick={() => setAccordionOpen(s => ({ ...s, meds: !s.meds }))}
                 className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
