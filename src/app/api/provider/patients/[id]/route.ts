@@ -173,7 +173,11 @@ export async function GET(
       gte(wearable_metrics.metric_date, sevenDaysAgoStr)
     ))
 
-  const liveWmi = computeLiveWMI(visitsRows as any, recentWearables)
+  let liveWmi: number | null = computeLiveWMI(visitsRows as any, recentWearables)
+  if (liveWmi == null) {
+    const submittedIntake = intakesRows.find(i => i.status !== 'draft')
+    liveWmi = (submittedIntake?.wmi_scores as any)?.wmi ?? null
+  }
 
   return NextResponse.json({
     patient,
