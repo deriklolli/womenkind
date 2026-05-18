@@ -1,74 +1,73 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface Props {
   patientId: string
-  initialPlan: string | null
-  initialNextStep: string | null
+  currentPlan: string | null
+  nextStep: string | null
+  lastMdReviewAt: string | null
 }
 
-export function PlanEditor({ patientId, initialPlan, initialNextStep }: Props) {
-  const [plan, setPlan] = useState(initialPlan ?? '')
-  const [nextStep, setNextStep] = useState(initialNextStep ?? '')
-  const [savedPlan, setSavedPlan] = useState(false)
-  const [savedNextStep, setSavedNextStep] = useState(false)
-  const [error, setError] = useState('')
+export default function PlanEditor({ patientId, currentPlan: initialPlan, nextStep: initialNext, lastMdReviewAt }: Props) {
+  const [plan, setPlan]        = useState(initialPlan ?? '')
+  const [next, setNext]        = useState(initialNext ?? '')
+  const [savedField, setSaved] = useState<'plan' | 'next' | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function save(field: 'plan' | 'nextStep') {
+  const save = async (field: 'plan' | 'next', value: string) => {
+    const body = field === 'plan' ? { current_plan: value } : { next_step: value }
     try {
-      const body = field === 'plan'
-        ? { current_plan: plan || null }
-        : { next_step: nextStep || null }
-      const res = await fetch(`/api/provider/patients/${patientId}/plan`, {
+      await fetch(`/api/provider/patients/${patientId}/plan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error('Save failed')
-      if (field === 'plan') { setSavedPlan(true); setTimeout(() => setSavedPlan(false), 2000) }
-      else { setSavedNextStep(true); setTimeout(() => setSavedNextStep(false), 2000) }
-    } catch {
-      setError('Failed to save')
-      setTimeout(() => setError(''), 3000)
-    }
+      setSaved(field)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setSaved(null), 2000)
+    } catch {}
   }
 
+  const reviewAgo = lastMdReviewAt
+    ? (() => {
+        const days = Math.floor((Date.now() - new Date(lastMdReviewAt).getTime()) / 86400000)
+        if (days === 0) return 'today'
+        if (days === 1) return '1 day ago'
+        return `${days} days ago`
+      })()
+    : null
+
   return (
-    <div className="space-y-3">
-      {/* Current Plan */}
+    <div className="col-span-2 grid grid-cols-2 gap-4">
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-aubergine/40">Current Plan</span>
-          {savedPlan && <span className="text-xs text-emerald-600">Saved</span>}
-        </div>
+        <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Current Plan</p>
         <textarea
           value={plan}
           onChange={e => setPlan(e.target.value)}
-          onBlur={() => save('plan')}
-          placeholder="Enter treatment plan..."
+          onBlur={() => save('plan', plan)}
+          placeholder="Click to add treatment plan…"
           rows={3}
-          className="w-full text-sm text-aubergine border border-aubergine/10 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet/30 bg-white"
+          className="w-full text-sm font-sans text-aubergine bg-transparent resize-none outline-none border border-transparent rounded-lg px-2 py-1 hover:border-aubergine/10 focus:border-aubergine/20 focus:bg-white transition-colors placeholder:text-aubergine/20"
         />
+        {savedField === 'plan' && <p className="text-xs font-sans text-emerald-500 mt-0.5">Saved</p>}
       </div>
 
-      {/* Next Step */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-aubergine/40">Next Step</span>
-          {savedNextStep && <span className="text-xs text-emerald-600">Saved</span>}
-        </div>
-        <input
-          type="text"
-          value={nextStep}
-          onChange={e => setNextStep(e.target.value)}
-          onBlur={() => save('nextStep')}
-          placeholder="No current action needed"
-          className="w-full text-sm text-aubergine border border-aubergine/10 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet/30 bg-white"
+        <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Next Step</p>
+        <textarea
+          value={next}
+          onChange={e => setNext(e.target.value)}
+          onBlur={() => save('next', next)}
+          placeholder="No current action needed…"
+          rows={3}
+          className="w-full text-sm font-sans text-aubergine bg-transparent resize-none outline-none border border-transparent rounded-lg px-2 py-1 hover:border-aubergine/10 focus:border-aubergine/20 focus:bg-white transition-colors placeholder:text-aubergine/20"
         />
+        {savedField === 'next' && <p className="text-xs font-sans text-emerald-500 mt-0.5">Saved</p>}
+        {reviewAgo && (
+          <p className="text-xs font-sans text-aubergine/30 mt-0.5">Last MD review: {reviewAgo}</p>
+        )}
       </div>
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
 }

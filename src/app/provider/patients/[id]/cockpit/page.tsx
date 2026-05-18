@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import { TaskQueue, Task } from '@/components/staff/TaskQueue'
 import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
 import { DiffPanel } from '@/components/provider/DiffPanel'
-import { PlanEditor } from '@/components/provider/PlanEditor'
+import PlanEditor from '@/components/provider/PlanEditor'
 import { MedChangeModal } from '@/components/provider/MedChangeModal'
 import ProviderNav from '@/components/provider/ProviderNav'
 
@@ -157,8 +157,9 @@ export default function CockpitPage() {
 
           <PlanEditor
             patientId={patientId}
-            initialPlan={cockpit.patient.current_plan}
-            initialNextStep={cockpit.patient.next_step}
+            currentPlan={cockpit.patient.current_plan}
+            nextStep={cockpit.patient.next_step}
+            lastMdReviewAt={cockpit.patient.last_md_review_at ?? null}
           />
         </div>
 
