@@ -1,150 +1,138 @@
 # Build 17 — Patient Cockpit + Medication Change Tracker
 
 **Date:** 2026-05-17  
-**Status:** Approved for planning  
-**Prerequisite:** Build 16 (tasks table and task engine must be live)
+**Status:** Approved for implementation  
+**Prerequisite:** Build 16 complete (tasks table, task engine, TaskQueue component all live)
 
 ---
 
 ## Goal
 
-The physician understands any patient's current state in under 60 seconds. Medication changes automatically generate the full 5-touchpoint follow-up cadence as tasks. The clinical task count is visible at a glance on the dashboard home screen.
+Give the provider a single tab to understand any patient and act — without navigating across 8 tabs to piece together context. Medication changes auto-schedule the full 5-touchpoint follow-up cadence as tasks.
 
 ---
 
 ## Design Decisions
 
-All decisions confirmed during brainstorming session on 2026-05-17.
-
 | Question | Decision |
 |---|---|
-| Task counts on dashboard | Full "Clinical Tasks" card below the existing 4 cards (Option B) — top 8 tasks, "View all →" |
-| Full task queue page layout | Grouped by priority sections: Urgent, MD Decisions, Lower Priority (Option B) |
-| Patient cockpit layout | Single column scroll (Option A) |
-| MedChangeModal entry points | Both: cockpit medication timeline + existing patient chart prescriptions tab |
+| Where does the cockpit live? | Rename the existing "Overview & Trends" tab to "Cockpit" — no new page, no new URL, tab count stays at 8 |
+| Score display | Demoted to compact number (not full banner) in top-left of a 3-column strip |
+| Med change button location | Inside the Medication Timeline accordion on the Cockpit tab only |
+| Dashboard clinical tasks | Already built in Build 16 — no changes needed |
+| Tasks page | Already built in Build 16 — no changes needed |
 
 ---
 
-## 1. Dashboard Consolidation
+## 1. Cockpit Tab (replaces "Overview & Trends")
 
-### 1a. DashboardHome — Clinical Tasks card
+### What changes
 
-Add a full-width "Clinical Tasks" card below the existing 2×2 grid in `src/components/provider/DashboardHome.tsx`.
+In `src/app/provider/patient/[id]/page.tsx`:
+- Rename tab label `'Overview & Trends'` → `'Cockpit'`
+- Replace the `activeTab === 'overview'` content block with the new Cockpit layout
+- Fetch `current_plan`, `next_step`, `last_md_review_at` from the patient API (added to existing response)
 
-- Fetches top 8 open tasks from `GET /api/provider/tasks?limit=8` (sorted: red → orange → yellow, then by `updated_at`)
-- Each row: priority color bar (left border), task title, patient name, status badge, time ago, Acknowledge or Close button
-- **Acknowledge** (`new` status): calls `PATCH /api/provider/tasks/[id]` with `{ status: 'acknowledged' }` — no modal, instant
-- **Close** (`acknowledged` / `in_progress` / `resolved` status): opens `TaskCloseModal` (already built in Build 16)
-- "View all →" link navigates to `/provider/tasks`
-- Zero state: "No open tasks — queue is clear." in muted text
-- Polls every 60 seconds (same pattern as ProviderNav task badge)
+### Layout (top to bottom)
 
-### 1b. `/provider/tasks` — Full task queue page
-
-New page at `src/app/provider/tasks/page.tsx`. Uses WomenKind design language (cream background, aubergine typography, white rounded cards).
-
-**Layout — three collapsible priority sections:**
+**1. Top strip — 3 columns**
 
 ```
-Urgent (N)           ← red tasks, requires_md_signoff or priority='red'
-  [task rows with Ack/Close actions]
-
-MD Decisions (N)     ← orange tasks
-  [task rows]
-  + N more in this section (expand link)
-
-Lower Priority (N)   ← yellow + blue tasks
-  [task rows]
-  + N more in this section
+┌─────────────────────────────────────────────────────────────┐
+│  WK Score   │  Current Plan (inline editable)               │
+│  68         │  E2 patch 0.05mg · Progesterone 100mg ...     │
+│  ↓ 4 pts    │                                               │
+│             │  Next Step (inline editable)                  │
+│             │  12-week meaningful response review           │
+│             │  Last MD review: 3 weeks ago                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Each section header has a colored dot, label, and count badge. Sections are expanded by default; clicking the header collapses them. The "+ N more" truncates each section to 5 rows; clicking expands all.
+- Score: `text-4xl font-light` (not `text-[100px]`). Delta chip beneath. Uses existing `liveWmi` prop — no new fetch.
+- Current Plan + Next Step: `PlanEditor` component, saves on blur via `PATCH /api/provider/patients/[id]/plan`
+- Next Step null state: "No current action needed"
 
-Each task row shows: priority color-left-border, patient name (links to cockpit), task title, category badge, status, time ago, Acknowledge / Close button.
+**2. Since Last MD Review panel (`DiffPanel` component)**
 
-**"Tasks" tab** added to `ProviderNav` between "Today" and "Patients". Shown for all staff roles. Badge count = total open tasks across all priorities (fetched alongside existing task count poll).
+Color-coded chips: WMI delta, new labs count, RN notes count, messages count. Chips only rendered if there is data (no empty rows).
+
+Zero state: "No changes since last MD review on [date]" — or "No MD review recorded yet — showing all history."
+
+Data: `GET /api/provider/patients/[id]/diff`
+
+**3. Open Tasks**
+
+`TaskQueue` component, filtered to this patient, status not in `['resolved', 'closed']`. Reuses existing component unchanged.
+
+Zero state: "No open tasks for this patient."
+
+**4. Symptom Domains (compact grid)**
+
+4-column grid of domain cards. Compact: smaller score number, no sparklines. Driven by existing visit `symptom_scores` data already fetched by the patient profile page.
+
+**5. Accordions (collapsed by default)**
+
+- **Trend Chart** — expands to show `PillarTrendChart`, reused as-is
+- **Medication Timeline** — expands to show chronological `prescription_changes` rows + `+ Record Change` button in the accordion header
 
 ---
 
-## 2. Patient Cockpit
+## 2. Medication Change Flow
 
-### Route
+### `MedChangeModal` component
 
-`/provider/patients/[id]/cockpit` — linked from:
-- `PatientOverview` component ("Open Cockpit" link, visible to providers only)
-- Each patient name in the Clinical Tasks card and `/provider/tasks` page
-- Patient list rows in the existing `/provider/dashboard?tab=patients` view
+Triggered by `+ Record Change` button in the Medication Timeline accordion.
 
-### Page layout (single column scroll)
+**Fields:**
+- **Medication** — dropdown of patient's active prescriptions
+- **Change type** — pill selector: `started | dose_increased | dose_decreased | stopped | formulation_changed`
+- **New dosage** — text input (hidden for `stopped`)
+- **Reason** — text input
 
-```
-┌─ Patient strip ────────────────────────────────────────────┐
-│ Sarah Mitchell  51y · Peri-menopausal · Member             │
-│                                                             │
-│ Current Plan (editable inline)                              │
-│ "Estradiol 1mg patch started 6 weeks ago. Monitor          │
-│  vasomotor response, reassess at 12 weeks."                 │
-│                                                             │
-│ → Next: 12-week meaningful response review due Jun 28       │
-│                          Last MD review: 18 days ago  WMI↓8 │
-└─────────────────────────────────────────────────────────────┘
+**Confirmation banner inside modal (before submit):**
+> ✓ Will schedule: Day 4 check-in · Week 4 check-in · Week 8 review · 12-week MD review · Annual review
 
-┌─ Since last MD review ─────────────────────────────────────┐
-│ WMI        72 → 64 (↓11%)                                  │
-│ Labs       E2 level resulted — pending review              │
-│ Messages   2 new · dose question, side effect              │
-│ RN Notes   1 note — patient contacted re: hot flashes      │
-│ Rx Changes Estradiol dose increased → 1mg (May 3)         │
-└─────────────────────────────────────────────────────────────┘
+Not shown for `stopped` or `refill_authorized`.
 
-┌─ Active Tasks (3) ─────────────────────────────────────────┐
-│ [TaskQueue component filtered to this patient]             │
-└─────────────────────────────────────────────────────────────┘
+**On submit:** `POST /api/provider/patients/[id]/prescriptions/[rxId]/change`
 
-┌─ History ──────────────────────────────────────────────────┐
-│ ▸ Medication Timeline (3 changes)                          │
-│ ▸ Symptom Trend (8 check-ins)                              │
-│ ▸ Labs (2 orders)                                          │
-│ ▸ Messages (5 threads)                                     │
-│ ▸ Visit & Encounter Notes (2)                              │
-└─────────────────────────────────────────────────────────────┘
-```
+After success: modal shows "Change recorded. 5 follow-up tasks scheduled:" with titles + dates. Closes on "Done" or after 3 seconds.
 
-### Patient strip details
+### Auto-task cadence (server-side)
 
-- **Current plan**: editable inline via `PlanEditor` component; auto-saves on blur via `PATCH /api/provider/patients/[id]/plan`
-- **Next step**: editable inline (same component, same endpoint); null state renders "No current action needed" in muted text
-- **Last MD review date**: set automatically when MD closes a `requires_md_signoff` task for this patient
-- **WMI delta chip**: compares current `liveWmi` to value at `last_md_review_at`; green if up, red if down, gray if no change
+Triggered for `change_type IN ('started', 'dose_increased', 'dose_decreased', 'formulation_changed')`. All 5 created in one transaction.
 
-### "Since last MD review" — DiffPanel
+| Due offset | Role | Priority | Title |
+|---|---|---|---|
+| +4 days | rn | yellow | `Day-4 check-in — [med name]: confirm received medication, no urgent side effects` |
+| +28 days | rn | yellow | `4-week check-in — [med name]` |
+| +56 days | rn | blue | `8-week trend review — [med name]` |
+| +84 days | md | orange | `12-week response review — [med name]` |
+| +365 days | md | blue | `Annual benefit/risk review — [med name]` |
 
-- Zero state (no prior MD review): "No prior MD review recorded — showing all history."
-- Each row is a different change type; rows only rendered if there's data (no empty rows)
-- Rx Changes row only shown if `prescription_changes` exist since `last_md_review_at`
-- RN Notes row shows count + most recent note snippet
+`source = 'med_change'`, `source_ref = prescription_change.id`
 
-### Active Tasks
-
-Reuses `TaskQueue` component from Build 16, filtered to `patient_id`. Includes Acknowledge and Close inline actions. Zero state: "No open tasks for this patient."
-
-### History accordions
-
-Each section collapsed by default. Content loaded lazily on expand (separate fetch per section to keep cockpit initial load fast).
-
-| Section | Data source |
-|---|---|
-| Medication Timeline | `prescription_changes` rows, newest first; "+ Record change" button |
-| Symptom Trend | Reuses `PillarTrendChart` component, props unchanged |
-| Labs | `lab_orders` + results |
-| Messages | Message threads for this patient |
-| Visit & Encounter Notes | `visits` + `encounter_notes` |
+`stopped` and `refill_authorized` create zero tasks.
 
 ---
 
-## 3. Medication Change Tracker
+## 3. Data Model Changes
 
-### prescription_changes table
+### `patients` table — 4 new columns
+
+```sql
+ALTER TABLE patients
+  ADD COLUMN IF NOT EXISTS last_md_review_at        timestamp WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS last_meaningful_touch_at  timestamp WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS current_plan              text,
+  ADD COLUMN IF NOT EXISTS next_step                 text;
+```
+
+- `last_md_review_at`: set when MD/NP closes a `requires_md_signoff` task for this patient (hook in `PATCH /api/provider/tasks/[id]`)
+- `last_meaningful_touch_at`: set on task close, check-in, message sent, or prescription change
+- `current_plan` / `next_step`: free text, MD-maintained via `PlanEditor`
+
+### `prescription_changes` table (new)
 
 ```sql
 CREATE TABLE prescription_changes (
@@ -153,12 +141,8 @@ CREATE TABLE prescription_changes (
   patient_id       uuid NOT NULL REFERENCES patients(id),
   provider_id      uuid NOT NULL REFERENCES providers(id),
   change_type      text NOT NULL,
-    -- started | dose_increased | dose_decreased | stopped
-    -- | refill_authorized | formulation_changed
   previous_dosage  text,
   new_dosage       text,
-  previous_status  text,
-  new_status       text,
   reason           text,
   created_at       timestamp WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -167,120 +151,67 @@ CREATE INDEX rx_changes_patient_id_idx ON prescription_changes(patient_id);
 CREATE INDEX rx_changes_prescription_id_idx ON prescription_changes(prescription_id);
 ```
 
-### MedChangeModal
-
-Fields:
-- **Change type** (required): dropdown — Started / Dose increased / Dose decreased / Stopped / Formulation changed / Refill authorized
-- **New dosage** (text, optional): pre-filled with current dosage
-- **Reason** (text, optional)
-
-On submit:
-1. `POST /api/provider/patients/[id]/prescriptions/[rxId]/change` with body `{ change_type, new_dosage, previous_dosage, reason }`
-2. Server inserts `prescription_changes` row + creates 5 tasks in one transaction (see cadence below)
-3. Modal shows confirmation: "Change recorded. 5 follow-up tasks scheduled:" with the task titles and dates listed
-4. Confirmation closes after 3 seconds or on "Done" click
-
-**Entry points:**
-- Cockpit → Medication Timeline accordion → "+ Record change" button per medication row
-- Patient chart prescriptions tab → "Record change" button per prescription row
-
-### Task cadence on medication change
-
-Created for `change_type IN ('started', 'dose_increased', 'dose_decreased', 'formulation_changed')`. Not created for `stopped`, `refill_authorized`.
-
-| Due offset | Assigned role | Priority | Title |
-|---|---|---|---|
-| +4 days | rn | yellow | Confirm patient understood plan, obtained [med name], no urgent side effects |
-| +28 days | rn | yellow | 4-week early check-in — [med name] |
-| +56 days | rn | blue | 8-week trend review — [med name] |
-| +84 days | md | orange | 12-week meaningful response review — [med name] |
-| +365 days | md | blue | Annual benefit/risk review — [med name] |
-
-All 5 tasks: `source = 'med_change'`, `source_ref = prescription_change.id`.
-
 ---
 
-## 4. Data Model Changes
-
-### patients table
-
-```sql
-ALTER TABLE patients
-  ADD COLUMN last_md_review_at        timestamp WITH TIME ZONE,
-  ADD COLUMN last_meaningful_touch_at timestamp WITH TIME ZONE,
-  ADD COLUMN current_plan             text,
-  ADD COLUMN next_step                text;
-```
-
-- `last_md_review_at`: set by `PATCH /api/provider/tasks/[id]` when MD closes a `requires_md_signoff=true` task for this patient
-- `last_meaningful_touch_at`: set on task close, check-in, message sent, or prescription change
-- `current_plan`: free text, MD-maintained, displayed in cockpit header
-- `next_step`: free text or null; null renders as "No current action needed"
-
----
-
-## 5. API Routes
+## 4. API Routes
 
 ### New
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/api/provider/patients/[id]/cockpit` | md, np | Full cockpit payload |
-| GET | `/api/provider/patients/[id]/diff` | md, np | Structured diff since `last_md_review_at` |
+| GET | `/api/provider/patients/[id]/diff` | md, np | Diff since `last_md_review_at`: WMI delta, labs, RN notes, messages counts |
 | PATCH | `/api/provider/patients/[id]/plan` | md, np | Update `current_plan` and `next_step` |
-| POST | `/api/provider/patients/[id]/prescriptions/[rxId]/change` | md, np | Record rx change + create task cadence |
+| POST | `/api/provider/patients/[id]/prescriptions/[rxId]/change` | md, np | Insert `prescription_changes` row + create task cadence |
 
 ### Modified
 
-- `PATCH /api/provider/tasks/[id]` close → if `requires_md_signoff` task closed by MD/NP: set `patients.last_md_review_at = now()`
-- `GET /api/provider/tasks` → add `limit` param support (used by DashboardHome top-8 fetch)
+- `GET /api/provider/patients/[id]` — add `current_plan`, `next_step`, `last_md_review_at` to response
+- `PATCH /api/provider/tasks/[id]` — when MD/NP closes a `requires_md_signoff` task: set `patients.last_md_review_at = now()`
 
 ---
 
-## 6. New Components
+## 5. New Components
 
 | Component | Path | Purpose |
 |---|---|---|
-| `DiffPanel` | `src/components/provider/DiffPanel.tsx` | "Since last MD review" section |
-| `MedChangeModal` | `src/components/provider/MedChangeModal.tsx` | Record prescription change + confirm task cadence |
+| `DiffPanel` | `src/components/provider/DiffPanel.tsx` | Since-last-review chips |
+| `MedChangeModal` | `src/components/provider/MedChangeModal.tsx` | Record rx change + task cadence confirmation |
 | `PlanEditor` | `src/components/provider/PlanEditor.tsx` | Inline edit for `current_plan` + `next_step`, auto-save on blur |
 
-## 7. Modified Components
+---
 
-| Component | Change |
-|---|---|
-| `DashboardHome` | Add Clinical Tasks card below existing grid |
-| `ProviderNav` | Add "Tasks" tab |
-| `PatientOverview` | Add "Open Cockpit" link |
-| Existing patient chart prescriptions tab | Add "Record change" button per row → opens `MedChangeModal` |
+## 6. What Is NOT Changing
+
+- All 7 other patient profile tabs (Intake, Biometrics, Prescriptions, Labs, Visit Timeline, Notes, Messages) — untouched
+- Dashboard clinical tasks card — already built in Build 16
+- Tasks page — already built in Build 16
+- Patient-facing dashboard — untouched
+- `PillarTrendChart` — reused inside accordion, no changes
+- `TaskQueue` — reused, no changes
 
 ---
 
-## 8. DB Migration
+## 7. DB Migration
 
-Run via debug endpoint pattern (same as Build 16): `POST /api/debug/migrate-build17` with `x-migration-secret: $CRON_SECRET`.
+Via debug endpoint pattern: `POST /api/debug/migrate-build17` with `x-migration-secret: $CRON_SECRET`
 
-Runs:
-1. `ALTER TABLE patients ADD COLUMN ...` (4 columns)
-2. `CREATE TABLE prescription_changes ...`
-3. `CREATE INDEX ...` (2 indexes)
+Runs `ALTER TABLE patients` (4 columns) + `CREATE TABLE prescription_changes` + 2 indexes.
 
 ---
 
-## 9. Verification Checklist
+## 8. Verification Checklist
 
-- [ ] Clinical Tasks card on dashboard shows top 8, priority-ordered
-- [ ] Acknowledge button sets status to `acknowledged` without modal
-- [ ] Close button opens `TaskCloseModal`, task disappears on success
-- [ ] "View all →" navigates to `/provider/tasks`
-- [ ] `/provider/tasks` grouped sections render; Urgent section shows only red tasks
-- [ ] Cockpit loads at `/provider/patients/[id]/cockpit`
-- [ ] Current plan edits auto-save on blur, "Saved" confirmation appears
-- [ ] Diff panel shows "No prior MD review" when `last_md_review_at` is null
-- [ ] Closing a `requires_md_signoff` task sets `last_md_review_at` on the patient
-- [ ] After MD review close, diff panel shows delta from that date forward
-- [ ] `MedChangeModal` accessible from cockpit med timeline and patient chart prescriptions tab
-- [ ] Submitting a `started` change creates exactly 5 tasks with correct due dates
-- [ ] Submitting a `stopped` change creates 0 tasks
-- [ ] Confirmation modal lists all 5 scheduled task titles + dates
-- [ ] `tsc --noEmit` passes with no errors
+- [ ] `tsc --noEmit` passes
+- [ ] "Overview & Trends" tab renamed to "Cockpit" and is default landing tab
+- [ ] Score shows compact number + delta chip, not full banner
+- [ ] Current plan saves on blur, "Saved" flash appears
+- [ ] Next step null state shows "No current action needed"
+- [ ] Diff panel shows correct counts for patient with 1 new lab + 2 RN notes
+- [ ] Diff panel zero state renders when no MD review recorded
+- [ ] Closing a `requires_md_signoff` task updates `patients.last_md_review_at`
+- [ ] Medication Timeline accordion expands, shows chronological history
+- [ ] `+ Record Change` button opens `MedChangeModal`
+- [ ] Submitting `dose_increased` change creates 5 tasks with correct `due_at` offsets
+- [ ] Submitting `stopped` change creates 0 tasks
+- [ ] Confirmation shows all 5 task titles + dates
+- [ ] All other 7 tabs unaffected
