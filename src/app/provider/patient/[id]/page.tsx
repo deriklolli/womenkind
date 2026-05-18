@@ -588,7 +588,7 @@ export default function PatientProfilePage() {
                         <div key={rx.id} className="flex items-center gap-3 py-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-sans font-semibold text-aubergine truncate">{rx.medication_name}</p>
-                            <p className="text-xs font-sans text-aubergine/40">{rx.dosage} · {rx.frequency}</p>
+                            <p className="text-xs font-sans text-aubergine/40">{rx.dosage ?? '—'} · {rx.frequency ?? '—'}</p>
                           </div>
                           <span className={`shrink-0 text-xs font-sans px-2.5 py-0.5 rounded-pill border ${
                             rx.status === 'active'
