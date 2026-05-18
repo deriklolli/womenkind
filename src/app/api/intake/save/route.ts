@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ intakeId: row.id })
     }
 
-    // Update existing intake
+    // Update existing intake — also set patient_id if it was missing on creation
     await db
       .update(intakes)
-      .set({ answers })
+      .set({ answers, ...(patientId ? { patient_id: patientId } : {}) })
       .where(eq(intakes.id, intakeId))
 
     return NextResponse.json({ success: true })
