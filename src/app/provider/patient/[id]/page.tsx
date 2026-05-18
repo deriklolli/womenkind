@@ -14,6 +14,7 @@ import { useChatContext } from '@/lib/chat-context'
 import { useRecording } from '@/lib/recording-context'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { devFixtures } from '@/lib/dev-fixtures'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
 import ClinicalBriefView from '@/components/provider/ClinicalBriefView'
 import ChatWidget from '@/components/provider/ChatWidget'
 import { isMemberPlan } from '@/lib/stripe'
@@ -128,7 +129,7 @@ export default function PatientProfilePage() {
   const [lastMdReviewAt, setLastMdReviewAt] = useState<string | null>(null)
   const [patientTasks, setPatientTasks]     = useState<Task[]>([])
   const [medChangeOpen, setMedChangeOpen]   = useState(false)
-  const [accordionOpen, setAccordionOpen]   = useState({ trend: false, meds: false })
+  const [accordionOpen, setAccordionOpen]   = useState({ meds: false })
 
   const { setPageContext, pageContext } = useChatContext()
   const { state: recordingState, startRecording, stopRecording } = useRecording()
@@ -236,6 +237,11 @@ export default function PatientProfilePage() {
         setProviderNotes(fx.providerNotes as ProviderNote[])
         setEncounterNotesCount(fx.encounterNotesCount ?? 0)
         setLatestEncounterNote(fx.latestEncounterNote ?? null)
+        const fxLiveWmi = computeLiveWMI(fx.visits as any[])
+        setLiveWmi(fxLiveWmi ?? 68)
+        setCurrentPlan('E2 patch 0.05mg · Progesterone 100mg nightly')
+        setNextStep('12-week meaningful response review')
+        setLastMdReviewAt(new Date(Date.now() - 21 * 86400000).toISOString())
         const latestIntake = (fx.intakes || [])[0]
         setPageContext({
           page: 'patient-profile',
@@ -468,11 +474,32 @@ export default function PatientProfilePage() {
             <div className="bg-white rounded-card shadow-sm border border-aubergine/5 px-6 py-5">
               <div className="flex gap-6 items-start">
                 {/* Compact score */}
-                <div className="text-center pr-6 border-r border-aubergine/8 flex-shrink-0 min-w-[72px]">
+                <div className="text-center pr-6 border-r border-aubergine/8 flex-shrink-0 min-w-[80px]">
                   <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">WK Score</p>
-                  <p className="font-serif font-normal text-4xl text-aubergine leading-none">
-                    {liveWmi != null ? Math.round(liveWmi) : '—'}
-                  </p>
+                  <div className="flex items-end gap-0.5 justify-center">
+                    {liveWmi != null ? (
+                      <>
+                        <span className="font-serif font-normal text-5xl text-aubergine leading-none">{Math.round(liveWmi)}</span>
+                        <span className="font-serif text-sm mb-1 italic" style={{ color: '#C4A87A' }}>/100</span>
+                      </>
+                    ) : (
+                      <span className="font-serif text-4xl text-aubergine/20 leading-none">—</span>
+                    )}
+                  </div>
+                  {(() => {
+                    const overallScores = visits
+                      .filter(v => v.symptom_scores?.overall != null)
+                      .map(v => (v.symptom_scores as Record<string, number>).overall)
+                    const delta = liveWmi != null && overallScores.length >= 2
+                      ? Math.round(liveWmi) - Math.round(overallScores[overallScores.length - 2])
+                      : null
+                    if (delta == null) return null
+                    return (
+                      <span className={`inline-flex items-center text-[10px] font-sans mt-1.5 px-1.5 py-0.5 rounded-pill ${delta >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                        {delta >= 0 ? '↑' : '↓'} {Math.abs(delta)} pts
+                      </span>
+                    )
+                  })()}
                 </div>
                 {/* Plan + next step editors */}
                 <PlanEditor
@@ -510,54 +537,17 @@ export default function PatientProfilePage() {
               />
             </div>
 
-            {/* Compact domain cards — last check-in scores */}
-            {(() => {
-              const latest = visits.find(v => v.symptom_scores && Object.keys(v.symptom_scores as object).length > 0)
-              if (!latest) return null
-              const scores = latest.symptom_scores as Record<string, number>
-              const domains = [
-                { key: 'vasomotor', label: 'Vasomotor', unit: 'episodes' },
-                { key: 'sleep',     label: 'Sleep',     unit: 'hrs' },
-                { key: 'energy',    label: 'Energy',    unit: '/10' },
-                { key: 'mood',      label: 'Mood',      unit: '/10' },
-              ]
-              return (
-                <div className="grid grid-cols-4 gap-3">
-                  {domains.map(d => (
-                    <div key={d.key} className="bg-white rounded-card shadow-sm border border-aubergine/5 px-4 py-3 text-center">
-                      <p className="text-xs font-sans text-aubergine/40 mb-1">{d.label}</p>
-                      <p className="font-serif font-normal text-2xl text-aubergine leading-none">
-                        {scores[d.key] != null ? scores[d.key] : '—'}
-                      </p>
-                      <p className="text-xs font-sans text-aubergine/30 mt-0.5">{d.unit}</p>
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-
-            {/* Trend chart accordion */}
-            <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
-              <button
-                onClick={() => setAccordionOpen(s => ({ ...s, trend: !s.trend }))}
-                className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
-              >
-                <span>Symptom Trend</span>
-                <span className="text-aubergine/30 text-xs">{accordionOpen.trend ? '▾' : '▸'}</span>
-              </button>
-              {accordionOpen.trend && (
-                <div className="px-6 pb-6">
-                  <PatientOverview
-                    view="provider"
-                    visits={visits}
-                    prescriptions={prescriptions}
-                    latestIntake={latestIntake}
-                    liveWmi={liveWmi}
-                    hideScoreHeader
-                  />
-                </div>
-              )}
-            </div>
+            {/* Symptom domain cards — full design treatment */}
+            {visits.some(v => v.symptom_scores && Object.keys(v.symptom_scores as object).length > 0) && (
+              <PatientOverview
+                view="provider"
+                hideScoreHeader
+                visits={visits}
+                prescriptions={prescriptions}
+                latestIntake={latestIntake}
+                liveWmi={liveWmi}
+              />
+            )}
 
             {/* Medication timeline accordion */}
             <div className="bg-white rounded-card shadow-sm border border-aubergine/5 overflow-hidden">
