@@ -39,6 +39,7 @@ const mockSet = jest.fn()
 const mockWhere = jest.fn()
 const mockQueryProvidersFindFirst = jest.fn()
 const mockQueryPatientsFindFirst = jest.fn()
+const mockQueryIntakesFindFirst = jest.fn()
 
 // Drizzle update chain: db.update(...).set(...).where(...)
 mockWhere.mockResolvedValue(undefined)
@@ -51,6 +52,7 @@ jest.mock('@/lib/db', () => ({
     query: {
       providers: { findFirst: (...args: unknown[]) => mockQueryProvidersFindFirst(...args) },
       patients: { findFirst: (...args: unknown[]) => mockQueryPatientsFindFirst(...args) },
+      intakes: { findFirst: (...args: unknown[]) => mockQueryIntakesFindFirst(...args) },
     },
   },
 }))
@@ -152,11 +154,14 @@ describe('POST /api/intake/submit', () => {
     })
     // Default: active provider found
     mockQueryProvidersFindFirst.mockResolvedValue({ id: 'provider-uuid-789' })
-    // Default: patient with profile found (for emails)
+    // Default: patient with profile found (for emails) + active onboarding status
     mockQueryPatientsFindFirst.mockResolvedValue({
       id: 'patient-uuid-456',
+      onboarding_status: 'active',
       profiles: { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' },
     })
+    // Default: intake is paid
+    mockQueryIntakesFindFirst.mockResolvedValue({ paid: true })
     // Default: update chain resolves
     mockWhere.mockResolvedValue(undefined)
     mockSet.mockReturnValue({ where: mockWhere })
@@ -280,5 +285,76 @@ describe('POST /api/intake/submit', () => {
     const { POST } = await import('../route')
     await POST(makeRequest(VALID_BODY))
     expect(mockLogPhiAccess).toHaveBeenCalledTimes(1)
+  })
+
+  // ── Payment gate (patient role, production) ───────────────────────────────
+  // These tests cover the exact scenario that caused the Dr. Urban / Jaclyn 404:
+  // new-funnel patients have intake.paid=false but onboarding_status='paid'.
+
+  describe('payment gate — patient role', () => {
+    beforeEach(() => {
+      // Override NODE_ENV to trigger the production payment gate
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', writable: true, configurable: true })
+      mockGetServerSession.mockResolvedValue({
+        userId: 'user-uuid-patient',
+        patientId: 'patient-uuid-456',
+        providerId: null,
+        role: 'patient',
+      })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'test', writable: true, configurable: true })
+    })
+
+    it('allows submission when intake.paid is true (legacy intake-first flow)', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: true })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: 'pending' })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(200)
+    })
+
+    it('allows submission when onboarding_status is "paid" (new funnel, membership paid upfront)', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: false })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: 'paid' })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(200)
+    })
+
+    it('allows submission when onboarding_status is "active" (existing patients, default status)', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: false })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: 'active' })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(200)
+    })
+
+    it('returns 402 when intake.paid is false and onboarding_status is not paid/active', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: false })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: 'pending' })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(402)
+      const body = await res.json()
+      expect(body.error).toBe('Payment required')
+    })
+
+    it('returns 402 when intake.paid is false and onboarding_status is "verified" (pre-payment)', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: false })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: 'verified' })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(402)
+    })
+
+    it('allows submission when onboarding_status is null (pre-funnel patient, no tracking row)', async () => {
+      mockQueryIntakesFindFirst.mockResolvedValue({ paid: false })
+      mockQueryPatientsFindFirst.mockResolvedValue({ onboarding_status: null })
+      const { POST } = await import('../route')
+      const res = await POST(makeRequest(VALID_BODY))
+      expect(res.status).toBe(200)
+    })
   })
 })

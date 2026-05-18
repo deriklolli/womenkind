@@ -30,15 +30,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Verify intake has been paid before allowing submission.
+    // Verify payment before allowing submission.
     // Providers bypass this check (submitting on behalf of patient).
     // Dev mode also bypasses so local testing doesn't require Stripe.
+    // Two valid payment proofs:
+    //   1. intake.paid = true  → legacy intake-first flow (Stripe charged with intakeId)
+    //   2. onboarding_status in ['paid','active'] → new funnel (membership charged before
+    //      intake exists; webhook sets patients.onboarding_status but can't know intakeId)
     if (session.role === 'patient' && process.env.NODE_ENV !== 'development') {
-      const intake = await db.query.intakes.findFirst({
-        where: eq(intakes.id, intakeId),
-        columns: { paid: true },
-      })
-      if (!intake?.paid) {
+      const [intakePayment, patientRow] = await Promise.all([
+        db.query.intakes.findFirst({
+          where: eq(intakes.id, intakeId),
+          columns: { paid: true },
+        }),
+        db.query.patients.findFirst({
+          where: eq(patients.id, session.patientId!),
+          columns: { onboarding_status: true },
+        }),
+      ])
+      // null = pre-funnel patient (created before onboarding tracking). Treat as paid.
+      // Only block explicit pre-payment funnel states ('pending', 'verified').
+      const onboardingStatus = patientRow?.onboarding_status
+      const membershipPaid = onboardingStatus == null || ['paid', 'active'].includes(onboardingStatus)
+      if (!intakePayment?.paid && !membershipPaid) {
         return NextResponse.json({ error: 'Payment required' }, { status: 402 })
       }
     }
