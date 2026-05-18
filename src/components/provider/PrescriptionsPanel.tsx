@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PRESCRIPTION_TEMPLATES } from '@/lib/canvas-client'
-import { MedChangeModal } from '@/components/provider/MedChangeModal'
+import MedChangeModal from '@/components/provider/MedChangeModal'
 
 interface PrescriptionNote {
   id: string
@@ -370,9 +370,7 @@ export default function PrescriptionsPanel({
       {medChangeTarget && (
         <MedChangeModal
           patientId={patientId}
-          prescriptionId={medChangeTarget.rxId}
-          medicationName={medChangeTarget.medName}
-          currentDosage={medChangeTarget.dosage}
+          prescriptions={prescriptions}
           onClose={() => setMedChangeTarget(null)}
           onSuccess={() => {
             setMedChangeTarget(null)
