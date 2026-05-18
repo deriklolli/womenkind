@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { getProviderSession } from '@/lib/getProviderSession'
 import { TaskQueue } from '@/components/staff/TaskQueue'
 import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
-import { OutcomesWatchQueue } from '@/components/staff/OutcomesWatchQueue'
 import { devFixtures } from '@/lib/dev-fixtures'
 import { isMemberPlan } from '@/lib/stripe'
 
@@ -102,31 +101,12 @@ export default function DashboardHome() {
   const [clinicalTasks, setClinicalTasks] = useState<any[]>([])
   const [taskCloseTarget, setTaskCloseTarget] = useState<any | null>(null)
   const [staffRole, setStaffRole] = useState('md')
-  const [commandBar, setCommandBar] = useState<{
-    red: number
-    mdDecisions: number
-    rnEscalations: number
-    labsPending: number
-    medFollowups: number
-    overdue: number
-    messagesOverSla: number
-    outcomesWatch: number
-  } | null>(null)
-
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.json())
       .then(data => { if (data?.staffRole) setStaffRole(data.staffRole) })
       .catch(() => {})
   }, [])
-
-  useEffect(() => {
-    if (staffRole !== 'md' && staffRole !== 'np') return
-    fetch('/api/provider/today')
-      .then(r => r.json())
-      .then(data => setCommandBar(data.commandBar ?? null))
-      .catch(() => {})
-  }, [staffRole])
 
   useEffect(() => {
     getProviderSession().then(session => {
@@ -213,39 +193,6 @@ export default function DashboardHome() {
           <p className="text-sm font-sans text-aubergine/40 mt-1">{today}</p>
         </div>
 
-        {/* Command Bar — md/np only */}
-        {commandBar && (staffRole === 'md' || staffRole === 'np') && (
-          <div className="space-y-3 mb-6">
-            {/* Large tiles */}
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { key: 'red',           label: 'Red — Urgent',      color: 'bg-red-50 border-red-200 text-red-700' },
-                { key: 'mdDecisions',   label: 'MD Decisions',      color: 'bg-orange-50 border-orange-200 text-orange-700' },
-                { key: 'rnEscalations', label: 'RN Escalations',    color: 'bg-purple-50 border-purple-200 text-purple-700' },
-              ].map(tile => (
-                <a key={tile.key} href="/provider/tasks" className={`rounded-card border p-5 text-center cursor-pointer hover:opacity-80 transition-opacity ${tile.color}`}>
-                  <div className="text-3xl font-bold">{commandBar[tile.key as keyof typeof commandBar]}</div>
-                  <div className="text-xs mt-1 font-medium">{tile.label}</div>
-                </a>
-              ))}
-            </div>
-            {/* Small tiles */}
-            <div className="grid grid-cols-5 gap-3">
-              {[
-                { key: 'labsPending',     label: 'Labs Pending',     color: 'bg-orange-50 border-orange-100 text-orange-600' },
-                { key: 'medFollowups',    label: 'Med Follow-Ups',   color: 'bg-blue-50 border-blue-200 text-blue-700' },
-                { key: 'overdue',         label: 'Overdue',          color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
-                { key: 'messagesOverSla', label: 'Msgs > SLA',       color: 'bg-orange-50 border-orange-100 text-orange-600' },
-                { key: 'outcomesWatch',   label: 'Outcomes Watch',   color: 'bg-green-50 border-green-200 text-green-700' },
-              ].map(tile => (
-                <a key={tile.key} href="/provider/tasks" className={`rounded-card border p-3 text-center cursor-pointer hover:opacity-80 transition-opacity ${tile.color}`}>
-                  <div className="text-xl font-bold">{commandBar[tile.key as keyof typeof commandBar]}</div>
-                  <div className="text-xs mt-0.5 leading-tight font-medium">{tile.label}</div>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Main grid */}
         <div className="grid grid-cols-2 gap-6 mb-6">
@@ -605,7 +552,6 @@ export default function DashboardHome() {
           />
         )}
 
-        {(staffRole === 'md' || staffRole === 'np') && <OutcomesWatchQueue />}
 
       </div>
     </div>
