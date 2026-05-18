@@ -6,11 +6,8 @@ import {
 } from "@/lib/google-calendar"
 import { decodeState } from "@/lib/oauth-state"
 
-/**
- * GET /api/auth/google/callback
- * Handles the OAuth callback from Google after the provider consents.
- * Exchanges the code for tokens, stores them, and redirects to settings.
- */
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const code = req.nextUrl.searchParams.get("code")
