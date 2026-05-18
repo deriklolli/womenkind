@@ -256,11 +256,6 @@ export default function ProviderNav({
                 <span className="flex items-center gap-2">
                   <Sun className="w-4 h-4" />
                   Today
-                  {taskCounts.md > 0 && (staffRole === 'md' || staffRole === 'np') && (
-                    <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
-                      {taskCounts.md > 9 ? '9+' : taskCounts.md}
-                    </span>
-                  )}
                 </span>
               </button>
 
@@ -307,11 +302,6 @@ export default function ProviderNav({
                 }`}
               >
                 Tasks
-                {(taskCounts.md + taskCounts.rn) > 0 && (
-                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                    {(taskCounts.md + taskCounts.rn) > 9 ? '9+' : taskCounts.md + taskCounts.rn}
-                  </span>
-                )}
               </a>
 
               <button

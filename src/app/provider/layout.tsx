@@ -19,6 +19,13 @@ export default function ProviderLayout({ children }: { children: React.ReactNode
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
+    // Dev bypass — skip auth entirely in local development
+    if (process.env.NODE_ENV === 'development') {
+      setAuthorized(true)
+      setChecking(false)
+      return
+    }
+
     // Login page doesn't need protection
     if (pathname === '/provider/login') {
       setAuthorized(true)

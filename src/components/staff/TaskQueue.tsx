@@ -56,12 +56,20 @@ export function TaskQueue({ tasks, onAcknowledge, onClose, patientNames = {} }: 
             {/* Priority circle */}
             <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dot}`} />
 
-            {/* Patient + title */}
+            {/* Title */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-sans font-semibold text-aubergine truncate">
-                {patientNames[task.patient_id] ?? task.patient_id.slice(0, 8)}
+              <p className="text-sm font-sans text-aubergine truncate">
+                {(() => {
+                  const name = patientNames[task.patient_id]
+                  const parts = task.title.split(' — ')
+                  const bold = name ?? parts[0]
+                  const rest = name ? task.title : parts.slice(1).join(' — ')
+                  return <>
+                    <span className="font-semibold">{bold}</span>
+                    {rest && <span className="font-normal text-aubergine/60"> — {rest}</span>}
+                  </>
+                })()}
               </p>
-              <p className="text-xs font-sans text-aubergine/50 truncate mt-0.5">{task.title}</p>
             </div>
 
             {/* Category */}

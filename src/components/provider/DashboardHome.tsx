@@ -51,14 +51,6 @@ interface PendingRefill {
   } | null
 }
 
-interface Cancellation {
-  id: string
-  canceled_at: string
-  appointment_types: { name: string } | null
-  patients: {
-    profiles: { first_name: string | null; last_name: string | null } | null
-  } | null
-}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
@@ -97,11 +89,11 @@ export default function DashboardHome() {
   const [intakes, setIntakes] = useState<NewIntake[]>([])
   const [threads, setThreads] = useState<UnreadThread[]>([])
   const [refills, setRefills] = useState<PendingRefill[]>([])
-  const [cancellations, setCancellations] = useState<Cancellation[]>([])
   const [clinicalTasks, setClinicalTasks] = useState<any[]>([])
   const [taskCloseTarget, setTaskCloseTarget] = useState<any | null>(null)
   const [staffRole, setStaffRole] = useState('md')
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') return
     fetch('/api/auth/me')
       .then(r => r.json())
       .then(data => { if (data?.staffRole) setStaffRole(data.staffRole) })
@@ -109,6 +101,11 @@ export default function DashboardHome() {
   }, [])
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      setProviderId('b0000000-0000-0000-0000-000000000001')
+      setProviderName('Dr. Urban')
+      return
+    }
     getProviderSession().then(session => {
       if (!session) return
       setProviderId(session.providerId)
@@ -118,6 +115,18 @@ export default function DashboardHome() {
 
   useEffect(() => {
     if (!providerId) return
+
+    // In local dev RDS is unreachable — load fixtures immediately, no network calls
+    if (process.env.NODE_ENV === 'development') {
+      setAppointments(devFixtures.todayAppointments as TodayAppointment[])
+      setIntakes(devFixtures.newIntakes as NewIntake[])
+      setThreads(devFixtures.unreadThreads as UnreadThread[])
+      setRefills(devFixtures.pendingRefills as PendingRefill[])
+      setClinicalTasks(devFixtures.clinicalTasks as any[])
+      setLoading(false)
+      return
+    }
+
     const today = new Date().toISOString().slice(0, 10)
 
     const safeFetch = async (url: string) => {
@@ -135,36 +144,12 @@ export default function DashboardHome() {
       safeFetch('/api/provider/intakes'),
       safeFetch(`/api/messages?providerId=${providerId}`),
       safeFetch(`/api/refill-requests?providerId=${providerId}&status=pending`),
-      safeFetch(`/api/provider/recent-cancellations?providerId=${providerId}`),
       safeFetch('/api/provider/tasks?open=true&limit=8'),
-    ]).then(([apptData, intakeData, msgData, refillData, cancelData, taskData]) => {
-      const isDev = process.env.NODE_ENV === 'development'
-
-      const appts = apptData
-        ? (apptData.appointments || []).filter((a: TodayAppointment) => a.status !== 'canceled')
-        : isDev ? devFixtures.todayAppointments as TodayAppointment[] : []
-
-      const newIntakes = intakeData
-        ? (intakeData.intakes || []).filter((i: NewIntake) => i.status === 'submitted').slice(0, 5)
-        : isDev ? devFixtures.newIntakes as NewIntake[] : []
-
-      const newThreads = msgData
-        ? (msgData.threads || []).filter((t: UnreadThread) => t.unreadCount > 0).slice(0, 5)
-        : isDev ? devFixtures.unreadThreads as UnreadThread[] : []
-
-      const newRefills = refillData
-        ? (refillData.refillRequests || []).slice(0, 5)
-        : isDev ? devFixtures.pendingRefills as PendingRefill[] : []
-
-      const newCancellations = cancelData
-        ? (cancelData.appointments || []).slice(0, 3)
-        : isDev ? devFixtures.recentCancellations as Cancellation[] : []
-
-      setAppointments(appts)
-      setIntakes(newIntakes)
-      setThreads(newThreads)
-      setRefills(newRefills)
-      setCancellations(newCancellations)
+    ]).then(([apptData, intakeData, msgData, refillData, taskData]) => {
+      setAppointments((apptData?.appointments || []).filter((a: TodayAppointment) => a.status !== 'canceled'))
+      setIntakes((intakeData?.intakes || []).filter((i: NewIntake) => i.status === 'submitted').slice(0, 5))
+      setThreads((msgData?.threads || []).filter((t: UnreadThread) => t.unreadCount > 0).slice(0, 5))
+      setRefills((refillData?.refillRequests || []).slice(0, 5))
       setClinicalTasks(taskData?.tasks ?? [])
       setLoading(false)
     })
@@ -194,8 +179,11 @@ export default function DashboardHome() {
         </div>
 
 
-        {/* Main grid */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        {/* Main grid — left 2/3, right 1/3 */}
+        <div className="grid grid-cols-3 gap-6">
+
+          {/* LEFT COLUMN — Schedule + Clinical Tasks */}
+          <div className="col-span-2 flex flex-col gap-6">
 
           {/* Today's Schedule */}
           <div className="bg-white rounded-card shadow-sm border border-aubergine/5 flex flex-col">
@@ -294,6 +282,43 @@ export default function DashboardHome() {
             </div>
           </div>
 
+          {/* Clinical Tasks */}
+          <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
+              <div className="flex items-center gap-2">
+                <h2 className="font-sans font-semibold text-base text-aubergine">Clinical Tasks</h2>
+                {clinicalTasks.length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                    {clinicalTasks.length}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => router.push('/provider/tasks')}
+                className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
+              >
+                View all →
+              </button>
+            </div>
+            <TaskQueue
+              tasks={clinicalTasks}
+              onAcknowledge={async (taskId) => {
+                await fetch(`/api/provider/tasks/${taskId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'acknowledged' }),
+                })
+                setClinicalTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+              }}
+              onClose={setTaskCloseTarget}
+            />
+          </div>
+
+          </div>{/* end left column */}
+
+          {/* RIGHT COLUMN — Intakes + Refills + Messages */}
+          <div className="col-span-1 flex flex-col gap-6">
+
           {/* New Intakes */}
           <div className="bg-white rounded-card shadow-sm border border-aubergine/5 flex flex-col">
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
@@ -306,11 +331,11 @@ export default function DashboardHome() {
             </div>
             <div className="flex-1 divide-y divide-aubergine/5">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex items-center justify-center py-10">
                   <div className="w-6 h-6 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
                 </div>
               ) : intakes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
                   <svg className="w-8 h-8 text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
@@ -348,66 +373,6 @@ export default function DashboardHome() {
                     </button>
                   )
                 })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Second row */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-
-          {/* Messages */}
-          <div className="bg-white rounded-card shadow-sm border border-aubergine/5 flex flex-col">
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
-              <div className="flex items-center gap-2">
-                <h2 className="font-sans font-semibold text-base text-aubergine">Messages</h2>
-                {threads.length > 0 && (
-                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">{threads.length}</span>
-                )}
-              </div>
-              <button
-                onClick={() => router.push('/provider/dashboard?tab=messages')}
-                className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
-              >
-                View all →
-              </button>
-            </div>
-            <div className="flex-1 divide-y divide-aubergine/5">
-              {loading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="w-6 h-6 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
-                </div>
-              ) : threads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
-                  <svg className="w-8 h-8 text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                  </svg>
-                  <p className="text-sm font-sans text-aubergine/30">All caught up</p>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <button
-                    key={thread.id}
-                    onClick={() => router.push('/provider/dashboard?tab=messages')}
-                    className="w-full px-6 py-4 flex items-start gap-3 hover:bg-violet/3 transition-colors text-left group"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-xs font-semibold text-violet">
-                        {(thread.senderName || '?').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-0.5">
-                        <p className="text-sm font-sans font-semibold text-aubergine truncate">{thread.senderName || 'Patient'}</p>
-                        <p className="text-xs font-sans text-aubergine/30 flex-shrink-0">{formatRelative(thread.created_at)}</p>
-                      </div>
-                      <p className="text-xs font-sans text-aubergine/50 truncate">{thread.body}</p>
-                    </div>
-                    {thread.unreadCount > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
-                    )}
-                  </button>
-                ))
               )}
             </div>
           </div>
@@ -466,70 +431,67 @@ export default function DashboardHome() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Recent Cancellations — only show if any */}
-        {cancellations.length > 0 && (
-          <div className="bg-white rounded-card shadow-sm border border-red-100 mb-6">
-            <div className="flex items-center gap-2 px-6 pt-5 pb-4 border-b border-red-50">
-              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h2 className="font-sans font-semibold text-base text-aubergine">Recent Cancellations</h2>
+          {/* Messages */}
+          <div className="bg-white rounded-card shadow-sm border border-aubergine/5 flex flex-col">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
+              <div className="flex items-center gap-2">
+                <h2 className="font-sans font-semibold text-base text-aubergine">Messages</h2>
+                {threads.length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">{threads.length}</span>
+                )}
+              </div>
+              <button
+                onClick={() => router.push('/provider/dashboard?tab=messages')}
+                className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
+              >
+                View all →
+              </button>
             </div>
-            <div className="divide-y divide-red-50">
-              {cancellations.map(c => {
-                const name = [c.patients?.profiles?.first_name, c.patients?.profiles?.last_name].filter(Boolean).join(' ') || 'Unknown'
-                return (
-                  <div key={c.id} className="px-6 py-4 flex items-center gap-4">
-                    <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-sans text-aubergine">
-                        <span className="font-semibold">{name}</span> canceled their{' '}
-                        <span className="text-aubergine/60">{c.appointment_types?.name || 'appointment'}</span>
-                      </p>
+            <div className="flex-1 divide-y divide-aubergine/5">
+              {loading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-6 h-6 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
+                </div>
+              ) : threads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+                  <svg className="w-8 h-8 text-aubergine/15 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                  <p className="text-sm font-sans text-aubergine/30">All caught up</p>
+                </div>
+              ) : (
+                threads.map(thread => (
+                  <button
+                    key={thread.id}
+                    onClick={() => router.push('/provider/dashboard?tab=messages')}
+                    className="w-full px-6 py-4 flex items-start gap-3 hover:bg-violet/3 transition-colors text-left group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-violet/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-violet">
+                        {(thread.senderName || '?').charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <p className="text-xs font-sans text-aubergine/40 flex-shrink-0">{formatRelative(c.canceled_at)}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Clinical Tasks */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
-            <div className="flex items-center gap-2">
-              <h2 className="font-sans font-semibold text-base text-aubergine">Clinical Tasks</h2>
-              {clinicalTasks.length > 0 && (
-                <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {clinicalTasks.length}
-                </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p className="text-sm font-sans font-semibold text-aubergine truncate">{thread.senderName || 'Patient'}</p>
+                        <p className="text-xs font-sans text-aubergine/30 flex-shrink-0">{formatRelative(thread.created_at)}</p>
+                      </div>
+                      <p className="text-xs font-sans text-aubergine/50 truncate">{thread.body}</p>
+                    </div>
+                    {thread.unreadCount > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                    )}
+                  </button>
+                ))
               )}
             </div>
-            <button
-              onClick={() => router.push('/provider/tasks')}
-              className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
-            >
-              View all →
-            </button>
           </div>
-          <div className="px-6 py-4">
-            <TaskQueue
-              tasks={clinicalTasks}
-              onAcknowledge={async (taskId) => {
-                await fetch(`/api/provider/tasks/${taskId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'acknowledged' }),
-                })
-                setClinicalTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
-              }}
-              onClose={setTaskCloseTarget}
-            />
-          </div>
-        </div>
+
+
+          </div>{/* end right column */}
+
+        </div>{/* end main grid */}
 
         {taskCloseTarget && (
           <TaskCloseModal
