@@ -1,11 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
 export default function PatientLoginPage() {
+  return (
+    <Suspense>
+      <PatientLoginForm />
+    </Suspense>
+  )
+}
+
+function PatientLoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextUrl = searchParams.get('next') || '/patient/dashboard'

@@ -4,6 +4,8 @@ import { appointments } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getServerSession } from '@/lib/getServerSession'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/scheduling/calendar-export?appointmentId=xxx
  *
