@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/getServerSession'
 import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
 import { db } from '@/lib/db'
-import { patients, tasks, prescription_changes, visits } from '@/lib/db/schema'
-import { and, eq, notInArray, sql, asc, desc } from 'drizzle-orm'
+import { patients, tasks, prescription_changes, visits, intakes } from '@/lib/db/schema'
+import { and, eq, ne, notInArray, sql, asc, desc } from 'drizzle-orm'
 import { computeLiveWMI } from '@/lib/wmi-scoring'
 
 export const maxDuration = 60
@@ -66,9 +66,20 @@ export async function GET(
   }))
   const liveWmi = dailyCheckIns.length > 0 ? computeLiveWMI(checkInsForWmi) : null
 
+  // Fall back to intake WMI when no check-ins exist yet
+  let intakeWmi: number | null = null
+  if (liveWmi == null) {
+    const latestIntake = await db.query.intakes.findFirst({
+      where: and(eq(intakes.patient_id, params.id), ne(intakes.status, 'draft')),
+      columns: { wmi_scores: true },
+      orderBy: [desc(intakes.submitted_at)],
+    })
+    intakeWmi = (latestIntake?.wmi_scores as any)?.wmi ?? null
+  }
+
   return NextResponse.json({
     patient,
-    liveWmi,
+    liveWmi: liveWmi ?? intakeWmi,
     activeTasks,
     rxHistory,
   })
