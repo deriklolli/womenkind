@@ -69,24 +69,29 @@ export async function POST(req: NextRequest) {
     })
     const providerId = providerRow?.id ?? null
 
-    // 2. Update intake status to submitted (and link to patient + provider if resolved)
-    await db
-      .update(intakes)
-      .set({
-        status: 'submitted',
-        answers,
-        submitted_at: new Date(),
-        ...(patientId ? { patient_id: patientId } : {}),
-        ...(providerId ? { provider_id: providerId } : {}),
-      })
-      .where(eq(intakes.id, intakeId))
+    // 2. Save intake as submitted — INSERT if no intakeId yet (auto-save may not have
+    //    fired before Submit was clicked), otherwise UPDATE the existing draft.
+    const intakeValues = {
+      status: 'submitted' as const,
+      answers,
+      submitted_at: new Date(),
+      ...(patientId ? { patient_id: patientId } : {}),
+      ...(providerId ? { provider_id: providerId } : {}),
+    }
+    let finalIntakeId: string | null = intakeId
+    if (!intakeId) {
+      const [row] = await db.insert(intakes).values(intakeValues).returning({ id: intakes.id })
+      finalIntakeId = row.id
+    } else {
+      await db.update(intakes).set(intakeValues).where(eq(intakes.id, intakeId))
+    }
 
     // 2a. Compute WMI scores deterministically (pure math — fast, no AI needed)
     const wmiScores = computeWMI(answers)
     await db
       .update(intakes)
       .set({ wmi_scores: wmiScores })
-      .where(eq(intakes.id, intakeId))
+      .where(eq(intakes.id, finalIntakeId!))
 
     // Advance onboarding_status from paid → active immediately so the patient
     // reaches their dashboard without waiting for Bedrock.
@@ -100,17 +105,17 @@ export async function POST(req: NextRequest) {
 
     // Send intake confirmation emails (fire and forget)
     if (patientId && process.env.RESEND_API_KEY) {
-      sendIntakeEmails({ patientId, intakeId }).catch(err =>
+      sendIntakeEmails({ patientId, intakeId: finalIntakeId! }).catch(err =>
         console.error('[RESEND] Intake email error:', err)
       )
     }
 
-    logPhiAccess({ providerId, patientId, recordType: 'intake', recordId: intakeId, action: 'create', route: '/api/intake/submit', req })
+    logPhiAccess({ providerId, patientId, recordType: 'intake', recordId: finalIntakeId, action: 'create', route: '/api/intake/submit', req })
 
     // Run Bedrock brief + component bodies in the background so the patient
     // is not blocked. waitUntil keeps the serverless function alive after the
     // response is sent.
-    waitUntil(generateBriefInBackground({ intakeId, patientId, answers, wmiScores }))
+    waitUntil(generateBriefInBackground({ intakeId: finalIntakeId!, patientId, answers, wmiScores }))
 
     return NextResponse.json({ success: true, briefGenerated: false })
   } catch (err: any) {

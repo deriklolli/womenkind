@@ -288,8 +288,11 @@ for (let i = 1; i <= 5; i++) {
     const { verifyUrl } = await verifyRes.json()
     expect(verifyUrl).toBeTruthy()
 
-    // Navigate to the real verification page — exercises server-side token check
-    await page.goto(verifyUrl)
+    // Navigate to the real verification page — exercises server-side token check.
+    // Use only the path (strip the host) so we stay on the baseURL deployment
+    // rather than following the NEXT_PUBLIC_APP_URL baked into the verifyUrl.
+    const verifyPath = new URL(verifyUrl).pathname + new URL(verifyUrl).search
+    await page.goto(verifyPath)
 
     // ── 4. Assert resume page shows Vitality plan ──────────────────────────
     await expect(page).toHaveURL(/\/signup\/resume/, { timeout: 15_000 })
