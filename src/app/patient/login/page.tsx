@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
 export default function PatientLoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextUrl = searchParams.get('next') || '/patient/dashboard'
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,7 +68,7 @@ export default function PatientLoginPage() {
       })
 
       localStorage.removeItem('womenkind_demo_patient')
-      router.push('/patient/dashboard')
+      router.push(nextUrl)
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {
@@ -108,7 +110,7 @@ export default function PatientLoginPage() {
       })
 
       localStorage.removeItem('womenkind_demo_patient')
-      router.push('/patient/dashboard')
+      router.push(nextUrl)
     } catch (err: any) {
       setError(err.message || 'Sign up failed')
     } finally {

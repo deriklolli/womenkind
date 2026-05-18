@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       heading: 'Time for your weekly check-in',
       bodyHtml: `<p style="margin:0 0 16px;font-size:16px;color:rgba(66,42,31,0.7);line-height:1.6;">Hi ${firstName}, your weekly symptom check-in takes about 60 seconds and helps Dr. Urban track your progress over time.</p>`,
       ctaText: 'Log Check-In',
-      ctaUrl:  `${appUrl}/patient/dashboard`,
+      ctaUrl:  `${appUrl}/patient/dashboard?checkin=true`,
       patientId: patient.id,
     })
 

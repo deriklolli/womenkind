@@ -479,6 +479,7 @@ export default function PatientDashboardPage() {
 
   const menuRef = useRef<HTMLDivElement>(null)
   const membershipParam = searchParams.get('membership')
+  const checkinParam = searchParams.get('checkin')
 
   const handleMembershipEnroll = async () => {
     if (!patient) return
@@ -735,6 +736,13 @@ export default function PatientDashboardPage() {
     }
     return out
   }, [patient, appointments])
+
+  // Auto-open check-in modal when arriving from the weekly nudge email
+  useEffect(() => {
+    if (!loading && patient && checkinParam === 'true') {
+      setCheckinModalOpen(true)
+    }
+  }, [loading, patient, checkinParam])
 
   // Close dropdown on outside click
   useEffect(() => {

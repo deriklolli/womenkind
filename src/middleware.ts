@@ -66,8 +66,9 @@ export async function middleware(request: NextRequest) {
   if ((isPatientProtected || isProviderProtected) && !user && !isLocalDev) {
     const loginPath = isProviderProtected ? '/provider/login' : '/patient/login'
     const loginUrl = new URL(loginPath, request.url)
-    // Preserve the original destination so we can redirect back after login
-    loginUrl.searchParams.set('next', path)
+    // Preserve full destination (path + query string) so we can redirect back after login
+    const destination = request.nextUrl.pathname + request.nextUrl.search
+    loginUrl.searchParams.set('next', destination)
     return NextResponse.redirect(loginUrl)
   }
 
