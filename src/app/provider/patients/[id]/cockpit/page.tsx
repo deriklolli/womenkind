@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { TaskQueue, Task } from '@/components/staff/TaskQueue'
 import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
-import { DiffPanel } from '@/components/provider/DiffPanel'
+import DiffPanel from '@/components/provider/DiffPanel'
 import PlanEditor from '@/components/provider/PlanEditor'
 import { MedChangeModal } from '@/components/provider/MedChangeModal'
 import ProviderNav from '@/components/provider/ProviderNav'
@@ -32,10 +32,13 @@ interface CockpitData {
 
 interface DiffData {
   since: string | null
-  wmiDelta: { from: number | null; to: number; delta: number | null } | null
-  rxChanges: any[]
-  messageCount: number
-  rnNotes: any[]
+  wmiDelta: number | null
+  wmiNow: number | null
+  wmiBefore: number | null
+  newLabs: number
+  latestLabName: string | null
+  rnNotes: number
+  newMessages: number
 }
 
 interface AccordionSection {
@@ -120,7 +123,7 @@ export default function CockpitPage() {
   )
   if (!cockpit) return <div className="p-8 text-aubergine/40">Patient not found.</div>
 
-  const wmiDelta = diff?.wmiDelta
+  const wmiDelta = diff?.wmiDelta ?? null
   const hasReview = !!cockpit.patient.last_md_review_at
 
   return (
@@ -143,13 +146,13 @@ export default function CockpitPage() {
               <span className="text-xs font-sans text-aubergine/40 bg-aubergine/5 px-2.5 py-1 rounded-full">
                 Last MD review: {formatDate(cockpit.patient.last_md_review_at)}
               </span>
-              {wmiDelta && wmiDelta.delta != null && (
+              {wmiDelta != null && (
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  wmiDelta.delta >= 0
+                  wmiDelta >= 0
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                     : 'bg-red-50 text-red-600 border border-red-200'
                 }`}>
-                  WMI {wmiDelta.delta >= 0 ? `↑ ${wmiDelta.delta}` : `↓ ${Math.abs(wmiDelta.delta)}`}
+                  WMI {wmiDelta >= 0 ? `↑ ${wmiDelta}` : `↓ ${Math.abs(wmiDelta)}`}
                 </span>
               )}
             </div>
@@ -176,7 +179,7 @@ export default function CockpitPage() {
             </h2>
           </div>
           <div className="px-6 py-4">
-            {diff ? <DiffPanel diff={diff} /> : <p className="text-sm text-aubergine/40">Loading...</p>}
+            <DiffPanel patientId={patientId} />
           </div>
         </div>
 

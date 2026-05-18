@@ -1,111 +1,91 @@
 'use client'
 
-interface RxChange {
-  id: string
-  change_type: string
-  previous_dosage: string | null
-  new_dosage: string | null
-  created_at: string
-}
-
-interface RnNote {
-  visit_date: string
-  notes: string | null
-}
+import { useEffect, useState } from 'react'
 
 interface DiffData {
   since: string | null
-  wmiDelta: { from: number | null; to: number; delta: number | null } | null
-  rxChanges: RxChange[]
-  messageCount: number
-  rnNotes: RnNote[]
+  wmiDelta: number | null
+  wmiNow: number | null
+  wmiBefore: number | null
+  newLabs: number
+  latestLabName: string | null
+  rnNotes: number
+  newMessages: number
 }
 
 interface Props {
-  diff: DiffData
+  patientId: string
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+export default function DiffPanel({ patientId }: Props) {
+  const [diff, setDiff]       = useState<DiffData | null>(null)
+  const [loading, setLoading] = useState(true)
 
-const CHANGE_TYPE_LABELS: Record<string, string> = {
-  started:             'Started',
-  dose_increased:      'Dose increased',
-  dose_decreased:      'Dose decreased',
-  stopped:             'Stopped',
-  refill_authorized:   'Refill authorized',
-  formulation_changed: 'Formulation changed',
-}
+  useEffect(() => {
+    fetch(`/api/provider/patients/${patientId}/diff`)
+      .then(r => r.json())
+      .then(setDiff)
+      .finally(() => setLoading(false))
+  }, [patientId])
 
-export function DiffPanel({ diff }: Props) {
-  if (!diff.since) {
+  if (loading) {
     return (
-      <div className="text-sm text-aubergine/40 italic px-1">
-        No prior MD review recorded — showing all history.
+      <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+        <div className="h-3 bg-aubergine/5 rounded animate-pulse w-40" />
       </div>
     )
   }
+  if (!diff) return null
 
-  const hasAnything = diff.wmiDelta || diff.rxChanges.length > 0 || diff.messageCount > 0 || diff.rnNotes.length > 0
+  const sinceLabel = diff.since
+    ? (() => {
+        const days = Math.floor((Date.now() - new Date(diff.since).getTime()) / 86400000)
+        if (days === 0) return 'today'
+        if (days === 1) return '1 day ago'
+        return `${days} days ago`
+      })()
+    : null
 
-  if (!hasAnything) {
-    return (
-      <div className="text-sm text-aubergine/40 italic px-1">
-        No changes since last MD review on {formatDate(diff.since)}.
-      </div>
-    )
-  }
+  const hasAny = diff.wmiDelta != null || diff.newLabs > 0 || diff.rnNotes > 0 || diff.newMessages > 0
 
   return (
-    <div className="divide-y divide-aubergine/5">
-      {diff.wmiDelta && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">WMI</span>
-          <span className="text-sm text-aubergine">
-            {diff.wmiDelta.from != null ? `${diff.wmiDelta.from} → ` : ''}{diff.wmiDelta.to}
-            {diff.wmiDelta.delta != null && (
-              <span className={`ml-2 text-xs font-semibold ${diff.wmiDelta.delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {diff.wmiDelta.delta >= 0 ? `↑ ${diff.wmiDelta.delta}` : `↓ ${Math.abs(diff.wmiDelta.delta)}`}
-              </span>
-            )}
-          </span>
-        </div>
-      )}
+    <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+      <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-3">
+        {sinceLabel ? `Since Last MD Review (${sinceLabel})` : 'No MD Review Recorded Yet'}
+      </p>
 
-      {diff.rxChanges.length > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">Rx Changes</span>
-          <div className="text-sm text-aubergine space-y-0.5">
-            {diff.rxChanges.map(c => (
-              <div key={c.id}>
-                {CHANGE_TYPE_LABELS[c.change_type] ?? c.change_type}
-                {c.new_dosage ? ` → ${c.new_dosage}` : ''}
-                <span className="text-aubergine/40 ml-1">({formatDate(c.created_at)})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {diff.messageCount > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">Messages</span>
-          <span className="text-sm text-aubergine">{diff.messageCount} new</span>
-        </div>
-      )}
-
-      {diff.rnNotes.length > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">RN Notes</span>
-          <div className="text-sm text-aubergine space-y-0.5">
-            {diff.rnNotes.map((n, i) => (
-              <div key={i} className="truncate">
-                {n.notes ? `${n.notes.slice(0, 80)}${n.notes.length > 80 ? '…' : ''}` : 'Note recorded'}
-                <span className="text-aubergine/40 ml-1">({formatDate(n.visit_date)})</span>
-              </div>
-            ))}
-          </div>
+      {!hasAny ? (
+        <p className="text-sm font-sans text-aubergine/30">
+          {sinceLabel
+            ? `No changes since review on ${new Date(diff.since!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+            : 'Record a review by closing an MD sign-off task for this patient.'}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {diff.wmiDelta != null && (
+            <div className={`rounded-lg px-3 py-2 text-xs font-sans ${diff.wmiDelta < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              <span className="font-semibold">WMI {diff.wmiDelta > 0 ? '+' : ''}{diff.wmiDelta} pts</span>
+              {diff.wmiBefore != null && diff.wmiNow != null && (
+                <span className="ml-1 opacity-70">{diff.wmiBefore} → {diff.wmiNow}</span>
+              )}
+            </div>
+          )}
+          {diff.newLabs > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-amber-50 text-amber-700">
+              <span className="font-semibold">{diff.newLabs} new lab{diff.newLabs > 1 ? 's' : ''}</span>
+              {diff.latestLabName && <span className="ml-1 opacity-70">{diff.latestLabName}</span>}
+            </div>
+          )}
+          {diff.rnNotes > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-violet/10 text-violet">
+              <span className="font-semibold">{diff.rnNotes} RN note{diff.rnNotes > 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {diff.newMessages > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-blue-50 text-blue-700">
+              <span className="font-semibold">{diff.newMessages} message{diff.newMessages > 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
