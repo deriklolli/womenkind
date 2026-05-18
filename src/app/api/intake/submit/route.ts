@@ -22,13 +22,18 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const { intakeId, patientId, answers } = await req.json()
+    const { intakeId, patientId: bodyPatientId, answers } = await req.json()
 
     // If a patientId is supplied, verify it belongs to the authenticated user.
     // Providers submitting on a patient's behalf are also allowed.
-    if (patientId && session.role === 'patient' && session.patientId !== patientId) {
+    if (bodyPatientId && session.role === 'patient' && session.patientId !== bodyPatientId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+
+    // For authenticated patients, always use the session patientId — this ensures
+    // the intake is correctly linked even when the form sends patientId: null
+    // (can happen when the intake-init call resolves after the first auto-save).
+    const patientId = session.role === 'patient' ? (session.patientId ?? bodyPatientId) : bodyPatientId
 
     // Verify payment before allowing submission.
     // Providers bypass this check (submitting on behalf of patient).
