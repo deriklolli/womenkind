@@ -39,3 +39,4 @@ next-env.d.ts
 # Local Claude worktrees (embedded repos that should never be committed)
 .claude/worktrees/
 .env.prod.tmp
+.superpowers/

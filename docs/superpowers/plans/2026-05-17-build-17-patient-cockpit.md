@@ -2,178 +2,120 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Clinical Tasks card to the provider dashboard home, a full `/provider/tasks` queue page, a per-patient cockpit at `/provider/patients/[id]/cockpit`, and a medication change tracker that auto-schedules the 5-touchpoint follow-up cadence.
+**Goal:** Rename the patient profile "Overview & Trends" tab to "Cockpit" and replace its content with a compact score strip, since-last-review diff panel, open tasks, domain cards, and a medication timeline accordion that includes a record-change flow auto-scheduling 5 follow-up tasks.
 
-**Architecture:** All data lives in AWS RDS via Drizzle ORM. New `prescription_changes` table and 4 new columns on `patients`. A debug endpoint runs the DB migration (RDS is only reachable from Vercel network). UI follows the existing WomenKind design language: cream background, white rounded-card cards, aubergine typography, violet accents.
+**Architecture:** All new UI lives inside the existing `src/app/provider/patient/[id]/page.tsx` overview tab block — no new pages. Three new API routes handle the diff query, plan save, and medication change + task creation. Three new components (`PlanEditor`, `DiffPanel`, `MedChangeModal`) are self-contained with clear props. Medication change tasks are created via the existing `createTask()` helper from Build 16.
 
-**Tech Stack:** Next.js 14 App Router, Drizzle ORM + PostgreSQL (AWS RDS), TypeScript, Tailwind CSS, Supabase Auth.
+**Tech Stack:** Next.js 14 App Router, TypeScript, Tailwind CSS, Drizzle ORM + PostgreSQL (AWS RDS), `src/lib/taskEngine.ts` (`createTask`), `src/lib/requireStaffRole.ts` (`MD_NP` guard).
 
-**Design spec:** `docs/superpowers/specs/2026-05-17-build-17-design.md`
-
-**Prerequisite:** Build 16 must be live (`tasks` table, `taskEngine.ts`, `requireStaffRole.ts`, `TaskQueue` component, `TaskCloseModal` component all exist).
+**Design reference:** `docs/superpowers/specs/2026-05-17-build-17-design.md`
 
 ---
 
 ## File Map
 
 ### Created
-- `src/lib/db/migrations/0002_build17.sql` — raw SQL for DB migration
-- `src/app/api/debug/migrate-build17/route.ts` — migration endpoint (CRON_SECRET protected)
-- `src/app/api/provider/patients/[id]/plan/route.ts` — PATCH current_plan + next_step
-- `src/app/api/provider/patients/[id]/diff/route.ts` — GET diff since last_md_review_at
-- `src/app/api/provider/patients/[id]/cockpit/route.ts` — GET full cockpit payload
-- `src/app/api/provider/patients/[id]/prescriptions/[rxId]/change/route.ts` — POST rx change + task cadence
-- `src/components/provider/PlanEditor.tsx` — inline editable plan + next_step, auto-save on blur
-- `src/components/provider/DiffPanel.tsx` — "Since last MD review" summary
-- `src/components/provider/MedChangeModal.tsx` — record prescription change, confirm 5 tasks
-- `src/app/provider/tasks/page.tsx` — full task queue grouped by priority
-- `src/app/provider/patients/[id]/cockpit/page.tsx` — patient cockpit single-column scroll
+- `src/app/api/provider/patients/[id]/diff/route.ts` — GET: WMI delta + counts since last_md_review_at
+- `src/app/api/provider/patients/[id]/plan/route.ts` — PATCH: update current_plan + next_step
+- `src/app/api/provider/patients/[id]/prescriptions/[rxId]/change/route.ts` — POST: record rx change + create 5 tasks
+- `src/components/provider/PlanEditor.tsx` — inline edit current_plan + next_step, saves on blur
+- `src/components/provider/DiffPanel.tsx` — since-last-review color chips
+- `src/components/provider/MedChangeModal.tsx` — medication change form + task cadence confirmation
 
 ### Modified
-- `src/lib/db/schema.ts` — add 4 columns to patients; add prescription_changes table
-- `src/app/api/provider/tasks/route.ts` — add `limit` param + `open` filter
-- `src/app/api/provider/tasks/[id]/route.ts` — on MD close of requires_md_signoff task → set last_md_review_at
-- `src/components/provider/DashboardHome.tsx` — add Clinical Tasks card below existing 2×2 grid
-- `src/components/provider/ProviderNav.tsx` — add Tasks tab
-- `src/components/provider/PatientOverview.tsx` — add "Open Cockpit" link
-- `src/components/provider/PrescriptionsPanel.tsx` — add "Record change" button per row → MedChangeModal
+- `src/app/api/provider/patients/[id]/route.ts` — add currentPlan, nextStep, lastMdReviewAt to response
+- `src/app/api/provider/tasks/[id]/route.ts` — set patients.last_md_review_at when MD closes requires_md_signoff task
+- `src/app/provider/patient/[id]/page.tsx` — rename tab to Cockpit, replace overview content with new layout
 
 ---
 
-## Task 1: Schema — Drizzle + SQL migration
+## Task 1: Run DB migration
+
+The schema (`src/lib/db/schema.ts`) and migration endpoint (`src/app/api/debug/migrate-build17/route.ts`) are already written from prior planning. The migration just needs to run against prod RDS.
+
+- [ ] **Step 1: Deploy current main to prod**
+
+```bash
+git push origin main
+```
+
+Wait for Vercel deploy (~2 min). Verify https://womenkind.vercel.app is live.
+
+- [ ] **Step 2: Get CRON_SECRET and run migration**
+
+```bash
+vercel env pull .env.prod.tmp --environment=production && grep CRON_SECRET .env.prod.tmp
+```
+
+Copy the secret value. Then:
+
+```bash
+curl -s -X POST https://womenkind.vercel.app/api/debug/migrate-build17 \
+  -H "x-migration-secret: <CRON_SECRET_VALUE>" \
+  -H "Content-Type: application/json"
+rm .env.prod.tmp
+```
+
+Expected: `{"ok":true,"message":"Build 17 migration complete"}`
+
+If you get `column already exists` errors — those are safe, `IF NOT EXISTS` handles them. Still a success.
+
+- [ ] **Step 3: Commit note**
+
+```bash
+git commit --allow-empty -m "chore: Build 17 DB migration run on prod"
+```
+
+---
+
+## Task 2: Extend GET /api/provider/patients/[id] — add cockpit fields
 
 **Files:**
-- Modify: `src/lib/db/schema.ts`
-- Create: `src/lib/db/migrations/0002_build17.sql`
-- Create: `src/app/api/debug/migrate-build17/route.ts`
+- Modify: `src/app/api/provider/patients/[id]/route.ts`
 
-- [ ] **Step 1: Add 4 columns to patients table in schema.ts**
+- [ ] **Step 1: Add columns to the patients query**
 
-In `src/lib/db/schema.ts`, replace the patients table definition (currently lines 20–30):
+Read `src/app/api/provider/patients/[id]/route.ts`.
+
+In the `db.query.patients.findFirst` call, the `columns` block currently has `id`, `profile_id`, `date_of_birth`, `phone`, `state`. Add three more:
 
 ```ts
-export const patients = pgTable('patients', {
-  id:                      uuid('id').primaryKey().defaultRandom(),
-  profile_id:              uuid('profile_id').notNull().references(() => profiles.id),
-  date_of_birth:           text('date_of_birth'),
-  state:                   text('state'),
-  phone:                   text('phone'),
-  is_active:               boolean('is_active').notNull().default(true),
-  onboarding_status:       text('onboarding_status').notNull().default('active'),
-  membership_plan:         text('membership_plan'),
-  last_md_review_at:       timestamp('last_md_review_at', { withTimezone: true }),
-  last_meaningful_touch_at: timestamp('last_meaningful_touch_at', { withTimezone: true }),
-  current_plan:            text('current_plan'),
-  next_step:               text('next_step'),
-  created_at:              timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+columns: {
+  id: true,
+  profile_id: true,
+  date_of_birth: true,
+  phone: true,
+  state: true,
+  last_md_review_at: true,
+  current_plan: true,
+  next_step: true,
+},
+```
+
+- [ ] **Step 2: Add fields to the JSON response**
+
+Find the `return NextResponse.json({...})` at the bottom. Add three new keys after `latestEncounterNote`:
+
+```ts
+return NextResponse.json({
+  patient,
+  intakes: intakesRows,
+  visits: visitsRows,
+  providerVisits: visitsRows.filter(v => v.source !== 'daily'),
+  liveWmi,
+  subscriptions: subscriptionsRows,
+  prescriptions: prescriptionsRows,
+  labOrders: labOrdersRows,
+  providerNotes: providerNotesRows,
+  encounterNotesCount,
+  latestEncounterNote: latestEncounterNote ?? null,
+  currentPlan: patient.current_plan ?? null,
+  nextStep: patient.next_step ?? null,
+  lastMdReviewAt: patient.last_md_review_at ?? null,
 })
 ```
 
-- [ ] **Step 2: Add prescription_changes table to schema.ts**
-
-After the `prescriptionNotes` table definition (around line 182), add:
-
-```ts
-// ── Prescription Changes ──────────────────────────────────────────────────────
-export const prescription_changes = pgTable('prescription_changes', {
-  id:               uuid('id').primaryKey().defaultRandom(),
-  prescription_id:  uuid('prescription_id').notNull().references(() => prescriptions.id),
-  patient_id:       uuid('patient_id').notNull().references(() => patients.id),
-  provider_id:      uuid('provider_id').notNull().references(() => providers.id),
-  change_type:      text('change_type').notNull(),
-  previous_dosage:  text('previous_dosage'),
-  new_dosage:       text('new_dosage'),
-  previous_status:  text('previous_status'),
-  new_status:       text('new_status'),
-  reason:           text('reason'),
-  created_at:       timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
-```
-
-- [ ] **Step 3: Write the SQL migration file**
-
-Create `src/lib/db/migrations/0002_build17.sql`:
-
-```sql
--- Build 17: Patient Cockpit + Medication Change Tracker
-
--- 1. Add plan/review columns to patients
-ALTER TABLE patients
-  ADD COLUMN IF NOT EXISTS last_md_review_at        timestamp WITH TIME ZONE,
-  ADD COLUMN IF NOT EXISTS last_meaningful_touch_at timestamp WITH TIME ZONE,
-  ADD COLUMN IF NOT EXISTS current_plan             text,
-  ADD COLUMN IF NOT EXISTS next_step                text;
-
--- 2. Prescription changes table
-CREATE TABLE IF NOT EXISTS prescription_changes (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  prescription_id  uuid NOT NULL REFERENCES prescriptions(id),
-  patient_id       uuid NOT NULL REFERENCES patients(id),
-  provider_id      uuid NOT NULL REFERENCES providers(id),
-  change_type      text NOT NULL,
-  previous_dosage  text,
-  new_dosage       text,
-  previous_status  text,
-  new_status       text,
-  reason           text,
-  created_at       timestamp WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS rx_changes_patient_id_idx ON prescription_changes(patient_id);
-CREATE INDEX IF NOT EXISTS rx_changes_prescription_id_idx ON prescription_changes(prescription_id);
-```
-
-- [ ] **Step 4: Create the debug migration endpoint**
-
-Create `src/app/api/debug/migrate-build17/route.ts`:
-
-```ts
-import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { sql } from 'drizzle-orm'
-
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-migration-secret')
-  if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    await db.execute(sql`
-      ALTER TABLE patients
-        ADD COLUMN IF NOT EXISTS last_md_review_at        timestamp WITH TIME ZONE,
-        ADD COLUMN IF NOT EXISTS last_meaningful_touch_at timestamp WITH TIME ZONE,
-        ADD COLUMN IF NOT EXISTS current_plan             text,
-        ADD COLUMN IF NOT EXISTS next_step                text;
-    `)
-
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS prescription_changes (
-        id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        prescription_id  uuid NOT NULL REFERENCES prescriptions(id),
-        patient_id       uuid NOT NULL REFERENCES patients(id),
-        provider_id      uuid NOT NULL REFERENCES providers(id),
-        change_type      text NOT NULL,
-        previous_dosage  text,
-        new_dosage       text,
-        previous_status  text,
-        new_status       text,
-        reason           text,
-        created_at       timestamp WITH TIME ZONE NOT NULL DEFAULT now()
-      );
-      CREATE INDEX IF NOT EXISTS rx_changes_patient_id_idx ON prescription_changes(patient_id);
-      CREATE INDEX IF NOT EXISTS rx_changes_prescription_id_idx ON prescription_changes(prescription_id);
-    `)
-
-    return NextResponse.json({ ok: true, message: 'Build 17 migration complete' })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: message }, { status: 500 })
-  }
-}
-```
-
-- [ ] **Step 5: Run tsc**
+- [ ] **Step 3: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -181,101 +123,42 @@ npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/lib/db/schema.ts src/lib/db/migrations/0002_build17.sql src/app/api/debug/migrate-build17/route.ts
-git commit -m "feat: add patients plan columns + prescription_changes table (Build 17 schema)"
+git add src/app/api/provider/patients/
+git commit -m "feat: add currentPlan, nextStep, lastMdReviewAt to patient API response"
 ```
 
 ---
 
-## Task 2: Extend GET /api/provider/tasks — limit + open filter
-
-**Files:**
-- Modify: `src/app/api/provider/tasks/route.ts`
-
-- [ ] **Step 1: Add limit param and open filter to GET handler**
-
-In `src/app/api/provider/tasks/route.ts`, replace the section from `const rows = await db.query.tasks.findMany` to the end of the GET function:
-
-```ts
-  // open=true → exclude resolved/closed (for DashboardHome top-8 fetch)
-  const openOnly = searchParams.get('open') === 'true'
-  if (openOnly) {
-    conditions.push(notInArray(tasks.status, ['resolved', 'closed']))
-  }
-
-  const limitParam = searchParams.get('limit')
-  const limitNum = limitParam ? Math.min(parseInt(limitParam, 10), 200) : 200
-
-  const whereClause = conditions.length > 0 ? and(...(conditions as [SQL, ...SQL[]])) : undefined
-
-  const rows = await db.query.tasks.findMany({
-    where: whereClause,
-    orderBy: [
-      // Sort by priority: red first, then orange, yellow, blue, gray
-      sql`CASE priority WHEN 'red' THEN 0 WHEN 'orange' THEN 1 WHEN 'yellow' THEN 2 WHEN 'blue' THEN 3 ELSE 4 END`,
-      desc(tasks.updated_at),
-    ],
-    limit: limitNum,
-  })
-
-  return NextResponse.json({ tasks: rows })
-```
-
-Also add `sql` to the import line at the top (it's already imported via drizzle-orm — verify it's there, add if missing):
-
-```ts
-import { and, eq, inArray, notInArray, desc, or, SQL, sql } from 'drizzle-orm'
-```
-
-- [ ] **Step 2: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/app/api/provider/tasks/route.ts
-git commit -m "feat: add limit + open filter params to GET /api/provider/tasks"
-```
-
----
-
-## Task 3: Modify PATCH /api/provider/tasks/[id] — set last_md_review_at on close
+## Task 3: Hook last_md_review_at into task close
 
 **Files:**
 - Modify: `src/app/api/provider/tasks/[id]/route.ts`
 
-- [ ] **Step 1: Add patients import and last_md_review_at update on close**
+When an MD or NP closes a `requires_md_signoff` task, write the current timestamp to `patients.last_md_review_at`.
 
-At the top of `src/app/api/provider/tasks/[id]/route.ts`, update the schema import to include `patients`:
+- [ ] **Step 1: Read the file**
+
+Read `src/app/api/provider/tasks/[id]/route.ts`. Find the block that handles `newStatus === 'closed'`. It contains `updates.closed_at = new Date()` and `updates.closed_by = session!.providerId`.
+
+- [ ] **Step 2: Add the hook**
+
+After the `updates.closed_at` and `updates.closed_by` lines, still inside the `if (newStatus === 'closed')` block, add:
 
 ```ts
-import { tasks, providers, patients } from '@/lib/db/schema'
+// If MD/NP closes a requires_md_signoff task, record the review date on the patient
+if (task.requires_md_signoff) {
+  await db.update(patients)
+    .set({ last_md_review_at: new Date() })
+    .where(eq(patients.id, task.patient_id))
+}
 ```
 
-Inside the `if (newStatus === 'closed')` block, after the existing close-out field checks and before the final `updates.status = newStatus` line, add:
+`patients` is already imported from `@/lib/db/schema` in this file. `db`, `eq` are already imported.
 
-```ts
-      // If MD/NP closes a requires_md_signoff task, record the review date on the patient
-      if (task.requires_md_signoff) {
-        await db.update(patients)
-          .set({ last_md_review_at: new Date(), last_meaningful_touch_at: new Date() })
-          .where(eq(patients.id, task.patient_id))
-      } else {
-        await db.update(patients)
-          .set({ last_meaningful_touch_at: new Date() })
-          .where(eq(patients.id, task.patient_id))
-      }
-```
-
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 3: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -283,21 +166,128 @@ npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/api/provider/tasks/[id]/route.ts
-git commit -m "feat: set last_md_review_at on patient when MD closes signoff task"
+git add "src/app/api/provider/tasks/[id]/route.ts"
+git commit -m "feat: set patients.last_md_review_at when MD closes requires_md_signoff task"
 ```
 
 ---
 
-## Task 4: PATCH /api/provider/patients/[id]/plan
+## Task 4: GET /api/provider/patients/[id]/diff
+
+**Files:**
+- Create: `src/app/api/provider/patients/[id]/diff/route.ts`
+
+- [ ] **Step 1: Create the directory**
+
+```bash
+mkdir -p "src/app/api/provider/patients/[id]/diff"
+```
+
+- [ ] **Step 2: Create the route**
+
+Create `src/app/api/provider/patients/[id]/diff/route.ts`:
+
+```ts
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/getServerSession'
+import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
+import { db } from '@/lib/db'
+import { patients, visits, lab_orders, provider_notes } from '@/lib/db/schema'
+import { eq, and, gt } from 'drizzle-orm'
+import { computeLiveWMI } from '@/lib/wmi-scoring'
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const session = await getServerSession()
+  const roleError = requireStaffRole(session, MD_NP)
+  if (roleError) return roleError
+
+  const patientId = params.id
+
+  const patient = await db.query.patients.findFirst({
+    where: eq(patients.id, patientId),
+    columns: { last_md_review_at: true },
+  })
+  if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+
+  const since = patient.last_md_review_at
+
+  if (!since) {
+    return NextResponse.json({ since: null, wmiDelta: null, wmiNow: null, wmiBefore: null, newLabs: 0, latestLabName: null, rnNotes: 0, newMessages: 0 })
+  }
+
+  const allVisits = await db.query.visits.findMany({
+    where: eq(visits.patient_id, patientId),
+    columns: { symptom_scores: true, visit_date: true, source: true },
+    orderBy: (v, { desc }) => [desc(v.visit_date)],
+  })
+
+  const visitsBefore = allVisits.filter(v => new Date(v.visit_date) <= since)
+  const visitsAfter  = allVisits.filter(v => new Date(v.visit_date) > since)
+  const wmiNow    = visitsAfter.length  > 0 ? computeLiveWMI(visitsAfter  as any) : null
+  const wmiBefore = visitsBefore.length > 0 ? computeLiveWMI(visitsBefore as any) : null
+  const wmiDelta  = wmiNow != null && wmiBefore != null ? Math.round(wmiNow - wmiBefore) : null
+
+  const [labRows, rnNoteRows] = await Promise.all([
+    db.query.lab_orders.findMany({
+      where: and(eq(lab_orders.patient_id, patientId), gt(lab_orders.created_at, since)),
+      columns: { id: true, tests: true },
+    }),
+    db.query.provider_notes.findMany({
+      where: and(eq(provider_notes.patient_id, patientId), gt(provider_notes.created_at, since)),
+      columns: { id: true },
+    }),
+  ])
+
+  return NextResponse.json({
+    since: since.toISOString(),
+    wmiDelta,
+    wmiNow,
+    wmiBefore,
+    newLabs: labRows.length,
+    latestLabName: (labRows[0]?.tests as { name?: string }[] | null)?.[0]?.name ?? null,
+    rnNotes: rnNoteRows.length,
+    newMessages: 0,
+  })
+}
+```
+
+- [ ] **Step 3: Verify tsc**
+
+```bash
+npx tsc --noEmit
+```
+
+Expected: no errors.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add "src/app/api/provider/patients/[id]/diff/"
+git commit -m "feat: add GET /api/provider/patients/[id]/diff for cockpit since-last-review panel"
+```
+
+---
+
+## Task 5: PATCH /api/provider/patients/[id]/plan
 
 **Files:**
 - Create: `src/app/api/provider/patients/[id]/plan/route.ts`
 
-- [ ] **Step 1: Create the route**
+- [ ] **Step 1: Create the directory**
+
+```bash
+mkdir -p "src/app/api/provider/patients/[id]/plan"
+```
+
+- [ ] **Step 2: Create the route**
+
+Create `src/app/api/provider/patients/[id]/plan/route.ts`:
 
 ```ts
 import { NextRequest, NextResponse } from 'next/server'
@@ -315,11 +305,11 @@ export async function PATCH(
   const roleError = requireStaffRole(session, MD_NP)
   if (roleError) return roleError
 
-  const { current_plan, next_step } = await req.json()
+  const body = await req.json() as { current_plan?: string | null; next_step?: string | null }
 
-  const updates: Record<string, unknown> = {}
-  if (current_plan !== undefined) updates.current_plan = current_plan || null
-  if (next_step !== undefined) updates.next_step = next_step || null
+  const updates: { current_plan?: string | null; next_step?: string | null } = {}
+  if ('current_plan' in body) updates.current_plan = body.current_plan ?? null
+  if ('next_step'    in body) updates.next_step    = body.next_step    ?? null
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
@@ -331,117 +321,7 @@ export async function PATCH(
 }
 ```
 
-- [ ] **Step 2: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/app/api/provider/patients/[id]/plan/route.ts
-git commit -m "feat: add PATCH /api/provider/patients/[id]/plan"
-```
-
----
-
-## Task 5: GET /api/provider/patients/[id]/diff
-
-**Files:**
-- Create: `src/app/api/provider/patients/[id]/diff/route.ts`
-
-- [ ] **Step 1: Create the route**
-
-```ts
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/getServerSession'
-import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
-import { db } from '@/lib/db'
-import { patients, visits, prescription_changes, messages } from '@/lib/db/schema'
-import { and, eq, gte, count } from 'drizzle-orm'
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const session = await getServerSession()
-  const roleError = requireStaffRole(session, MD_NP)
-  if (roleError) return roleError
-
-  const patient = await db.query.patients.findFirst({
-    where: eq(patients.id, params.id),
-    columns: { last_md_review_at: true, current_plan: true, next_step: true },
-  })
-  if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
-
-  const since = patient.last_md_review_at ?? new Date(0)
-
-  const [wmiVisits, rxChanges, msgCount, rnNotes] = await Promise.all([
-    // Recent daily check-ins for WMI delta
-    db.query.visits.findMany({
-      where: and(eq(visits.patient_id, params.id), gte(visits.created_at, since)),
-      columns: { overall_score: true, visit_date: true, source: true },
-      orderBy: (v, { desc }) => [desc(v.visit_date)],
-      limit: 20,
-    }),
-    // Prescription changes since last review
-    db.query.prescription_changes.findMany({
-      where: and(
-        eq(prescription_changes.patient_id, params.id),
-        gte(prescription_changes.created_at, since),
-      ),
-      orderBy: (r, { desc }) => [desc(r.created_at)],
-    }),
-    // Message count since last review
-    db.select({ count: count() })
-      .from(messages)
-      .where(and(eq(messages.patient_id, params.id), gte(messages.created_at, since))),
-    // RN notes (visits with source='rn_note')
-    db.query.visits.findMany({
-      where: and(
-        eq(visits.patient_id, params.id),
-        eq(visits.source, 'rn_note' as any),
-        gte(visits.created_at, since),
-      ),
-      columns: { visit_date: true, notes: true },
-      limit: 5,
-    }),
-  ])
-
-  // Compute WMI delta: compare earliest vs latest overall_score since review
-  const scores = wmiVisits
-    .filter(v => v.overall_score != null)
-    .map(v => v.overall_score as number)
-  const wmiDelta = scores.length >= 2
-    ? { from: scores[scores.length - 1], to: scores[0], delta: scores[0] - scores[scores.length - 1] }
-    : scores.length === 1
-    ? { from: null, to: scores[0], delta: null }
-    : null
-
-  return NextResponse.json({
-    since: patient.last_md_review_at,
-    wmiDelta,
-    rxChanges,
-    messageCount: msgCount[0]?.count ?? 0,
-    rnNotes,
-  })
-}
-```
-
-Note: `messages` table — check the actual table name in `schema.ts`. If it's `thread_messages` or similar, use the correct import. Look for it: `grep -n "messages\|thread_messages" src/lib/db/schema.ts`.
-
-- [ ] **Step 2: Verify messages table name in schema**
-
-```bash
-grep -n "^export const.*message\|^export const.*thread" src/lib/db/schema.ts
-```
-
-Use the correct table name for the messages count query. If the table has no `patient_id` column, set `messageCount: 0` and skip that join for now.
-
-- [ ] **Step 3: Run tsc**
+- [ ] **Step 3: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -452,125 +332,26 @@ Expected: no errors.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/app/api/provider/patients/[id]/diff/route.ts
-git commit -m "feat: add GET /api/provider/patients/[id]/diff"
+git add "src/app/api/provider/patients/[id]/plan/"
+git commit -m "feat: add PATCH /api/provider/patients/[id]/plan for cockpit inline editing"
 ```
 
 ---
 
-## Task 6: GET /api/provider/patients/[id]/cockpit
-
-**Files:**
-- Create: `src/app/api/provider/patients/[id]/cockpit/route.ts`
-
-- [ ] **Step 1: Create the route**
-
-```ts
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/getServerSession'
-import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
-import { db } from '@/lib/db'
-import { patients, tasks, prescription_changes, profiles } from '@/lib/db/schema'
-import { and, eq, notInArray } from 'drizzle-orm'
-import { computeLiveWMI } from '@/lib/wmi-scoring'
-
-export const maxDuration = 60
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  const session = await getServerSession()
-  const roleError = requireStaffRole(session, MD_NP)
-  if (roleError) return roleError
-
-  const patient = await db.query.patients.findFirst({
-    where: eq(patients.id, params.id),
-    with: { profiles: true },
-  })
-  if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
-
-  const [activeTasks, rxHistory, recentVisits] = await Promise.all([
-    db.query.tasks.findMany({
-      where: and(
-        eq(tasks.patient_id, params.id),
-        notInArray(tasks.status, ['resolved', 'closed']),
-      ),
-      orderBy: (t, { sql, asc }) => [
-        sql`CASE priority WHEN 'red' THEN 0 WHEN 'orange' THEN 1 WHEN 'yellow' THEN 2 WHEN 'blue' THEN 3 ELSE 4 END`,
-        asc(t.due_at),
-      ],
-    }),
-    db.query.prescription_changes.findMany({
-      where: eq(prescription_changes.patient_id, params.id),
-      orderBy: (r, { desc }) => [desc(r.created_at)],
-      limit: 20,
-    }),
-    db.query.visits.findMany({
-      where: eq((await import('@/lib/db/schema')).visits.patient_id, params.id),
-      orderBy: (v, { desc }) => [desc(v.visit_date)],
-      limit: 10,
-      columns: { visit_date: true, source: true, overall_score: true, visit_type: true },
-    }),
-  ])
-
-  // Compute live WMI from recent check-ins
-  const checkinScores = recentVisits
-    .filter(v => v.source === 'daily' && v.overall_score != null)
-    .map(v => v.overall_score as number)
-  const liveWmi = checkinScores.length > 0
-    ? Math.round(checkinScores.slice(0, 3).reduce((a, b) => a + b, 0) / Math.min(checkinScores.length, 3))
-    : null
-
-  return NextResponse.json({
-    patient: {
-      id: patient.id,
-      current_plan: patient.current_plan,
-      next_step: patient.next_step,
-      last_md_review_at: patient.last_md_review_at,
-      last_meaningful_touch_at: patient.last_meaningful_touch_at,
-    },
-    liveWmi,
-    activeTasks,
-    rxHistory,
-  })
-}
-```
-
-Note: The `with: { profiles: true }` requires a relation defined in schema. If `patients` doesn't have a `profiles` relation set up in Drizzle's `relations()`, replace with a separate query:
-```ts
-const profile = await db.query.profiles.findFirst({ where: eq(profiles.id, patient.profile_id) })
-```
-
-Also fix the `recentVisits` query — the `await import` pattern is wrong. Import `visits` at the top:
-```ts
-import { patients, tasks, prescription_changes, profiles, visits } from '@/lib/db/schema'
-```
-Then use `eq(visits.patient_id, params.id)` directly.
-
-- [ ] **Step 2: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Fix any type errors (import issues, missing fields). The key fields are: `patient.current_plan`, `patient.next_step`, `patient.last_md_review_at`.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/app/api/provider/patients/[id]/cockpit/route.ts
-git commit -m "feat: add GET /api/provider/patients/[id]/cockpit"
-```
-
----
-
-## Task 7: POST /api/provider/patients/[id]/prescriptions/[rxId]/change
+## Task 6: POST /api/provider/patients/[id]/prescriptions/[rxId]/change
 
 **Files:**
 - Create: `src/app/api/provider/patients/[id]/prescriptions/[rxId]/change/route.ts`
 
-- [ ] **Step 1: Create the route**
+- [ ] **Step 1: Create the directory**
+
+```bash
+mkdir -p "src/app/api/provider/patients/[id]/prescriptions/[rxId]/change"
+```
+
+- [ ] **Step 2: Create the route**
+
+Create `src/app/api/provider/patients/[id]/prescriptions/[rxId]/change/route.ts`:
 
 ```ts
 import { NextRequest, NextResponse } from 'next/server'
@@ -578,25 +359,12 @@ import { getServerSession } from '@/lib/getServerSession'
 import { requireStaffRole, MD_NP } from '@/lib/requireStaffRole'
 import { createTask } from '@/lib/taskEngine'
 import { db } from '@/lib/db'
-import { prescription_changes, prescriptions, patients } from '@/lib/db/schema'
+import { prescription_changes, prescriptions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-const CADENCE_TYPES = new Set(['started', 'dose_increased', 'dose_decreased', 'formulation_changed'])
+type ChangeType = 'started' | 'dose_increased' | 'dose_decreased' | 'stopped' | 'formulation_changed' | 'refill_authorized'
 
-interface CadenceTask {
-  daysOffset: number
-  role: 'rn' | 'md'
-  priority: 'yellow' | 'orange' | 'blue'
-  titleFn: (med: string) => string
-}
-
-const CADENCE: CadenceTask[] = [
-  { daysOffset: 4,   role: 'rn', priority: 'yellow', titleFn: m => `Confirm patient understood plan, obtained ${m}, no urgent side effects` },
-  { daysOffset: 28,  role: 'rn', priority: 'yellow', titleFn: m => `4-week early check-in — ${m}` },
-  { daysOffset: 56,  role: 'rn', priority: 'blue',   titleFn: m => `8-week trend review — ${m}` },
-  { daysOffset: 84,  role: 'md', priority: 'orange', titleFn: m => `12-week meaningful response review — ${m}` },
-  { daysOffset: 365, role: 'md', priority: 'blue',   titleFn: m => `Annual benefit/risk review — ${m}` },
-]
+const CADENCE_TYPES: ChangeType[] = ['started', 'dose_increased', 'dose_decreased', 'formulation_changed']
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date)
@@ -612,7 +380,12 @@ export async function POST(
   const roleError = requireStaffRole(session, MD_NP)
   if (roleError) return roleError
 
-  const { change_type, new_dosage, reason } = await req.json()
+  const { change_type, new_dosage, previous_dosage, reason } = await req.json() as {
+    change_type: ChangeType
+    new_dosage?: string
+    previous_dosage?: string
+    reason?: string
+  }
 
   if (!change_type) {
     return NextResponse.json({ error: 'change_type is required' }, { status: 400 })
@@ -620,57 +393,57 @@ export async function POST(
 
   const rx = await db.query.prescriptions.findFirst({
     where: eq(prescriptions.id, params.rxId),
-    columns: { id: true, medication_name: true, dosage: true, status: true },
+    columns: { id: true, patient_id: true, medication_name: true, dosage: true },
   })
-  if (!rx) return NextResponse.json({ error: 'Prescription not found' }, { status: 404 })
+  if (!rx || rx.patient_id !== params.id) {
+    return NextResponse.json({ error: 'Prescription not found' }, { status: 404 })
+  }
 
-  // Insert the change record
   const [change] = await db.insert(prescription_changes).values({
-    prescription_id: params.rxId,
-    patient_id:      params.id,
-    provider_id:     session!.providerId!,
+    prescription_id:  params.rxId,
+    patient_id:       params.id,
+    provider_id:      session!.providerId!,
     change_type,
-    previous_dosage: rx.dosage,
-    new_dosage:      new_dosage ?? null,
-    previous_status: rx.status,
-    new_status:      new_dosage ? rx.status : change_type === 'stopped' ? 'inactive' : rx.status,
-    reason:          reason ?? null,
+    previous_dosage:  previous_dosage ?? rx.dosage ?? null,
+    new_dosage:       new_dosage ?? null,
+    reason:           reason ?? null,
   }).returning({ id: prescription_changes.id })
 
-  // Update last_meaningful_touch_at on patient
-  await db.update(patients)
-    .set({ last_meaningful_touch_at: new Date() })
-    .where(eq(patients.id, params.id))
+  const scheduledTasks: { title: string; dueAt: string }[] = []
 
-  // Create follow-up task cadence if applicable
-  const scheduledTasks: Array<{ title: string; dueAt: string }> = []
-  if (CADENCE_TYPES.has(change_type)) {
+  if (CADENCE_TYPES.includes(change_type)) {
+    const medName = rx.medication_name
     const now = new Date()
-    for (const step of CADENCE) {
-      const dueAt = addDays(now, step.daysOffset)
-      const title = step.titleFn(rx.medication_name)
+
+    const cadence = [
+      { days: 4,   priority: 'yellow' as const, title: `Day-4 check-in — ${medName}: confirm received medication, no urgent side effects`, requiresMd: false },
+      { days: 28,  priority: 'yellow' as const, title: `4-week check-in — ${medName}`,                                                    requiresMd: false },
+      { days: 56,  priority: 'blue'   as const, title: `8-week trend review — ${medName}`,                                                requiresMd: false },
+      { days: 84,  priority: 'orange' as const, title: `12-week response review — ${medName}`,                                            requiresMd: true  },
+      { days: 365, priority: 'blue'   as const, title: `Annual benefit/risk review — ${medName}`,                                         requiresMd: true  },
+    ]
+
+    for (const step of cadence) {
+      const dueAt = addDays(now, step.days)
       await createTask({
         patient_id:          params.id,
-        title,
+        title:               step.title,
         category:            'med',
         priority:            step.priority,
         source:              'med_change',
         source_ref:          change.id,
         due_at:              dueAt,
-        requires_md_signoff: step.role === 'md',
+        requires_md_signoff: step.requiresMd,
       })
-      scheduledTasks.push({ title, dueAt: dueAt.toISOString() })
+      scheduledTasks.push({ title: step.title, dueAt: dueAt.toISOString() })
     }
   }
 
-  return NextResponse.json({
-    changeId: change.id,
-    scheduledTasks,
-  }, { status: 201 })
+  return NextResponse.json({ ok: true, changeId: change.id, scheduledTasks }, { status: 201 })
 }
 ```
 
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 3: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -678,21 +451,23 @@ npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add "src/app/api/provider/patients/[id]/prescriptions/[rxId]/change/route.ts"
-git commit -m "feat: add POST rx change endpoint with 5-task cadence creation"
+git add "src/app/api/provider/patients/[id]/prescriptions/"
+git commit -m "feat: add POST prescriptions/[rxId]/change — record med change and auto-schedule 5 tasks"
 ```
 
 ---
 
-## Task 8: PlanEditor component
+## Task 7: PlanEditor component
 
 **Files:**
 - Create: `src/components/provider/PlanEditor.tsx`
 
 - [ ] **Step 1: Create the component**
+
+Create `src/components/provider/PlanEditor.tsx`:
 
 ```tsx
 'use client'
@@ -701,77 +476,76 @@ import { useState, useRef } from 'react'
 
 interface Props {
   patientId: string
-  initialPlan: string | null
-  initialNextStep: string | null
+  currentPlan: string | null
+  nextStep: string | null
+  lastMdReviewAt: string | null
 }
 
-export function PlanEditor({ patientId, initialPlan, initialNextStep }: Props) {
-  const [plan, setPlan] = useState(initialPlan ?? '')
-  const [nextStep, setNextStep] = useState(initialNextStep ?? '')
-  const [savedPlan, setSavedPlan] = useState(false)
-  const [savedNextStep, setSavedNextStep] = useState(false)
-  const [error, setError] = useState('')
+export default function PlanEditor({ patientId, currentPlan: initialPlan, nextStep: initialNext, lastMdReviewAt }: Props) {
+  const [plan, setPlan]        = useState(initialPlan ?? '')
+  const [next, setNext]        = useState(initialNext ?? '')
+  const [savedField, setSaved] = useState<'plan' | 'next' | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function save(field: 'plan' | 'nextStep') {
+  const save = async (field: 'plan' | 'next', value: string) => {
+    const body = field === 'plan' ? { current_plan: value } : { next_step: value }
     try {
-      const body = field === 'plan'
-        ? { current_plan: plan || null }
-        : { next_step: nextStep || null }
-      const res = await fetch(`/api/provider/patients/${patientId}/plan`, {
+      await fetch(`/api/provider/patients/${patientId}/plan`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error('Save failed')
-      if (field === 'plan') { setSavedPlan(true); setTimeout(() => setSavedPlan(false), 2000) }
-      else { setSavedNextStep(true); setTimeout(() => setSavedNextStep(false), 2000) }
-    } catch {
-      setError('Failed to save')
-      setTimeout(() => setError(''), 3000)
-    }
+      setSaved(field)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setSaved(null), 2000)
+    } catch {}
   }
 
+  const reviewAgo = lastMdReviewAt
+    ? (() => {
+        const days = Math.floor((Date.now() - new Date(lastMdReviewAt).getTime()) / 86400000)
+        if (days === 0) return 'today'
+        if (days === 1) return '1 day ago'
+        return `${days} days ago`
+      })()
+    : null
+
   return (
-    <div className="space-y-3">
-      {/* Current Plan */}
+    <div className="col-span-2 grid grid-cols-2 gap-4">
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-aubergine/40">Current Plan</span>
-          {savedPlan && <span className="text-xs text-emerald-600">Saved</span>}
-        </div>
+        <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Current Plan</p>
         <textarea
           value={plan}
           onChange={e => setPlan(e.target.value)}
-          onBlur={() => save('plan')}
-          placeholder="Enter treatment plan..."
+          onBlur={() => save('plan', plan)}
+          placeholder="Click to add treatment plan…"
           rows={3}
-          className="w-full text-sm text-aubergine border border-aubergine/10 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet/30 bg-white"
+          className="w-full text-sm font-sans text-aubergine bg-transparent resize-none outline-none border border-transparent rounded-lg px-2 py-1 hover:border-aubergine/10 focus:border-aubergine/20 focus:bg-white transition-colors placeholder:text-aubergine/20"
         />
+        {savedField === 'plan' && <p className="text-xs font-sans text-emerald-500 mt-0.5">Saved</p>}
       </div>
 
-      {/* Next Step */}
       <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-aubergine/40">Next Step</span>
-          {savedNextStep && <span className="text-xs text-emerald-600">Saved</span>}
-        </div>
-        <input
-          type="text"
-          value={nextStep}
-          onChange={e => setNextStep(e.target.value)}
-          onBlur={() => save('nextStep')}
-          placeholder="No current action needed"
-          className="w-full text-sm text-aubergine border border-aubergine/10 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet/30 bg-white"
+        <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Next Step</p>
+        <textarea
+          value={next}
+          onChange={e => setNext(e.target.value)}
+          onBlur={() => save('next', next)}
+          placeholder="No current action needed…"
+          rows={3}
+          className="w-full text-sm font-sans text-aubergine bg-transparent resize-none outline-none border border-transparent rounded-lg px-2 py-1 hover:border-aubergine/10 focus:border-aubergine/20 focus:bg-white transition-colors placeholder:text-aubergine/20"
         />
+        {savedField === 'next' && <p className="text-xs font-sans text-emerald-500 mt-0.5">Saved</p>}
+        {reviewAgo && (
+          <p className="text-xs font-sans text-aubergine/30 mt-0.5">Last MD review: {reviewAgo}</p>
+        )}
       </div>
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
 }
 ```
 
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 2: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -783,127 +557,109 @@ Expected: no errors.
 
 ```bash
 git add src/components/provider/PlanEditor.tsx
-git commit -m "feat: add PlanEditor component with auto-save on blur"
+git commit -m "feat: add PlanEditor component — inline current_plan + next_step, saves on blur"
 ```
 
 ---
 
-## Task 9: DiffPanel component
+## Task 8: DiffPanel component
 
 **Files:**
 - Create: `src/components/provider/DiffPanel.tsx`
 
 - [ ] **Step 1: Create the component**
 
+Create `src/components/provider/DiffPanel.tsx`:
+
 ```tsx
 'use client'
 
-interface RxChange {
-  id: string
-  change_type: string
-  previous_dosage: string | null
-  new_dosage: string | null
-  created_at: string
-}
-
-interface RnNote {
-  visit_date: string
-  notes: string | null
-}
+import { useEffect, useState } from 'react'
 
 interface DiffData {
   since: string | null
-  wmiDelta: { from: number | null; to: number; delta: number | null } | null
-  rxChanges: RxChange[]
-  messageCount: number
-  rnNotes: RnNote[]
+  wmiDelta: number | null
+  wmiNow: number | null
+  wmiBefore: number | null
+  newLabs: number
+  latestLabName: string | null
+  rnNotes: number
+  newMessages: number
 }
 
 interface Props {
-  diff: DiffData
+  patientId: string
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+export default function DiffPanel({ patientId }: Props) {
+  const [diff, setDiff]       = useState<DiffData | null>(null)
+  const [loading, setLoading] = useState(true)
 
-const CHANGE_TYPE_LABELS: Record<string, string> = {
-  started:              'Started',
-  dose_increased:       'Dose increased',
-  dose_decreased:       'Dose decreased',
-  stopped:              'Stopped',
-  refill_authorized:    'Refill authorized',
-  formulation_changed:  'Formulation changed',
-}
+  useEffect(() => {
+    fetch(`/api/provider/patients/${patientId}/diff`)
+      .then(r => r.json())
+      .then(setDiff)
+      .finally(() => setLoading(false))
+  }, [patientId])
 
-export function DiffPanel({ diff }: Props) {
-  if (!diff.since) {
+  if (loading) {
     return (
-      <div className="text-sm text-aubergine/40 italic px-1">
-        No prior MD review recorded — showing all history.
+      <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+        <div className="h-3 bg-aubergine/5 rounded animate-pulse w-40" />
       </div>
     )
   }
+  if (!diff) return null
 
-  const hasAnything = diff.wmiDelta || diff.rxChanges.length > 0 || diff.messageCount > 0 || diff.rnNotes.length > 0
+  const sinceLabel = diff.since
+    ? (() => {
+        const days = Math.floor((Date.now() - new Date(diff.since).getTime()) / 86400000)
+        if (days === 0) return 'today'
+        if (days === 1) return '1 day ago'
+        return `${days} days ago`
+      })()
+    : null
 
-  if (!hasAnything) {
-    return (
-      <div className="text-sm text-aubergine/40 italic px-1">
-        No changes since last MD review on {formatDate(diff.since)}.
-      </div>
-    )
-  }
+  const hasAny = diff.wmiDelta != null || diff.newLabs > 0 || diff.rnNotes > 0 || diff.newMessages > 0
 
   return (
-    <div className="divide-y divide-aubergine/5">
-      {diff.wmiDelta && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">WMI</span>
-          <span className="text-sm text-aubergine">
-            {diff.wmiDelta.from != null ? `${diff.wmiDelta.from} → ` : ''}{diff.wmiDelta.to}
-            {diff.wmiDelta.delta != null && (
-              <span className={`ml-2 text-xs font-semibold ${diff.wmiDelta.delta >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {diff.wmiDelta.delta >= 0 ? `↑ ${diff.wmiDelta.delta}` : `↓ ${Math.abs(diff.wmiDelta.delta)}`}
-              </span>
-            )}
-          </span>
-        </div>
-      )}
+    <div className="bg-white rounded-card border border-aubergine/5 px-5 py-4">
+      <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-3">
+        {sinceLabel ? `Since Last MD Review (${sinceLabel})` : 'No MD Review Recorded Yet'}
+      </p>
 
-      {diff.rxChanges.length > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">Rx Changes</span>
-          <div className="text-sm text-aubergine space-y-0.5">
-            {diff.rxChanges.map(c => (
-              <div key={c.id}>
-                {CHANGE_TYPE_LABELS[c.change_type] ?? c.change_type}
-                {c.new_dosage ? ` → ${c.new_dosage}` : ''}
-                <span className="text-aubergine/40 ml-1">({formatDate(c.created_at)})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {diff.messageCount > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">Messages</span>
-          <span className="text-sm text-aubergine">{diff.messageCount} new</span>
-        </div>
-      )}
-
-      {diff.rnNotes.length > 0 && (
-        <div className="flex items-baseline gap-3 py-2.5">
-          <span className="text-xs font-semibold text-aubergine/40 w-24 flex-shrink-0">RN Notes</span>
-          <div className="text-sm text-aubergine space-y-0.5">
-            {diff.rnNotes.map((n, i) => (
-              <div key={i} className="truncate">
-                {n.notes ? `${n.notes.slice(0, 80)}${n.notes.length > 80 ? '…' : ''}` : 'Note recorded'}
-                <span className="text-aubergine/40 ml-1">({formatDate(n.visit_date)})</span>
-              </div>
-            ))}
-          </div>
+      {!hasAny ? (
+        <p className="text-sm font-sans text-aubergine/30">
+          {sinceLabel
+            ? `No changes since review on ${new Date(diff.since!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`
+            : 'Record a review by closing an MD sign-off task for this patient.'}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {diff.wmiDelta != null && (
+            <div className={`rounded-lg px-3 py-2 text-xs font-sans ${diff.wmiDelta < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              <span className="font-semibold">WMI {diff.wmiDelta > 0 ? '+' : ''}{diff.wmiDelta} pts</span>
+              {diff.wmiBefore != null && diff.wmiNow != null && (
+                <span className="ml-1 opacity-70">{diff.wmiBefore} → {diff.wmiNow}</span>
+              )}
+            </div>
+          )}
+          {diff.newLabs > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-amber-50 text-amber-700">
+              <span className="font-semibold">{diff.newLabs} new lab{diff.newLabs > 1 ? 's' : ''}</span>
+              {diff.latestLabName && <span className="ml-1 opacity-70">{diff.latestLabName}</span>}
+            </div>
+          )}
+          {diff.rnNotes > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-violet/10 text-violet">
+              <span className="font-semibold">{diff.rnNotes} RN note{diff.rnNotes > 1 ? 's' : ''}</span>
+            </div>
+          )}
+          {diff.newMessages > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-sans bg-blue-50 text-blue-700">
+              <span className="font-semibold">{diff.newMessages} message{diff.newMessages > 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -911,7 +667,7 @@ export function DiffPanel({ diff }: Props) {
 }
 ```
 
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 2: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -923,81 +679,84 @@ Expected: no errors.
 
 ```bash
 git add src/components/provider/DiffPanel.tsx
-git commit -m "feat: add DiffPanel component"
+git commit -m "feat: add DiffPanel — since-last-review color chip summary"
 ```
 
 ---
 
-## Task 10: MedChangeModal component
+## Task 9: MedChangeModal component
 
 **Files:**
 - Create: `src/components/provider/MedChangeModal.tsx`
 
 - [ ] **Step 1: Create the component**
 
+Create `src/components/provider/MedChangeModal.tsx`:
+
 ```tsx
 'use client'
 
 import { useState } from 'react'
 
+interface Prescription {
+  id: string
+  medication_name: string
+  dosage: string
+  status: string
+}
+
+interface ScheduledTask {
+  title: string
+  dueAt: string
+}
+
 interface Props {
   patientId: string
-  prescriptionId: string
-  medicationName: string
-  currentDosage: string
+  prescriptions: Prescription[]
   onClose: () => void
   onSuccess: () => void
 }
 
-const CHANGE_TYPES = [
-  { value: 'started',             label: 'Started' },
-  { value: 'dose_increased',      label: 'Dose increased' },
-  { value: 'dose_decreased',      label: 'Dose decreased' },
-  { value: 'stopped',             label: 'Stopped' },
-  { value: 'formulation_changed', label: 'Formulation changed' },
-  { value: 'refill_authorized',   label: 'Refill authorized' },
+type ChangeType = 'started' | 'dose_increased' | 'dose_decreased' | 'stopped' | 'formulation_changed'
+
+const CHANGE_TYPES: { key: ChangeType; label: string }[] = [
+  { key: 'started',             label: 'Started' },
+  { key: 'dose_increased',      label: 'Dose increased' },
+  { key: 'dose_decreased',      label: 'Dose decreased' },
+  { key: 'stopped',             label: 'Stopped' },
+  { key: 'formulation_changed', label: 'Formulation changed' },
 ]
 
-const CADENCE_TYPES = new Set(['started', 'dose_increased', 'dose_decreased', 'formulation_changed'])
+const CREATES_TASKS: ChangeType[] = ['started', 'dose_increased', 'dose_decreased', 'formulation_changed']
 
-function addDays(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-export function MedChangeModal({
-  patientId, prescriptionId, medicationName, currentDosage, onClose, onSuccess,
-}: Props) {
-  const [changeType, setChangeType] = useState('')
-  const [newDosage, setNewDosage] = useState(currentDosage)
-  const [reason, setReason] = useState('')
+export default function MedChangeModal({ patientId, prescriptions, onClose, onSuccess }: Props) {
+  const active = prescriptions.filter(rx => rx.status === 'active')
+  const [rxId, setRxId]             = useState(active[0]?.id ?? '')
+  const [changeType, setChangeType] = useState<ChangeType>('dose_increased')
+  const [newDosage, setNewDosage]   = useState('')
+  const [reason, setReason]         = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [result, setResult] = useState<{ scheduledTasks: Array<{ title: string; dueAt: string }> } | null>(null)
+  const [error, setError]           = useState('')
+  const [scheduled, setScheduled]   = useState<ScheduledTask[] | null>(null)
 
-  const showsCadence = CADENCE_TYPES.has(changeType)
+  const willCreateTasks = CREATES_TASKS.includes(changeType)
 
   async function handleSubmit() {
-    if (!changeType) { setError('Select a change type.'); return }
+    if (!rxId) { setError('Select a medication.'); return }
     setSubmitting(true)
     setError('')
     try {
-      const res = await fetch(
-        `/api/provider/patients/${patientId}/prescriptions/${prescriptionId}/change`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ change_type: changeType, new_dosage: newDosage || undefined, reason: reason || undefined }),
-        },
-      )
+      const res = await fetch(`/api/provider/patients/${patientId}/prescriptions/${rxId}/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ change_type: changeType, new_dosage: newDosage || undefined, reason: reason || undefined }),
+      })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error ?? 'Failed to record change')
       }
       const data = await res.json()
-      setResult(data)
-      onSuccess()
+      setScheduled(data.scheduledTasks ?? [])
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -1005,28 +764,33 @@ export function MedChangeModal({
     }
   }
 
-  if (result) {
+  // Confirmation screen
+  if (scheduled !== null) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-aubergine">Change recorded</h2>
-          {result.scheduledTasks.length > 0 && (
+        <div className="bg-white rounded-card shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
+          <h2 className="text-lg font-sans font-semibold text-aubergine">Change recorded</h2>
+          {scheduled.length > 0 && (
             <>
-              <p className="text-sm text-aubergine/60">{result.scheduledTasks.length} follow-up tasks scheduled:</p>
-              <ul className="space-y-1">
-                {result.scheduledTasks.map((t, i) => (
-                  <li key={i} className="text-xs text-aubergine/70 flex gap-2">
-                    <span className="text-aubergine/30">·</span>
-                    <span className="flex-1">{t.title}</span>
-                    <span className="text-aubergine/40 flex-shrink-0">{new Date(t.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <p className="text-sm font-sans text-aubergine/60">{scheduled.length} follow-up tasks scheduled:</p>
+              <ul className="space-y-2">
+                {scheduled.map((t, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs font-sans text-aubergine/70">
+                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-violet/40 flex-shrink-0" />
+                    <span>
+                      {t.title}
+                      <span className="ml-1 text-aubergine/40">
+                        — {new Date(t.dueAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </span>
                   </li>
                 ))}
               </ul>
             </>
           )}
           <button
-            onClick={onClose}
-            className="w-full py-2 text-sm bg-aubergine text-white rounded-lg hover:bg-aubergine/90"
+            onClick={() => { onSuccess(); onClose() }}
+            className="w-full py-2.5 text-sm font-sans font-semibold bg-aubergine text-white rounded-pill hover:bg-aubergine/90 transition-colors"
           >
             Done
           </button>
@@ -1037,75 +801,96 @@ export function MedChangeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-aubergine">Record medication change</h2>
-        <p className="text-sm text-aubergine/50">{medicationName}</p>
+      <div className="bg-white rounded-card shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
+        <h2 className="text-lg font-sans font-semibold text-aubergine">Record Medication Change</h2>
 
-        <div>
-          <label className="block text-xs font-semibold text-aubergine/50 mb-1">Change type *</label>
-          <select
-            value={changeType}
-            onChange={e => setChangeType(e.target.value)}
-            className="w-full border border-aubergine/10 rounded-lg px-3 py-2 text-sm text-aubergine focus:outline-none focus:ring-2 focus:ring-violet/30"
-          >
-            <option value="">Select...</option>
-            {CHANGE_TYPES.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </div>
+        {active.length === 0 ? (
+          <p className="text-sm font-sans text-aubergine/50">No active prescriptions for this patient.</p>
+        ) : (
+          <>
+            <div>
+              <label className="block text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Medication</label>
+              <select
+                value={rxId}
+                onChange={e => setRxId(e.target.value)}
+                className="w-full border border-aubergine/15 rounded-lg px-3 py-2 text-sm font-sans text-aubergine"
+              >
+                {active.map(rx => (
+                  <option key={rx.id} value={rx.id}>{rx.medication_name} — {rx.dosage}</option>
+                ))}
+              </select>
+            </div>
 
-        {changeType !== 'stopped' && (
-          <div>
-            <label className="block text-xs font-semibold text-aubergine/50 mb-1">New dosage</label>
-            <input
-              value={newDosage}
-              onChange={e => setNewDosage(e.target.value)}
-              className="w-full border border-aubergine/10 rounded-lg px-3 py-2 text-sm text-aubergine focus:outline-none focus:ring-2 focus:ring-violet/30"
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-2">Change Type</label>
+              <div className="flex flex-wrap gap-2">
+                {CHANGE_TYPES.map(ct => (
+                  <button
+                    key={ct.key}
+                    onClick={() => setChangeType(ct.key)}
+                    className={`px-3 py-1.5 rounded-pill text-xs font-sans font-medium transition-colors ${
+                      changeType === ct.key
+                        ? 'bg-aubergine text-white'
+                        : 'bg-aubergine/5 text-aubergine/60 hover:bg-aubergine/10'
+                    }`}
+                  >
+                    {ct.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {changeType !== 'stopped' && (
+              <div>
+                <label className="block text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">New Dosage</label>
+                <input
+                  value={newDosage}
+                  onChange={e => setNewDosage(e.target.value)}
+                  placeholder="e.g. 0.075mg patch"
+                  className="w-full border border-aubergine/15 rounded-lg px-3 py-2 text-sm font-sans text-aubergine placeholder:text-aubergine/20"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">Reason</label>
+              <input
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder="Optional"
+                className="w-full border border-aubergine/15 rounded-lg px-3 py-2 text-sm font-sans text-aubergine placeholder:text-aubergine/20"
+              />
+            </div>
+
+            {willCreateTasks && (
+              <div className="bg-violet/5 border border-violet/15 rounded-lg px-4 py-3 text-xs font-sans text-violet">
+                ✓ Will schedule: Day 4 · Week 4 · Week 8 · 12-week MD review · Annual review
+              </div>
+            )}
+
+            {error && <p className="text-sm font-sans text-red-500">{error}</p>}
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={onClose} className="flex-1 py-2.5 text-sm font-sans text-aubergine/50 hover:text-aubergine transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 py-2.5 text-sm font-sans font-semibold bg-aubergine text-white rounded-pill hover:bg-aubergine/90 transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'Saving…' : 'Confirm Change'}
+              </button>
+            </div>
+          </>
         )}
-
-        <div>
-          <label className="block text-xs font-semibold text-aubergine/50 mb-1">Reason (optional)</label>
-          <input
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            placeholder="e.g. inadequate response, side effect..."
-            className="w-full border border-aubergine/10 rounded-lg px-3 py-2 text-sm text-aubergine focus:outline-none focus:ring-2 focus:ring-violet/30"
-          />
-        </div>
-
-        {showsCadence && changeType && (
-          <div className="bg-violet/5 rounded-lg px-3 py-2 text-xs text-aubergine/60 space-y-0.5">
-            <p className="font-semibold text-aubergine/50 mb-1">5 follow-up tasks will be scheduled:</p>
-            <p>· Confirm patient obtained med — {addDays(4)}</p>
-            <p>· 4-week check-in — {addDays(28)}</p>
-            <p>· 8-week trend review — {addDays(56)}</p>
-            <p>· 12-week response review — {addDays(84)}</p>
-            <p>· Annual benefit/risk — {addDays(365)}</p>
-          </div>
-        )}
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-3 pt-1">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-aubergine/60 hover:text-aubergine">Cancel</button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !changeType}
-            className="px-4 py-2 text-sm bg-aubergine text-white rounded-lg hover:bg-aubergine/90 disabled:opacity-50"
-          >
-            {submitting ? 'Recording...' : 'Record change'}
-          </button>
-        </div>
       </div>
     </div>
   )
 }
 ```
 
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 2: Verify tsc**
 
 ```bash
 npx tsc --noEmit
@@ -1117,873 +902,304 @@ Expected: no errors.
 
 ```bash
 git add src/components/provider/MedChangeModal.tsx
-git commit -m "feat: add MedChangeModal with 5-task cadence preview and confirmation"
+git commit -m "feat: add MedChangeModal — rx change form with task cadence confirmation screen"
 ```
 
 ---
 
-## Task 11: DashboardHome — Clinical Tasks card
+## Task 10: Rework patient profile — Cockpit tab
 
 **Files:**
-- Modify: `src/components/provider/DashboardHome.tsx`
+- Modify: `src/app/provider/patient/[id]/page.tsx`
 
-- [ ] **Step 1: Add task state and fetch to DashboardHome**
+This is the main assembly task. Rename the tab, add state, load cockpit data, and replace the overview tab content block.
 
-At the top of the component, add task-related state after the existing state declarations:
+- [ ] **Step 1: Add imports**
 
-```ts
-const [clinicalTasks, setClinicalTasks] = useState<any[]>([])
-const [taskCloseTarget, setTaskCloseTarget] = useState<any | null>(null)
-```
-
-Inside the `Promise.all` in the second `useEffect`, add a tasks fetch (the one that already fetches appointments, intakes, messages, etc.). Replace the existing `Promise.all` call with:
-
-```ts
-    Promise.all([
-      safeFetch(`/api/scheduling/appointments?providerId=${providerId}&startDate=${today}&endDate=${today}`),
-      safeFetch('/api/provider/intakes'),
-      safeFetch(`/api/messages?providerId=${providerId}`),
-      safeFetch(`/api/refill-requests?providerId=${providerId}&status=pending`),
-      safeFetch(`/api/provider/recent-cancellations?providerId=${providerId}`),
-      safeFetch('/api/provider/tasks?open=true&limit=8'),
-    ]).then(([apptData, intakeData, msgData, refillData, cancelData, taskData]) => {
-```
-
-Then after the existing `setLoading(false)` line, add:
-
-```ts
-      setClinicalTasks(taskData?.tasks ?? [])
-```
-
-- [ ] **Step 2: Add imports for TaskQueue, TaskCloseModal, and useRouter**
-
-At the top of `DashboardHome.tsx`, add:
-
-```ts
-import { useRouter } from 'next/navigation'
-import { TaskQueue } from '@/components/staff/TaskQueue'
-import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
-```
-
-Inside the component body, add the router hook and a `staffRole` state. Staff role is fetched from `/api/auth/me` (built in Build 16 as part of ProviderNav session fetch — verify this endpoint returns `{ staffRole }`):
-
-```ts
-const router = useRouter()
-const [staffRole, setStaffRole] = useState('md')
-
-useEffect(() => {
-  fetch('/api/auth/me')
-    .then(r => r.json())
-    .then(data => { if (data?.staffRole) setStaffRole(data.staffRole) })
-    .catch(() => {})
-}, [])
-```
-
-If `/api/auth/me` does not exist yet, create `src/app/api/auth/me/route.ts`:
-
-```ts
-import { NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/getServerSession'
-
-export async function GET() {
-  const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  return NextResponse.json({
-    userId: session.userId,
-    providerId: session.providerId,
-    staffRole: session.staffRole,
-    role: session.role,
-  })
-}
-```
-
-- [ ] **Step 3: Add Clinical Tasks card below the existing grid**
-
-In the JSX, after the `{/* Recent Cancellations */}` block (around line 458), add:
+Read `src/app/provider/patient/[id]/page.tsx`. At the top with the other imports, add:
 
 ```tsx
-        {/* Clinical Tasks */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-aubergine/5">
-            <div className="flex items-center gap-2">
-              <h2 className="font-sans font-semibold text-base text-aubergine">Clinical Tasks</h2>
-              {clinicalTasks.length > 0 && (
-                <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {clinicalTasks.length}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => router.push('/provider/tasks')}
-              className="text-xs font-sans text-violet hover:text-aubergine/60 transition-colors"
-            >
-              View all →
-            </button>
-          </div>
-          <div className="px-6 py-4">
-            <TaskQueue
-              tasks={clinicalTasks}
-              onAcknowledge={async (taskId) => {
-                await fetch(`/api/provider/tasks/${taskId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'acknowledged' }),
-                })
-                setClinicalTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
-              }}
-              onClose={setTaskCloseTarget}
-            />
-          </div>
-        </div>
-
-        {taskCloseTarget && (
-          <TaskCloseModal
-            task={taskCloseTarget}
-            staffRole={staffRole}
-            onClose={() => setTaskCloseTarget(null)}
-            onSubmit={async (closeout) => {
-              const res = await fetch(`/api/provider/tasks/${taskCloseTarget.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'closed', ...closeout }),
-              })
-              if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.error ?? 'Failed to close task')
-              }
-              setClinicalTasks(q => q.filter(t => t.id !== taskCloseTarget.id))
-              setTaskCloseTarget(null)
-            }}
-          />
-        )}
-```
-
-- [ ] **Step 4: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/components/provider/DashboardHome.tsx
-git commit -m "feat: add Clinical Tasks card to DashboardHome"
-```
-
----
-
-## Task 12: ProviderNav — Tasks tab
-
-**Files:**
-- Modify: `src/components/provider/ProviderNav.tsx`
-
-- [ ] **Step 1: Add Tasks tab between Today and Patients**
-
-In `ProviderNav.tsx`, in the tab bar JSX (in the `{!isLogin && ...}` section), add a new tab after the MD Today / RN Queue / Admin Queue role-conditional tabs and before the Patients button:
-
-```tsx
-              {/* Tasks — all staff */}
-              <a
-                href="/provider/tasks"
-                className={`relative px-5 py-3.5 text-sm font-sans font-medium border-b-2 transition-all flex items-center gap-2 ${
-                  pathname === '/provider/tasks'
-                    ? 'border-violet text-violet'
-                    : 'border-transparent text-aubergine/40 hover:text-aubergine/60'
-                }`}
-              >
-                Tasks
-                {(taskCounts.md + taskCounts.rn) > 0 && (
-                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-pill font-medium">
-                    {(taskCounts.md + taskCounts.rn) > 9 ? '9+' : taskCounts.md + taskCounts.rn}
-                  </span>
-                )}
-              </a>
-```
-
-The `taskCounts` state and polling were added to ProviderNav in Build 16. Verify they exist:
-
-```bash
-grep -n "taskCounts\|setTaskCounts" src/components/provider/ProviderNav.tsx | head -10
-```
-
-If `taskCounts` exists (from Build 16), the tab above just works. If it doesn't exist yet, add this state and poll to ProviderNav:
-
-```ts
-const [taskCounts, setTaskCounts] = useState({ md: 0, rn: 0 })
-useEffect(() => {
-  async function fetchCounts() {
-    const [mdRes, rnRes] = await Promise.all([
-      fetch('/api/provider/tasks?open=true&queue=md'),
-      fetch('/api/provider/tasks?open=true&queue=rn'),
-    ])
-    const [mdData, rnData] = await Promise.all([mdRes.json(), rnRes.json()])
-    setTaskCounts({ md: mdData.tasks?.length ?? 0, rn: rnData.tasks?.length ?? 0 })
-  }
-  fetchCounts()
-  const interval = setInterval(fetchCounts, 60_000)
-  return () => clearInterval(interval)
-}, [])
-```
-
-The badge uses `md + rn` count as a proxy for total urgent+MD-decision tasks.
-
-- [ ] **Step 2: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/components/provider/ProviderNav.tsx
-git commit -m "feat: add Tasks tab to ProviderNav"
-```
-
----
-
-## Task 13: /provider/tasks page
-
-**Files:**
-- Create: `src/app/provider/tasks/page.tsx`
-
-- [ ] **Step 1: Create the page**
-
-```tsx
-'use client'
-
-import { useEffect, useState } from 'react'
+import PlanEditor from '@/components/provider/PlanEditor'
+import DiffPanel from '@/components/provider/DiffPanel'
+import MedChangeModal from '@/components/provider/MedChangeModal'
 import { TaskQueue, Task } from '@/components/staff/TaskQueue'
-import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
-
-interface Section {
-  key: string
-  label: string
-  dotColor: string
-  tasks: Task[]
-  expanded: boolean
-}
-
-function buildSections(tasks: Task[]): Section[] {
-  const urgent   = tasks.filter(t => t.priority === 'red')
-  const mdReview = tasks.filter(t => t.priority === 'orange')
-  const lower    = tasks.filter(t => t.priority === 'yellow' || t.priority === 'blue' || t.priority === 'gray')
-  return [
-    { key: 'urgent',   label: 'Urgent',        dotColor: '#dc2626', tasks: urgent,   expanded: true },
-    { key: 'md',       label: 'MD Decisions',  dotColor: '#f97316', tasks: mdReview, expanded: true },
-    { key: 'lower',    label: 'Lower Priority', dotColor: '#eab308', tasks: lower,   expanded: true },
-  ]
-}
-
-export default function TasksPage() {
-  const [allTasks, setAllTasks] = useState<Task[]>([])
-  const [sections, setSections] = useState<Section[]>([])
-  const [loading, setLoading] = useState(true)
-  const [closeTask, setCloseTask] = useState<Task | null>(null)
-  const [staffRole, setStaffRole] = useState('md')
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    urgent: true, md: true, lower: true,
-  })
-
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { if (d?.staffRole) setStaffRole(d.staffRole) }).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/provider/tasks?open=true')
-      .then(r => r.json())
-      .then(data => {
-        const tasks: Task[] = data.tasks ?? []
-        setAllTasks(tasks)
-        setSections(buildSections(tasks))
-      })
-      .finally(() => setLoading(false))
-  }, [])
-
-  function acknowledge(taskId: string) {
-    fetch(`/api/provider/tasks/${taskId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'acknowledged' }),
-    })
-    setAllTasks(q => {
-      const updated = q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t)
-      setSections(buildSections(updated))
-      return updated
-    })
-  }
-
-  async function handleClose(closeout: any) {
-    if (!closeTask) return
-    const res = await fetch(`/api/provider/tasks/${closeTask.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'closed', ...closeout }),
-    })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error ?? 'Failed to close task')
-    }
-    setAllTasks(q => {
-      const updated = q.filter(t => t.id !== closeTask.id)
-      setSections(buildSections(updated))
-      return updated
-    })
-    setCloseTask(null)
-  }
-
-  if (loading) return (
-    <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen bg-cream">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-serif font-normal text-3xl text-aubergine tracking-tight">Clinical Tasks</h1>
-            <p className="text-sm font-sans text-aubergine/40 mt-1">{allTasks.length} open</p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {sections.map(section => (
-            <div key={section.key}>
-              <button
-                onClick={() => setExpandedSections(s => ({ ...s, [section.key]: !s[section.key] }))}
-                className="flex items-center gap-2 mb-3 group w-full text-left"
-              >
-                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: section.dotColor }} />
-                <span className="text-xs font-semibold uppercase tracking-wide text-aubergine/50 group-hover:text-aubergine/70 transition-colors">
-                  {section.label}
-                </span>
-                <span className="text-xs text-aubergine/30 font-sans">{section.tasks.length}</span>
-                <span className="text-xs text-aubergine/25 ml-auto">
-                  {expandedSections[section.key] ? '▾' : '▸'}
-                </span>
-              </button>
-
-              {expandedSections[section.key] && (
-                section.tasks.length === 0 ? (
-                  <p className="text-sm text-aubergine/30 italic pl-4 pb-2">None</p>
-                ) : (
-                  <TaskQueue
-                    tasks={section.tasks}
-                    onAcknowledge={acknowledge}
-                    onClose={setCloseTask}
-                  />
-                )
-              )}
-            </div>
-          ))}
-        </div>
-
-        {allTasks.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-aubergine/30 font-sans text-sm">No open tasks — queue is clear.</p>
-          </div>
-        )}
-      </div>
-
-      {closeTask && (
-        <TaskCloseModal
-          task={closeTask}
-          staffRole={staffRole}
-          onClose={() => setCloseTask(null)}
-          onSubmit={handleClose}
-        />
-      )}
-    </div>
-  )
-}
 ```
 
-- [ ] **Step 2: Run tsc**
+- [ ] **Step 2: Add state variables**
 
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add src/app/provider/tasks/page.tsx
-git commit -m "feat: add /provider/tasks full queue page grouped by priority"
-```
-
----
-
-## Task 14: Patient Cockpit page
-
-**Files:**
-- Create: `src/app/provider/patients/[id]/cockpit/page.tsx`
-
-- [ ] **Step 1: Create the page**
+In the component body, after the existing `useState` declarations, add:
 
 ```tsx
-'use client'
+const [currentPlan, setCurrentPlan]       = useState<string | null>(null)
+const [nextStep, setNextStep]             = useState<string | null>(null)
+const [lastMdReviewAt, setLastMdReviewAt] = useState<string | null>(null)
+const [patientTasks, setPatientTasks]     = useState<Task[]>([])
+const [medChangeOpen, setMedChangeOpen]   = useState(false)
+const [accordionOpen, setAccordionOpen]   = useState({ trend: false, meds: false })
+```
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { TaskQueue, Task } from '@/components/staff/TaskQueue'
-import { TaskCloseModal } from '@/components/staff/TaskCloseModal'
-import { DiffPanel } from '@/components/provider/DiffPanel'
-import { PlanEditor } from '@/components/provider/PlanEditor'
-import { MedChangeModal } from '@/components/provider/MedChangeModal'
+- [ ] **Step 3: Load cockpit fields from API**
 
-interface CockpitData {
-  patient: {
-    id: string
-    current_plan: string | null
-    next_step: string | null
-    last_md_review_at: string | null
-    last_meaningful_touch_at: string | null
-  }
-  liveWmi: number | null
-  activeTasks: Task[]
-  rxHistory: Array<{
-    id: string
-    change_type: string
-    previous_dosage: string | null
-    new_dosage: string | null
-    reason: string | null
-    created_at: string
-    prescription_id: string
-  }>
-}
+Inside `loadPatientData`, after the existing `setLiveWmi(data.liveWmi ?? null)` line, add:
 
-interface DiffData {
-  since: string | null
-  wmiDelta: { from: number | null; to: number; delta: number | null } | null
-  rxChanges: any[]
-  messageCount: number
-  rnNotes: any[]
-}
+```tsx
+setCurrentPlan(data.currentPlan ?? null)
+setNextStep(data.nextStep ?? null)
+setLastMdReviewAt(data.lastMdReviewAt ?? null)
+```
 
-interface AccordionSection {
-  key: string
-  label: string
-  count?: number
-}
+- [ ] **Step 4: Fetch open tasks for this patient**
 
-const ACCORDION_SECTIONS: AccordionSection[] = [
-  { key: 'medications', label: 'Medication Timeline' },
-  { key: 'trend',       label: 'Symptom Trend' },
-  { key: 'labs',        label: 'Labs' },
-  { key: 'messages',    label: 'Messages' },
-  { key: 'visits',      label: 'Visit & Encounter Notes' },
-]
+Still inside `loadPatientData`, after the message thread count fetch block, add:
 
-function formatDate(iso: string | null): string {
-  if (!iso) return 'Never'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
+```tsx
+try {
+  const taskRes = await fetch(`/api/provider/tasks?patientId=${patientId}`)
+  const taskData = await taskRes.json()
+  if (fetchGenRef.current !== gen) return
+  const open = (taskData.tasks ?? []).filter((t: Task) => !['resolved', 'closed'].includes(t.status))
+  setPatientTasks(open)
+} catch {}
+```
 
-const CHANGE_LABELS: Record<string, string> = {
-  started: 'Started', dose_increased: 'Dose ↑', dose_decreased: 'Dose ↓',
-  stopped: 'Stopped', refill_authorized: 'Refill', formulation_changed: 'Formulation changed',
-}
+- [ ] **Step 5: Rename the tab**
 
-export default function CockpitPage() {
-  const params = useParams()
-  const patientId = params.id as string
+Find the `TABS` array. Change:
 
-  const [cockpit, setCockpit] = useState<CockpitData | null>(null)
-  const [diff, setDiff] = useState<DiffData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [closeTask, setCloseTask] = useState<Task | null>(null)
-  const [staffRole, setStaffRole] = useState('md')
-  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({})
-  const [medChangeTarget, setMedChangeTarget] = useState<{ rxId: string; medName: string; dosage: string } | null>(null)
-  const [tasks, setTasks] = useState<Task[]>([])
+```tsx
+{ key: 'overview', label: 'Overview & Trends' },
+```
 
-  useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { if (d?.staffRole) setStaffRole(d.staffRole) }).catch(() => {})
-  }, [])
+to:
 
-  useEffect(() => {
-    Promise.all([
-      fetch(`/api/provider/patients/${patientId}/cockpit`).then(r => r.json()),
-      fetch(`/api/provider/patients/${patientId}/diff`).then(r => r.json()),
-    ]).then(([cockpitData, diffData]) => {
-      setCockpit(cockpitData)
-      setTasks(cockpitData.activeTasks ?? [])
-      setDiff(diffData)
-    }).finally(() => setLoading(false))
-  }, [patientId])
+```tsx
+{ key: 'overview', label: 'Cockpit' },
+```
 
-  function toggleAccordion(key: string) {
-    setOpenAccordions(s => ({ ...s, [key]: !s[key] }))
-  }
+- [ ] **Step 6: Replace the overview tab content block**
 
-  async function handleClose(closeout: any) {
-    if (!closeTask) return
-    const res = await fetch(`/api/provider/tasks/${closeTask.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'closed', ...closeout }),
-    })
-    if (!res.ok) {
-      const data = await res.json()
-      throw new Error(data.error ?? 'Failed to close task')
-    }
-    setTasks(q => q.filter(t => t.id !== closeTask.id))
-    setCloseTask(null)
-    // Refresh last_md_review_at if required
-    fetch(`/api/provider/patients/${patientId}/cockpit`)
-      .then(r => r.json())
-      .then(data => setCockpit(data))
-  }
+Find and replace the entire `{activeTab === 'overview' && (...)}` block with:
 
-  if (loading) return (
-    <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-violet/20 border-t-violet rounded-full animate-spin" />
-    </div>
-  )
-  if (!cockpit) return <div className="p-8 text-aubergine/40">Patient not found.</div>
+```tsx
+{activeTab === 'overview' && (
+  <div className="space-y-4">
 
-  const wmiDelta = diff?.wmiDelta
-  const hasReview = !!cockpit.patient.last_md_review_at
-
-  return (
-    <div className="min-h-screen bg-cream">
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-
-        {/* Patient strip */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5 p-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <a
-                href={`/provider/patient/${patientId}`}
-                className="text-xs font-sans text-violet hover:underline"
-              >
-                ← Back to chart
-              </a>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs font-sans text-aubergine/40 bg-aubergine/5 px-2.5 py-1 rounded-pill">
-                Last MD review: {formatDate(cockpit.patient.last_md_review_at)}
-              </span>
-              {wmiDelta && wmiDelta.delta != null && (
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-pill ${
-                  wmiDelta.delta >= 0
-                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                    : 'bg-red-50 text-red-600 border border-red-200'
-                }`}>
-                  WMI {wmiDelta.delta >= 0 ? `↑ ${wmiDelta.delta}` : `↓ ${Math.abs(wmiDelta.delta)}`}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <PlanEditor
-            patientId={patientId}
-            initialPlan={cockpit.patient.current_plan}
-            initialNextStep={cockpit.patient.next_step}
-          />
+    {/* Top strip: compact score + plan editor */}
+    <div className="bg-white rounded-card border border-aubergine/5 px-6 py-5">
+      <div className="flex gap-6 items-start">
+        {/* Compact score */}
+        <div className="text-center pr-6 border-r border-aubergine/8 flex-shrink-0 min-w-[72px]">
+          <p className="text-xs font-sans font-semibold text-aubergine/40 uppercase tracking-wide mb-1">WK Score</p>
+          <p className="font-serif font-normal text-4xl text-aubergine leading-none">
+            {liveWmi != null ? Math.round(liveWmi) : '—'}
+          </p>
         </div>
-
-        {/* Since last MD review */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
-          <div className="px-6 pt-5 pb-3 border-b border-aubergine/5">
-            <h2 className="font-sans font-semibold text-base text-aubergine">
-              Since last MD review
-              {hasReview && (
-                <span className="text-xs font-normal text-aubergine/40 ml-2">
-                  {formatDate(cockpit.patient.last_md_review_at)}
-                </span>
-              )}
-            </h2>
-          </div>
-          <div className="px-6 py-4">
-            {diff ? <DiffPanel diff={diff} /> : <p className="text-sm text-aubergine/40">Loading...</p>}
-          </div>
-        </div>
-
-        {/* Active tasks */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5">
-          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-aubergine/5">
-            <h2 className="font-sans font-semibold text-base text-aubergine">
-              Active Tasks
-              {tasks.length > 0 && (
-                <span className="ml-2 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {tasks.length}
-                </span>
-              )}
-            </h2>
-          </div>
-          <div className="px-6 py-4">
-            <TaskQueue
-              tasks={tasks}
-              onAcknowledge={async (taskId) => {
-                await fetch(`/api/provider/tasks/${taskId}`, {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'acknowledged' }),
-                })
-                setTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
-              }}
-              onClose={setCloseTask}
-            />
-          </div>
-        </div>
-
-        {/* History accordions */}
-        <div className="bg-white rounded-card shadow-sm border border-aubergine/5 divide-y divide-aubergine/5">
-          {ACCORDION_SECTIONS.map(section => (
-            <div key={section.key}>
-              <button
-                onClick={() => toggleAccordion(section.key)}
-                className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-aubergine/2 transition-colors"
-              >
-                <span className="text-sm font-sans font-medium text-aubergine/70">
-                  {section.key === 'medications'
-                    ? `Medication Timeline (${cockpit.rxHistory.length} changes)`
-                    : section.label}
-                </span>
-                <span className="text-xs text-aubergine/30">
-                  {openAccordions[section.key] ? '▾' : '▸'}
-                </span>
-              </button>
-
-              {openAccordions[section.key] && (
-                <div className="px-6 pb-5">
-                  {section.key === 'medications' && (
-                    cockpit.rxHistory.length === 0 ? (
-                      <p className="text-sm text-aubergine/30 italic">No medication changes recorded.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {cockpit.rxHistory.map(c => (
-                          <div key={c.id} className="flex items-center gap-3 text-sm">
-                            <span className="text-xs font-semibold text-aubergine/40 w-20 flex-shrink-0">
-                              {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="text-aubergine/60">
-                              {CHANGE_LABELS[c.change_type] ?? c.change_type}
-                              {c.new_dosage ? ` → ${c.new_dosage}` : ''}
-                            </span>
-                            <button
-                              onClick={() => setMedChangeTarget({
-                                rxId: c.prescription_id,
-                                medName: 'Medication',
-                                dosage: c.new_dosage ?? '',
-                              })}
-                              className="ml-auto text-xs text-violet hover:underline"
-                            >
-                              + Record change
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  )}
-                  {section.key !== 'medications' && (
-                    <p className="text-sm text-aubergine/30 italic">
-                      Open the full patient chart to view {section.label.toLowerCase()}.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-      </div>
-
-      {closeTask && (
-        <TaskCloseModal
-          task={closeTask}
-          staffRole={staffRole}
-          onClose={() => setCloseTask(null)}
-          onSubmit={handleClose}
-        />
-      )}
-
-      {medChangeTarget && (
-        <MedChangeModal
+        {/* Plan + next step editors */}
+        <PlanEditor
           patientId={patientId}
-          prescriptionId={medChangeTarget.rxId}
-          medicationName={medChangeTarget.medName}
-          currentDosage={medChangeTarget.dosage}
-          onClose={() => setMedChangeTarget(null)}
-          onSuccess={() => {
-            fetch(`/api/provider/patients/${patientId}/cockpit`)
-              .then(r => r.json())
-              .then(data => setCockpit(data))
-          }}
+          currentPlan={currentPlan}
+          nextStep={nextStep}
+          lastMdReviewAt={lastMdReviewAt}
         />
+      </div>
+    </div>
+
+    {/* Since last MD review */}
+    <DiffPanel patientId={patientId} />
+
+    {/* Open tasks */}
+    <div className="bg-white rounded-card border border-aubergine/5">
+      <div className="px-6 py-4 border-b border-aubergine/5">
+        <p className="text-sm font-sans font-semibold text-aubergine">
+          Open Tasks
+          {patientTasks.length > 0 && (
+            <span className="ml-1.5 text-aubergine/40 font-normal">({patientTasks.length})</span>
+          )}
+        </p>
+      </div>
+      <TaskQueue
+        tasks={patientTasks}
+        onAcknowledge={async (taskId) => {
+          await fetch(`/api/provider/tasks/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'acknowledged' }),
+          })
+          setPatientTasks(q => q.map(t => t.id === taskId ? { ...t, status: 'acknowledged' } : t))
+        }}
+      />
+    </div>
+
+    {/* Compact domain cards — last check-in scores */}
+    {(() => {
+      const latest = visits.find(v => v.symptom_scores && Object.keys(v.symptom_scores).length > 0)
+      if (!latest) return null
+      const scores = latest.symptom_scores as Record<string, number>
+      const domains = [
+        { key: 'vasomotor', label: 'Vasomotor', unit: 'episodes' },
+        { key: 'sleep',     label: 'Sleep',     unit: 'hrs' },
+        { key: 'energy',    label: 'Energy',    unit: '/10' },
+        { key: 'mood',      label: 'Mood',      unit: '/10' },
+      ]
+      return (
+        <div className="grid grid-cols-4 gap-3">
+          {domains.map(d => (
+            <div key={d.key} className="bg-white rounded-card border border-aubergine/5 px-4 py-3 text-center">
+              <p className="text-xs font-sans text-aubergine/40 mb-1">{d.label}</p>
+              <p className="font-serif font-normal text-2xl text-aubergine leading-none">
+                {scores[d.key] != null ? scores[d.key] : '—'}
+              </p>
+              <p className="text-xs font-sans text-aubergine/30 mt-0.5">{d.unit}</p>
+            </div>
+          ))}
+        </div>
+      )
+    })()}
+
+    {/* Trend chart accordion */}
+    <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+      <button
+        onClick={() => setAccordionOpen(s => ({ ...s, trend: !s.trend }))}
+        className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
+      >
+        <span>Symptom Trend</span>
+        <span className="text-aubergine/30 text-xs">{accordionOpen.trend ? '▾' : '▸'}</span>
+      </button>
+      {accordionOpen.trend && (
+        <div className="px-6 pb-6">
+          <PatientOverview
+            view="provider"
+            visits={visits}
+            prescriptions={prescriptions}
+            latestIntake={latestIntake}
+            liveWmi={liveWmi}
+            hideScoreHeader
+          />
+        </div>
       )}
     </div>
-  )
-}
-```
 
-- [ ] **Step 2: Run tsc**
+    {/* Medication timeline accordion */}
+    <div className="bg-white rounded-card border border-aubergine/5 overflow-hidden">
+      <button
+        onClick={() => setAccordionOpen(s => ({ ...s, meds: !s.meds }))}
+        className="w-full px-6 py-4 flex items-center justify-between text-sm font-sans font-semibold text-aubergine hover:bg-aubergine/[0.02] transition-colors"
+      >
+        <span>Medication Timeline</span>
+        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+          {accordionOpen.meds && (
+            <button
+              onClick={() => setMedChangeOpen(true)}
+              className="text-xs font-sans font-semibold text-violet hover:text-aubergine transition-colors bg-violet/5 px-3 py-1 rounded-pill"
+            >
+              + Record Change
+            </button>
+          )}
+          <span className="text-aubergine/30 text-xs pointer-events-none">{accordionOpen.meds ? '▾' : '▸'}</span>
+        </div>
+      </button>
+      {accordionOpen.meds && (
+        <div className="px-6 pb-4">
+          {prescriptions.length === 0 ? (
+            <p className="text-sm font-sans text-aubergine/30 py-2">No prescriptions on file.</p>
+          ) : (
+            <div className="divide-y divide-aubergine/5">
+              {prescriptions.map(rx => (
+                <div key={rx.id} className="flex items-center gap-3 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-sans font-semibold text-aubergine truncate">{rx.medication_name}</p>
+                    <p className="text-xs font-sans text-aubergine/40">{rx.dosage} · {rx.frequency}</p>
+                  </div>
+                  <span className={`shrink-0 text-xs font-sans px-2.5 py-0.5 rounded-pill border ${
+                    rx.status === 'active'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      : 'bg-aubergine/5 text-aubergine/40 border-aubergine/10'
+                  }`}>
+                    {rx.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
 
-```bash
-npx tsc --noEmit
-```
+    {/* Med change modal */}
+    {medChangeOpen && (
+      <MedChangeModal
+        patientId={patientId}
+        prescriptions={prescriptions}
+        onClose={() => setMedChangeOpen(false)}
+        onSuccess={() => { setMedChangeOpen(false); reloadPrescriptions() }}
+      />
+    )}
 
-Expected: no errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add "src/app/provider/patients/[id]/cockpit/page.tsx"
-git commit -m "feat: add patient cockpit page (single-column scroll)"
-```
-
----
-
-## Task 15: Wire MedChangeModal into PrescriptionsPanel
-
-**Files:**
-- Modify: `src/components/provider/PrescriptionsPanel.tsx`
-
-- [ ] **Step 1: Add MedChangeModal import and state**
-
-At the top of `PrescriptionsPanel.tsx`, add:
-
-```ts
-import { MedChangeModal } from '@/components/provider/MedChangeModal'
-```
-
-Inside the `PrescriptionsPanel` component, add state:
-
-```ts
-const [medChangeTarget, setMedChangeTarget] = useState<{
-  rxId: string; medName: string; dosage: string
-} | null>(null)
-```
-
-- [ ] **Step 2: Add "Record change" button to each prescription row**
-
-In the JSX where each prescription is rendered (inside the `prescriptions.map(...)` block), add a "Record change" button after the existing prescription name/status display. Find the section that renders each prescription row and add:
-
-```tsx
-<button
-  onClick={() => setMedChangeTarget({
-    rxId: rx.id,
-    medName: rx.medication_name,
-    dosage: rx.dosage,
-  })}
-  className="text-xs text-violet hover:underline font-medium mt-1"
->
-  Record change
-</button>
-```
-
-- [ ] **Step 3: Render MedChangeModal at the bottom of the component return**
-
-At the end of the component's JSX, before the final closing tag, add:
-
-```tsx
-{medChangeTarget && (
-  <MedChangeModal
-    patientId={patientId}
-    prescriptionId={medChangeTarget.rxId}
-    medicationName={medChangeTarget.medName}
-    currentDosage={medChangeTarget.dosage}
-    onClose={() => setMedChangeTarget(null)}
-    onSuccess={() => {
-      setMedChangeTarget(null)
-      onPrescriptionSent()
-    }}
-  />
+  </div>
 )}
 ```
 
-- [ ] **Step 4: Run tsc**
+- [ ] **Step 7: Verify tsc**
 
 ```bash
 npx tsc --noEmit
 ```
 
-Expected: no errors.
+Common issues to fix:
+- `PatientOverview` with `hideScoreHeader` — this prop already exists in the component; if tsc complains the prop isn't in the type, check `src/components/provider/PatientOverview.tsx` around line 60 for `hideScoreHeader?: boolean` in the props interface.
+- `Task` import — `src/components/staff/TaskQueue.tsx` exports `Task` as a named export; verify the import is `import { TaskQueue, Task } from '@/components/staff/TaskQueue'`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 8: Test locally**
 
 ```bash
-git add src/components/provider/PrescriptionsPanel.tsx
-git commit -m "feat: add Record change button to PrescriptionsPanel"
+npm run dev
+```
+
+Open `http://localhost:3000/provider/patient/fx-p-1`. Verify in dev (fixtures bypass):
+- Tab bar shows "Cockpit" as first tab (active by default)
+- Score renders as a small number, not a full banner
+- DiffPanel renders with "No MD review recorded yet" message (fixtures have no last_md_review_at)
+- Task section shows zero state "No open tasks" or fixture tasks if any
+- Domain cards render 4-column grid with scores from fixture visits
+- Trend accordion expands to show PatientOverview (without score banner)
+- Medication timeline accordion shows fixture prescriptions list
+- "+ Record Change" button appears only when med timeline is open
+- Clicking "+ Record Change" opens MedChangeModal
+- All other tabs (Intake, Biometrics, Prescriptions, Labs, Visit Timeline, Notes, Messages) still render correctly
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add src/app/provider/patient/ src/components/provider/
+git commit -m "feat: Build 17 — Cockpit tab with compact score, diff panel, tasks, domain cards, med timeline"
 ```
 
 ---
 
-## Task 16: Add "Open Cockpit" link to PatientOverview
+## Task 11: Deploy and verify on prod
 
-**Files:**
-- Modify: `src/components/provider/PatientOverview.tsx`
-
-- [ ] **Step 1: Find where the patient ID is available in PatientOverview**
-
-```bash
-grep -n "patientId\|patient\.id\|cockpit" src/components/provider/PatientOverview.tsx | head -20
-```
-
-- [ ] **Step 2: Add "Open Cockpit" link**
-
-PatientOverview receives a `patientId` prop (or derives it from the intake/visit data). Find the component's header section — near the patient name or the top of the card — and add:
-
-```tsx
-{patientId && (
-  <a
-    href={`/provider/patients/${patientId}/cockpit`}
-    className="text-xs font-sans font-semibold text-violet hover:text-aubergine/60 transition-colors flex items-center gap-1"
-  >
-    Open Cockpit →
-  </a>
-)}
-```
-
-Place it in the header row where the patient name appears, right-aligned, similar to other "View all →" links in the codebase.
-
-- [ ] **Step 3: Run tsc**
-
-```bash
-npx tsc --noEmit
-```
-
-Expected: no errors.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/components/provider/PatientOverview.tsx
-git commit -m "feat: add Open Cockpit link to PatientOverview"
-```
-
----
-
-## Task 17: Run DB migration + final verification
-
-- [ ] **Step 1: Deploy to Vercel**
+- [ ] **Step 1: Push to main**
 
 ```bash
 git push origin main
 ```
 
-Wait for Vercel auto-deploy to complete (check https://vercel.com/dashboard or `vercel ls`).
+Wait for Vercel deploy (~2 min).
 
-- [ ] **Step 2: Run migration via debug endpoint**
+- [ ] **Step 2: Verify on prod**
 
-```bash
-curl -s -X POST https://www.womenkindhealth.com/api/debug/migrate-build17 \
-  -H "x-migration-secret: $CRON_SECRET" | jq .
-```
+Open `https://womenkind.vercel.app/provider`. Log in as `josephurbanmd@gmail.com` / `password123`. Navigate to any patient.
 
-Expected: `{ "ok": true, "message": "Build 17 migration complete" }`
+- [ ] Cockpit tab is first and active by default
+- [ ] Score shows compact (not full banner)
+- [ ] PlanEditor: type in Current Plan field, click away → "Saved" appears → reload page → text persists
+- [ ] DiffPanel loads without error
+- [ ] Medication timeline accordion opens and shows prescriptions
+- [ ] `+ Record Change` button appears, opens MedChangeModal
+- [ ] Submit a `dose_increased` change → confirmation screen shows 5 scheduled tasks with dates
+- [ ] All other 7 tabs still work
 
-- [ ] **Step 3: Run tsc one final time**
+- [ ] **Step 3: Final tsc**
 
 ```bash
 npx tsc --noEmit
@@ -1991,52 +1207,3 @@ npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 4: Smoke test the Clinical Tasks card**
-
-Hit `GET /api/provider/tasks?open=true&limit=8` — verify it returns tasks sorted red first.
-
-If the `tasks` table has the test task from Build 16, it should appear. Otherwise create one:
-
-```bash
-curl -s -X POST https://www.womenkindhealth.com/api/provider/tasks \
-  -H "Content-Type: application/json" \
-  -H "x-migration-secret: $CRON_SECRET" \
-  -d '{
-    "patient_id": "<any-patient-uuid>",
-    "title": "Build 17 smoke test task",
-    "category": "clinical",
-    "priority": "orange",
-    "source": "manual"
-  }' | jq .
-```
-
-- [ ] **Step 5: Verify prescription_changes table exists**
-
-```bash
-curl -s -X POST https://www.womenkindhealth.com/api/debug/migrate-build17 \
-  -H "x-migration-secret: $CRON_SECRET" | jq .
-```
-
-Re-running is safe (all `IF NOT EXISTS`). Should return `ok: true` again.
-
----
-
-## Final Verification Checklist
-
-- [ ] Clinical Tasks card appears on dashboard home, shows top 8 tasks priority-ordered
-- [ ] Acknowledge button updates status without modal
-- [ ] Close button opens TaskCloseModal, task removed on success
-- [ ] "View all →" navigates to `/provider/tasks`
-- [ ] `/provider/tasks` shows Urgent / MD Decisions / Lower Priority sections
-- [ ] Tasks tab in ProviderNav navigates to `/provider/tasks`
-- [ ] "Open Cockpit" link on PatientOverview navigates to `/provider/patients/[id]/cockpit`
-- [ ] Cockpit loads: patient strip, diff panel, active tasks, history accordions
-- [ ] PlanEditor saves current plan on blur, shows "Saved" confirmation
-- [ ] DiffPanel shows "No prior MD review" when `last_md_review_at` is null
-- [ ] Closing a `requires_md_signoff` task sets `last_md_review_at` (verify with diff panel refresh)
-- [ ] "Record change" button in PrescriptionsPanel opens MedChangeModal
-- [ ] "+ Record change" in cockpit med timeline opens MedChangeModal
-- [ ] Submitting `started` change type creates 5 tasks (verify in `/provider/tasks`)
-- [ ] Submitting `stopped` change type creates 0 tasks
-- [ ] Confirmation screen lists all scheduled task titles + dates
-- [ ] `tsc --noEmit` passes with no errors
