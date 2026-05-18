@@ -28,6 +28,9 @@ export async function GET(
       date_of_birth: true,
       phone: true,
       state: true,
+      last_md_review_at: true,
+      current_plan: true,
+      next_step: true,
     },
     with: {
       profiles: {
@@ -186,5 +189,8 @@ export async function GET(
     providerNotes: providerNotesRows,
     encounterNotesCount,
     latestEncounterNote: latestEncounterNote ?? null,
+    currentPlan: patient.current_plan ?? null,
+    nextStep: patient.next_step ?? null,
+    lastMdReviewAt: patient.last_md_review_at ?? null,
   })
 }
