@@ -95,6 +95,7 @@ export async function POST(
   }
 
   return NextResponse.json({
+    ok: true,
     changeId: change.id,
     scheduledTasks,
   }, { status: 201 })
